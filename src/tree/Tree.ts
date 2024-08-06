@@ -145,7 +145,7 @@ export class Tree<K, Item> {
 		if (siblings) {
 			let index = siblings.findIndex((node) => node.id === nodeId);
 			let sibling = index >= 0 && index < siblings.length - 1 ? siblings[index + 1] : undefined;
-			console.log('getNextSibling', nodeId, sibling);
+			
 			return sibling;
 		}
 		return undefined;
@@ -345,7 +345,7 @@ export class Tree<K, Item> {
 
 	// New method to set tree content from nested items
 	setTreeContent(content: Item[]): void {
-		console.log('setTreeContent', content);
+		
 		// clear the current content
 		this.reset(this.root.id, this.root.item);
 

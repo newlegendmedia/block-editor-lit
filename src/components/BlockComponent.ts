@@ -1,117 +1,124 @@
-import { LitElement, html } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
-import type { TreeStateController } from '../controllers/TreeStateController';
-import type { ModelStateController } from '../controllers/ModelStateController';
-import type { IListProperty, Property, IModelProperty, IElementProperty, IGroupProperty } from '../types/types';
-import { isElement, isModel, isList, isGroup } from '../types/ModelDefinition';
-import { AtomType } from '../types/types';
+// BlockComponent.ts
+import { LitElement, html, css, PropertyValues } from 'lit';
+import { property, customElement } from 'lit/decorators.js';
+import { BaseBlock } from '../blocks/BaseBlock';
+import { TreeStateController } from '../controllers/TreeStateController';
+import { ModelStateController } from '../controllers/ModelStateController';
+import { Property } from '../types/ModelDefinition';
 
 @customElement('block-component')
 export class BlockComponent extends LitElement {
-  @property({ type: Object }) modelProperty!: Property;
-  @property({ type: String }) path!: string;
+  @property({ type: Object }) block!: BaseBlock;
   @property({ type: Object }) treeStateController!: TreeStateController;
   @property({ type: Object }) modelStateController!: ModelStateController;
 
+  static styles = css`
+    :host {
+      display: block;
+      margin-bottom: 10px;
+    }
+  `;
+
+  protected updated(changedProperties: PropertyValues) {
+    super.updated(changedProperties);
+    if (changedProperties.has('block')) {
+      this.block.host = this;
+    }
+  }
+
   render() {
-    const content = this.treeStateController.getContentByPath(this.path);
-    
     return html`
       <div class="block">
-        <h3>${this.modelProperty.label || this.modelProperty.key}</h3>
-        ${this.renderContent(content)}
+        ${this.renderBlockContent()}
       </div>
     `;
   }
 
-  renderContent(content: any) {
-    if (isElement(this.modelProperty)) {
-      return this.renderElement(this.modelProperty, content);
-    } else if (isModel(this.modelProperty)) {
-      return this.renderModel(this.modelProperty, content);
-    } else if (isList(this.modelProperty)) {
-      return this.renderList(this.modelProperty, content);
-    } else if (isGroup(this.modelProperty)) {
-      return this.renderGroup(this.modelProperty, content);
-    } else {
-      return html`<p>Unsupported property type</p>`;
-    }
-  }
-
-  renderElement(property: IElementProperty, content: any) {
-    if (!property.atom) return null;
-    switch (property.atom) {
-      case AtomType.Text:
-        return html`<input type="text" .value=${content || ''} @input=${this.handleInput}>`;
-      case AtomType.Number:
-        return html`<input type="number" .value=${content || ''} @input=${this.handleInput}>`;
-      case AtomType.Boolean:
-        return html`<input type="checkbox" .checked=${content || false} @change=${this.handleInput}>`;
-      // Add cases for other atom types as needed
+  private renderBlockContent() {
+    switch (this.block.modelProperty.type) {
+      case 'element':
+        return this.renderElementBlock();
+      case 'model':
+        return this.renderModelBlock();
+      case 'list':
+        return this.renderListBlock();
+      case 'group':
+        return this.renderGroupBlock();
       default:
-        return html`<p>Unsupported atom type: ${property.atom}</p>`;
+        return html`Unknown block type`;
     }
   }
 
-  renderModel(property: IModelProperty, _content: any) {
-    if (!isModel(property)) {
-      console.error('Invalid property type passed to renderModel');
-      return null;
-    }
+  private renderElementBlock() {
+    const content = this.block.getContent();
     return html`
-      <div class="model-content">
-        ${property.properties?.map(prop => 
-          html`<block-component
-            .modelProperty=${prop}
-            .path=${`${this.path}.${prop.key}`}
-            .treeStateController=${this.treeStateController}
-            .modelStateController=${this.modelStateController}
-          ></block-component>`
-        )}
+      <div class="element-block">
+        <label>${this.block.modelProperty.label || this.block.modelProperty.key}</label>
+        <input type="text" .value=${content || ''} @input=${this.handleInput}>
       </div>
     `;
   }
 
-  renderList(property: IListProperty, content: any) {
-    if (!Array.isArray(content)) content = [];
+  private renderModelBlock() {
+    const children = this.block.getChildren();
     return html`
-      <div class="list-content">
-        ${content.map((_item: any, index: number) => 
-          html`<block-component
-            .modelProperty=${property.items}
-            .path=${`${this.path}[${index}]`}
+      <div class="model-block">
+        <h3>${this.block.modelProperty.label || this.block.modelProperty.key}</h3>
+        ${children.map(child => html`
+          <block-component
+            .block=${child}
             .treeStateController=${this.treeStateController}
             .modelStateController=${this.modelStateController}
-          ></block-component>`
-        )}
-        <button @click=${this.handleAddListItem}>Add Item</button>
+          ></block-component>
+        `)}
       </div>
     `;
   }
 
-  renderGroup(property: IGroupProperty, _content: any) {
+  private renderListBlock() {
+    const items = this.block.getContent() || [];
     return html`
-      <div class="group-content">
-        ${property.items.map(prop => 
-          html`<block-component
-            .modelProperty=${prop}
-            .path=${`${this.path}.${prop.key}`}
-            .treeStateController=${this.treeStateController}
-            .modelStateController=${this.modelStateController}
-          ></block-component>`
-        )}
+      <div class="list-block">
+        <h3>${this.block.modelProperty.label || this.block.modelProperty.key}</h3>
+        <ul>
+          ${items.map((item: any, index: number) => html`
+            <li>
+              <block-component
+                .block=${this.treeStateController.getBlock(`${this.block.path}[${index}]`)}
+                .treeStateController=${this.treeStateController}
+                .modelStateController=${this.modelStateController}
+              ></block-component>
+            </li>
+          `)}
+        </ul>
+        <button @click=${this.handleAddItem}>Add Item</button>
       </div>
     `;
   }
 
-  handleInput(e: Event) {
-    const target = e.target as HTMLInputElement;
-    const value = target.type === 'checkbox' ? target.checked : target.value;
-    this.treeStateController.setContentByPath(this.path, value);
+  private renderGroupBlock() {
+    const children = this.block.getChildren();
+    return html`
+      <div class="group-block">
+        <h3>${this.block.modelProperty.label || this.block.modelProperty.key}</h3>
+        ${children.map(child => html`
+          <block-component
+            .block=${child}
+            .treeStateController=${this.treeStateController}
+            .modelStateController=${this.modelStateController}
+          ></block-component>
+        `)}
+      </div>
+    `;
   }
 
-  handleAddListItem() {
-    const currentContent = this.treeStateController.getContentByPath(this.path) || [];
-    this.treeStateController.setContentByPath(this.path, [...currentContent, {}]);
+  private handleInput(e: Event) {
+    const input = e.target as HTMLInputElement;
+    this.block.setContent(input.value);
+  }
+
+  private handleAddItem() {
+    const listProperty = this.block.modelProperty as Property & { items: Property };
+    this.treeStateController.addChildBlock(this.block.path, listProperty.items);
   }
 }

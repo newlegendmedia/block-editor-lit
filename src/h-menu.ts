@@ -153,7 +153,7 @@ export class HatchMenu extends LitElement {
 
 	updated(changedProperties: Map<string, any>) {
 		if (changedProperties.has('open')) {
-			console.log('Open state changed:', this.open);
+			
 		}
 		if (changedProperties.has('maxHeight')) {
 			this.style.setProperty('--h-menu-max-height', `${this.maxHeight}px`);
@@ -161,7 +161,7 @@ export class HatchMenu extends LitElement {
 	}
 
 	toggle(x: number, y: number) {
-		console.log('Toggle called', { x, y, currentOpen: this.open });
+		
 		if (this.open) {
 			this.close();
 		} else {
@@ -170,7 +170,7 @@ export class HatchMenu extends LitElement {
 	}
 
 	show(x: number, y: number) {
-		console.log('Show called', { x, y });
+		
 		this.style.left = `${x}px`;
 		this.style.top = `${y}px`;
 		this.open = true;
@@ -181,14 +181,14 @@ export class HatchMenu extends LitElement {
 	}
 
 	close() {
-		console.log('Close called');
+		
 		this.open = false;
 		this.requestUpdate();
 	}
 
 	private handleOutsideClick = (event: MouseEvent) => {
 		if (this.open && !this.contains(event.target as Node)) {
-			console.log('Outside click detected, closing menu');
+			
 			this.close();
 		}
 	};

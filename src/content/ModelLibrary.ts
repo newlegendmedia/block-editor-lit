@@ -1,73 +1,97 @@
 import { ModelDefinition, AtomType } from '../types/ModelDefinition';
 
 export class ModelLibrary {
-    private models: Map<string, ModelDefinition>;
-  
-    constructor() {
-      this.models = new Map();
-      this.initializeModels();
-    }
-  
-    private initializeModels() {
-      this.models.set('person', {
-        key: 'person',
-        label: 'Person',
-        type: 'model',
-        properties: [
-          {
-            type: 'model',
-            key: 'name',
-            label: 'Full Name',
-            properties: [
-              { type: 'element', key: 'firstName', label: 'First Name', atom: AtomType.Text },
-              { type: 'element', key: 'lastName', label: 'Last Name', atom: AtomType.Text }
-            ]
-          },
-          {
-            type: 'model',
-            key: 'contactInfo',
-            label: 'Contact Information',
-            properties: [
-              { 
-                type: 'element', 
-                key: 'email', 
-                label: 'Email Address', 
-                atom: AtomType.Text,
-              },
-              { 
-                type: 'element', 
-                key: 'phone', 
-                label: 'Phone Number', 
-                atom: AtomType.Text,
-              }
-            ]
-          },
-          {
-            type: 'element',
-            key: 'maritalStatus',
-            label: 'Marital Status',
-            atom: AtomType.Text, // Simplified from Enum for now
-          },
-          {
-            type: 'list',
-            key: 'emergencyContacts',
-            label: 'Emergency Contacts',
-            items: {
-              type: 'model',
-              key: 'emergencyContact', // Add this key
-              properties: [
-                { type: 'element', key: 'name', label: 'Name', atom: AtomType.Text },
-                { type: 'element', key: 'phone', label: 'Phone', atom: AtomType.Text }
-              ]
-            }
-          }
-        ]
-      });
-  
-      // You can add more models here as needed
-    }
-  
-    getModel(key: string): ModelDefinition | undefined {
-      return this.models.get(key);
-    }
+  private models: Map<string, ModelDefinition>;
+
+  constructor() {
+    this.models = new Map();
+    this.initializeModels();
   }
+
+  private initializeModels() {
+    // ... other models ...
+
+    const documentModel: ModelDefinition = {
+      key: 'document',
+      label: 'Document',
+      type: 'model',
+      properties: [
+        {
+          type: 'element',
+          key: 'title',
+          label: 'Document Title',
+          atom: AtomType.Text
+        },
+        {
+          type: 'group',
+          key: 'content',
+          label: 'Document Content',
+          properties: [
+            {
+              type: 'list',
+              key: 'sections',
+              label: 'Sections',
+              items: {
+                type: 'model',
+                key: 'section',
+                label: 'Section',
+                properties: [
+                  {
+                    type: 'element',
+                    key: 'heading',
+                    label: 'Section Heading',
+                    atom: AtomType.Text
+                  },
+                  {
+                    type: 'element',
+                    key: 'body',
+                    label: 'Section Body',
+                    atom: AtomType.Text
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          type: 'model',
+          key: 'metadata',
+          label: 'Document Metadata',
+          properties: [
+            {
+              type: 'element',
+              key: 'author',
+              label: 'Author',
+              atom: AtomType.Text
+            },
+            {
+              type: 'element',
+              key: 'createdAt',
+              label: 'Created At',
+              atom: AtomType.Datetime
+            }
+          ]
+        }
+      ]
+    };
+
+    this.models.set('document', documentModel);
+  }
+
+  getModel(key: string): ModelDefinition | undefined {
+    return this.models.get(key);
+  }
+
+  // New method to get all available model keys
+  getAvailableModels(): string[] {
+    return Array.from(this.models.keys());
+  }
+
+  // New method to add a custom model
+  addModel(model: ModelDefinition): void {
+    if (this.models.has(model.key)) {
+      console.warn(`Model with key ${model.key} already exists. Overwriting.`);
+    }
+    this.models.set(model.key, model);
+  }
+}

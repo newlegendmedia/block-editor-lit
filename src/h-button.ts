@@ -64,12 +64,12 @@ export class HatchButton extends LitElement {
   _editIcon(e: Event) {
     e.stopPropagation();
     // Implement icon editing logic here
-    console.log('Editing icon');
+    
   }
 
   _editLabel(e: Event) {
     e.stopPropagation();
     // Implement label editing logic here
-    console.log('Editing label');
+    
   }
 }
