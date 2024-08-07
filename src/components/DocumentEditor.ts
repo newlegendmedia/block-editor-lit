@@ -1,3 +1,4 @@
+// Update DocumentEditor.ts
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { TreeStateController } from '../controllers/TreeStateController';
@@ -5,7 +6,8 @@ import { ModelStateController } from '../controllers/ModelStateController';
 import { ModelLibrary } from '../content/ModelLibrary';
 import { BaseBlock } from '../blocks/BaseBlock';
 import { ContentModelTree } from '../tree/ContentModelTree';
-import { isModel, isList, isGroup } from '../types/ModelDefinition';
+import './BlockComponent';  // Import the new BlockComponent
+import { isModel, isGroup, isList } from '../types/ModelDefinition';
 
 @customElement('document-editor')
 export class DocumentEditor extends LitElement {
@@ -13,6 +15,7 @@ export class DocumentEditor extends LitElement {
 
   private treeStateController?: TreeStateController;
   private modelStateController?: ModelStateController;
+
 
   static styles = css`
     :host {
@@ -77,7 +80,13 @@ export class DocumentEditor extends LitElement {
     return html`
       <div class="document">
         <h1>Document Editor</h1>
-        ${this.rootBlock ? this.rootBlock.render() : 'Loading...'}
+        ${this.rootBlock ? html`
+          <block-component
+            .block=${this.rootBlock}
+            .treeStateController=${this.treeStateController}
+            .modelStateController=${this.modelStateController}
+          ></block-component>
+        ` : 'Loading...'}
       </div>
       <button class="log-button" @click=${this.logDocumentStructure}>Log Document Structure</button>
     `;

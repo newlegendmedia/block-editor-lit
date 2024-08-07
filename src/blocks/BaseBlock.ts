@@ -1,20 +1,28 @@
-import { ReactiveController, ReactiveControllerHost, html, TemplateResult } from 'lit';
+// BaseBlock.ts
+import { ReactiveController, ReactiveControllerHost, TemplateResult, html } from 'lit';
 import { Property } from '../types/ModelDefinition';
 import { TreeStateController } from '../controllers/TreeStateController';
 import { ModelStateController } from '../controllers/ModelStateController';
 
 export abstract class BaseBlock implements ReactiveController {
-	protected host: ReactiveControllerHost;
+  protected host: ReactiveControllerHost;
 
-	constructor(
-		public modelProperty: Property,
-		public path: string,
-		public treeStateController: TreeStateController,
-		public modelStateController: ModelStateController
-	) {
-		this.host = treeStateController.host;
-		this.host.addController(this);
-	}
+  constructor(
+    public modelProperty: Property,
+    public path: string,
+    public treeStateController: TreeStateController,
+    public modelStateController: ModelStateController
+  ) {
+    this.host = treeStateController.host;
+    this.host.addController(this);
+  }
+
+  // Add a public method to update the host
+  updateHost(newHost: ReactiveControllerHost) {
+    this.host.removeController(this);
+    this.host = newHost;
+    this.host.addController(this);
+  }
 
 	abstract render(): TemplateResult;
 

@@ -22,13 +22,15 @@ export class BlockComponent extends LitElement {
   protected updated(changedProperties: PropertyValues) {
     super.updated(changedProperties);
     if (changedProperties.has('block')) {
-      this.block.host = this;
+      this.block.updateHost(this);
     }
   }
 
   render() {
     return html`
-      <div class="block">
+      <div class="block" 
+           block-type="${this.block.modelProperty.type}"
+           block-key="${this.block.modelProperty.key}">
         ${this.renderBlockContent()}
       </div>
     `;
@@ -48,7 +50,7 @@ export class BlockComponent extends LitElement {
         return html`Unknown block type`;
     }
   }
-
+    
   private renderElementBlock() {
     const content = this.block.getContent();
     return html`
@@ -81,7 +83,7 @@ export class BlockComponent extends LitElement {
       <div class="list-block">
         <h3>${this.block.modelProperty.label || this.block.modelProperty.key}</h3>
         <ul>
-          ${items.map((item: any, index: number) => html`
+          ${items.map((_item: any, index: number) => html`
             <li>
               <block-component
                 .block=${this.treeStateController.getBlock(`${this.block.path}[${index}]`)}
