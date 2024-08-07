@@ -1,5 +1,5 @@
 import { ReactiveController, ReactiveControllerHost } from 'lit';
-import { ModelDefinition, Property, isModel, isList, isGroup } from '../types/ModelDefinition';
+import { ModelDefinition, SimplifiedModelDefinition, Property, isModel, isList, isGroup } from '../types/ModelDefinition';
 import { ContentModelTree } from '../tree/ContentModelTree';
 import { TreeStateController } from './TreeStateController';
 
@@ -18,6 +18,26 @@ export class ModelStateController implements ReactiveController {
     this.modelDefinition = modelDefinition;
     this.modelTree = new ContentModelTree('root', modelDefinition);
   }
+
+  getSimplifiedModelDefinition(path: string): SimplifiedModelDefinition {
+    const fullDef = this.getModelPropertyByPath(path);
+    if (!fullDef) {
+      console.warn(`No property found for path: ${path}`);
+      return {
+        key: path, label: path, type: 'element'
+      }
+    }
+    return this.simplifyModelDefinition(fullDef);
+  }
+
+  simplifyModelDefinition(def: Property): SimplifiedModelDefinition {
+    return {
+      key: def.key,
+      label: def.label || def.key,
+      type: def.type,
+      // Add other necessary properties
+    };
+  }  
 
   setTreeStateController(treeStateController: TreeStateController) {
     this.treeStateController = treeStateController;

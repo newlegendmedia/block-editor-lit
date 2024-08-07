@@ -1,5 +1,18 @@
 // ModelDefinition.ts
 
+// types/BlockInterfaces.ts
+export interface BlockData {
+  content: any;
+  // Add other necessary properties
+}
+
+export interface SimplifiedModelDefinition {
+  key: string;
+  label: string;
+  type: string;
+  // Add other necessary properties
+}
+
 export interface IBaseProperty {
   id?: string;
   key: string;

@@ -1,85 +1,49 @@
 import { ReactiveController, ReactiveControllerHost, TemplateResult, html } from 'lit';
-import { Property } from '../types/ModelDefinition';
-import { TreeStateController } from '../controllers/TreeStateController';
-import { ModelStateController } from '../controllers/ModelStateController';
+import { BlockData, SimplifiedModelDefinition } from '../types/ModelDefinition';
 
 export abstract class BaseBlock implements ReactiveController {
   protected host: ReactiveControllerHost;
-  protected _content: any;
 
   constructor(
-    public modelProperty: Property,
+    public blockData: BlockData,
+    public modelDefinition: SimplifiedModelDefinition,
     public path: string,
-    public treeStateController: TreeStateController,
-    public modelStateController: ModelStateController
+    host: ReactiveControllerHost
   ) {
-    this.host = treeStateController.host;
-    this.host.addController(this);
-    this._content = undefined; // Initialize content as undefined
-  }
-
-  updateHost(newHost: ReactiveControllerHost) {
-    this.host.removeController(this);
-    this.host = newHost;
-    this.host.addController(this);
+    this.host = host;
+//    this.host.addController(this);
   }
 
   abstract render(): TemplateResult;
 
   getContent(): any {
-    return this._content;
+    return this.blockData.content;
   }
 
   setContent(content: any): void {
-    this._content = content;
+    this.blockData.content = content;
     this.requestUpdate();
   }
-
+  
   protected requestUpdate() {
     this.host.requestUpdate();
   }
 
-  update(_changedProperties: Map<string, any>): void {
-    // Implement update logic here
-  }
-
-  addChild(_child: BaseBlock): void {
-    // Implementation depends on the specific block type
-  }
-
-  removeChild(_child: BaseBlock): void {
-    // Implementation depends on the specific block type
-  }
-
-  getChildren(): BaseBlock[] {
-    return this.treeStateController.getChildBlocks(this.path);
-  }
-
   // Implement other ReactiveController methods
-  hostConnected(): void {}
-  hostDisconnected(): void {}
-  hostUpdate(): void {}
-  hostUpdated(): void {}
-
-  // New method to render content without child blocks
-  renderContent(): TemplateResult {
-    return html``;
-  }
+  hostConnected() {}
+  hostDisconnected() {}
+  hostUpdate() {}
+  hostUpdated() {}
 }
 
 export class ElementBlock extends BaseBlock {
-  renderContent(): TemplateResult {
-    const content = this.getContent();
+  render(): TemplateResult {
     return html`
       <div class="element-block">
-        <label>${this.modelProperty.label || this.modelProperty.key}</label>
-        <input type="text" .value=${content || ''} @input=${this.handleInput} />
+        <label>${this.modelDefinition.label}</label>
+        <input type="text" .value=${this.getContent() || ''} @input=${this.handleInput} />
       </div>
     `;
-  }
-
-  render(): TemplateResult {
-    return this.renderContent();
   }
 
   private handleInput(e: Event) {
@@ -89,49 +53,37 @@ export class ElementBlock extends BaseBlock {
 }
 
 export class ModelBlock extends BaseBlock {
-  renderContent(): TemplateResult {
+  render(): TemplateResult {
     return html`
       <div class="model-block">
-        <h3>${this.modelProperty.label || this.modelProperty.key}</h3>
+        <h3>${this.modelDefinition.label}</h3>
       </div>
     `;
-  }
-
-  render(): TemplateResult {
-    return this.renderContent();
   }
 }
 
 export class ListBlock extends BaseBlock {
-  renderContent(): TemplateResult {
+  render(): TemplateResult {
     return html`
       <div class="list-block">
-        <h3>${this.modelProperty.label || this.modelProperty.key}</h3>
+        <h3>${this.modelDefinition.label}</h3>
         <button @click=${this.handleAddItem}>Add Item</button>
       </div>
     `;
   }
 
-  render(): TemplateResult {
-    return this.renderContent();
-  }
-
   private handleAddItem() {
-    const listProperty = this.modelProperty as Property & { items: Property };
-    this.treeStateController.addChildBlock(this.path, listProperty.items);
+    // We'll need to implement this later
+    console.log('Add item to list');
   }
 }
 
 export class GroupBlock extends BaseBlock {
-  renderContent(): TemplateResult {
+  render(): TemplateResult {
     return html`
       <div class="group-block">
-        <h3>${this.modelProperty.label || this.modelProperty.key}</h3>
+        <h3>${this.modelDefinition.label}</h3>
       </div>
     `;
-  }
-
-  render(): TemplateResult {
-    return this.renderContent();
   }
 }
