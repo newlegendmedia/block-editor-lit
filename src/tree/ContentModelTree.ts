@@ -1,43 +1,35 @@
-import { Tree } from './Tree';
-import { Property, ModelDefinition, isModel, isList } from '../types/ModelDefinition';
+import { PathTree } from './PathTree';
+import { Property, ModelDefinition, isModel, isList, isGroup } from '../types/ModelDefinition';
+import { PathTreeNode } from './PathTreeNode';
 
-export class ContentModelTree<K> extends Tree<K, Property> {
-  constructor(rootId: K, modelDefinition: ModelDefinition) {
+export class ContentModelTree extends PathTree<string, Property> {
+  constructor(rootId: string, modelDefinition: ModelDefinition) {
     super(rootId, modelDefinition);
     this.buildTree(modelDefinition);
   }
 
-  private buildTree(modelDef: Property, parentId?: K) {
-    let nodeId: K;
-    if (parentId) {
-      const newNode = this.add(modelDef, parentId);
-      if (!newNode) {
-        console.error(`Failed to add node for property: ${modelDef.key}`);
-        return;
-      }
-      nodeId = newNode.id;
-    } else {
-      nodeId = this.getRootId();
-    }
+  private buildTree(modelDef: Property, parentPath: string = ''): void {
+    const currentPath = parentPath ? `${parentPath}.${modelDef.key}` : modelDef.key;
     
-    if (isModel(modelDef) && modelDef.properties) {
-      modelDef.properties.forEach(prop => {
-        this.buildTree(prop, nodeId);
+    if (parentPath) {
+      this.add(modelDef, parentPath, modelDef.key);
+    }
+
+    if (isModel(modelDef) || isGroup(modelDef)) {
+      modelDef.properties?.forEach(prop => {
+        this.buildTree(prop, currentPath);
       });
-    } else if (isList(modelDef) && modelDef.items) {
-      this.buildTree(modelDef.items, nodeId);
+    } else if (isList(modelDef)) {
+      this.buildTree(modelDef.items, currentPath);
     }
   }
 
   getPropertyByPath(path: string): Property | undefined {
-    const parts = path.split('.');
-    let currentNode = this.get(this.getRootId());
-    
-    for (const part of parts) {
-      if (!currentNode) return undefined;
-      currentNode = currentNode.children.find(child => child.item.key === part);
-    }
+    const node = this.getNodeByPath(path);
+    return node ? node.item : undefined;
+  }
 
-    return currentNode ? currentNode.item : undefined;
+  override getNodeByPath(path: string): PathTreeNode<string, Property> | undefined {
+    return super.getNodeByPath(path) as PathTreeNode<string, Property> | undefined;
   }
 }

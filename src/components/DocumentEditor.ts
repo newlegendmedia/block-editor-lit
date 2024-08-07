@@ -8,6 +8,7 @@ import './BlockComponent';
 @customElement('document-editor')
 export class DocumentEditor extends LitElement {
   @state() private rootPath: string = 'root';
+  @state() private testCounter: number = 0;
 
   private treeStateController?: TreeStateController;
   private modelStateController?: ModelStateController;
@@ -23,7 +24,7 @@ export class DocumentEditor extends LitElement {
       border: 1px solid #ccc;
       padding: 16px;
     }
-    .log-button {
+    .button-container {
       margin-top: 16px;
     }
   `;
@@ -45,6 +46,9 @@ export class DocumentEditor extends LitElement {
     this.modelStateController = new ModelStateController(this, modelDefinition);
     this.treeStateController = new TreeStateController(this, modelDefinition, this.modelStateController);
     
+    // Initialize with a default title
+    this.treeStateController.setContentByPath('root.title', 'Initial Title');
+    
     this.requestUpdate();
   }
 
@@ -53,24 +57,32 @@ export class DocumentEditor extends LitElement {
       return html`<div>Loading...</div>`;
     }
 
+    const title = this.treeStateController.getContentByPath('root.title') || 'Untitled';
+
     return html`
       <div class="document">
+        <h1>${title}</h1>
         <block-component
           .path=${this.rootPath}
           .treeStateController=${this.treeStateController}
           .modelStateController=${this.modelStateController}
         ></block-component>
       </div>
-      <button class="log-button" @click=${this.logDocumentStructure}>Log Document Structure</button>
+      <div class="button-container">
+        <button @click=${this.testReactivity}>Test Reactivity</button>
+        <p>Test Counter: ${this.testCounter}</p>
+      </div>
     `;
   }
 
-  private logDocumentStructure() {
-    const documentBlock = this.treeStateController?.getBlock(this.rootPath);
-    if (documentBlock && 'logDocumentStructure' in documentBlock) {
-      (documentBlock as any).logDocumentStructure();
-    } else {
-      console.error('Unable to log document structure: DocumentBlock not found or method not available');
+  private testReactivity() {
+    this.testCounter++;
+    if (this.treeStateController) {
+      const titlePath = 'root.title';
+      const currentTitle = this.treeStateController.getContentByPath(titlePath) || 'Untitled';
+      const newTitle = `${currentTitle} (Updated)`;
+      this.treeStateController.setContentByPath(titlePath, newTitle);
+      // Note: We don't need to call this.requestUpdate() here as TreeStateController should handle it
     }
   }
 }

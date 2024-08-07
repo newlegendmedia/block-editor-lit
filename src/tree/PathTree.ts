@@ -1,21 +1,21 @@
 import { Tree } from './Tree';
-import { ExtendedTreeNode } from './ExtendedTreeNode';
+import { PathTreeNode } from './PathTreeNode';
 import { generateId } from '../util/generateId';
 
 export class PathTree<K, Item> extends Tree<K, Item> {
   private pathLookup: Map<string, K>;
-  protected override root: ExtendedTreeNode<K, Item>;
-  protected override nodes: Map<K, ExtendedTreeNode<K, Item>>;
+  protected override root: PathTreeNode<K, Item>;
+  protected override nodes: Map<K, PathTreeNode<K, Item>>;
 
   constructor(rootId: K, rootItem?: Item) {
     super(rootId, rootItem);
     this.pathLookup = new Map();
-    this.root = new ExtendedTreeNode(rootId, rootItem || {} as Item);
+    this.root = new PathTreeNode(rootId, rootItem || {} as Item);
     this.nodes = new Map([[rootId, this.root]]);
     this.initializePathLookup();
   }
 
-  override get(id: K): ExtendedTreeNode<K, Item> | undefined {
+  override get(id: K): PathTreeNode<K, Item> | undefined {
     return this.nodes.get(id);
   }
 
@@ -23,23 +23,23 @@ export class PathTree<K, Item> extends Tree<K, Item> {
     this.buildPathLookup(this.root);
   }
 
-  private buildPathLookup(node: ExtendedTreeNode<K, Item>, parentPath: string = ''): void {
+  private buildPathLookup(node: PathTreeNode<K, Item>, parentPath: string = ''): void {
     const currentPath = parentPath ? `${parentPath}.${node.id}` : `${node.id}`;
     this.pathLookup.set(currentPath, node.id);
 
     node.children.forEach(child => {
-      this.buildPathLookup(child as ExtendedTreeNode<K, Item>, currentPath);
+      this.buildPathLookup(child as PathTreeNode<K, Item>, currentPath);
     });
   }
 
-  getNodeByPath(path: string): ExtendedTreeNode<K, Item> | undefined {
+  getNodeByPath(path: string): PathTreeNode<K, Item> | undefined {
     const nodeId = this.pathLookup.get(path);
     return nodeId ? this.get(nodeId) : undefined;
   }
 
-  override add(item: Item, parentId?: K, id?: K): ExtendedTreeNode<K, Item> | undefined {
+  override add(item: Item, parentId?: K, id?: K): PathTreeNode<K, Item> | undefined {
     const nodeId = id || generateId() as K;
-    const node = new ExtendedTreeNode(nodeId, item, parentId || null);
+    const node = new PathTreeNode(nodeId, item, parentId || null);
     if (!parentId) {
       this.root.children.push(node);
     } else {
@@ -105,14 +105,14 @@ export class PathTree<K, Item> extends Tree<K, Item> {
 //     return true;
 //   }
 
-//   getDescendants(path: string): ExtendedTreeNode<K, Item>[] {
-//     const descendants: ExtendedTreeNode<K, Item>[] = [];
+//   getDescendants(path: string): PathTreeNode<K, Item>[] {
+//     const descendants: PathTreeNode<K, Item>[] = [];
 //     const node = this.getNodeByPath(path);
 //     if (node) {
-//       const traverse = (n: ExtendedTreeNode<K, Item>) => {
+//       const traverse = (n: PathTreeNode<K, Item>) => {
 //         n.children.forEach(child => {
-//           descendants.push(child as ExtendedTreeNode<K, Item>);
-//           traverse(child as ExtendedTreeNode<K, Item>);
+//           descendants.push(child as PathTreeNode<K, Item>);
+//           traverse(child as PathTreeNode<K, Item>);
 //         });
 //       };
 //       traverse(node);
@@ -120,8 +120,8 @@ export class PathTree<K, Item> extends Tree<K, Item> {
 //     return descendants;
 //   }
 
-//   getAncestors(path: string): ExtendedTreeNode<K, Item>[] {
-//     const ancestors: ExtendedTreeNode<K, Item>[] = [];
+//   getAncestors(path: string): PathTreeNode<K, Item>[] {
+//     const ancestors: PathTreeNode<K, Item>[] = [];
 //     let currentPath = path;
 //     while (currentPath.includes('.')) {
 //       currentPath = currentPath.substring(0, currentPath.lastIndexOf('.'));
@@ -133,13 +133,13 @@ export class PathTree<K, Item> extends Tree<K, Item> {
 //     return ancestors;
 //   }
 
-//   findNodesByPredicate(predicate: (node: ExtendedTreeNode<K, Item>) => boolean): ExtendedTreeNode<K, Item>[] {
-//     const result: ExtendedTreeNode<K, Item>[] = [];
-//     const traverse = (node: ExtendedTreeNode<K, Item>) => {
+//   findNodesByPredicate(predicate: (node: PathTreeNode<K, Item>) => boolean): PathTreeNode<K, Item>[] {
+//     const result: PathTreeNode<K, Item>[] = [];
+//     const traverse = (node: PathTreeNode<K, Item>) => {
 //       if (predicate(node)) {
 //         result.push(node);
 //       }
-//       node.children.forEach(child => traverse(child as ExtendedTreeNode<K, Item>));
+//       node.children.forEach(child => traverse(child as PathTreeNode<K, Item>));
 //     };
 //     traverse(this.root);
 //     return result;

@@ -1,6 +1,5 @@
-import { LitElement, html, css, PropertyValues } from 'lit';
+import { LitElement, html, css } from 'lit';
 import { property, customElement } from 'lit/decorators.js';
-import { BaseBlock } from '../blocks/BaseBlock';
 import { TreeStateController } from '../controllers/TreeStateController';
 import { ModelStateController } from '../controllers/ModelStateController';
 
@@ -16,16 +15,6 @@ export class BlockComponent extends LitElement {
       margin-bottom: 10px;
     }
   `;
-
-  protected updated(changedProperties: PropertyValues) {
-    super.updated(changedProperties);
-    if (changedProperties.has('path') || changedProperties.has('treeStateController')) {
-      const block = this.treeStateController.getBlock(this.path);
-      if (block) {
-        block.updateHost(this);
-      }
-    }
-  }
 
   render() {
     const block = this.treeStateController.getBlock(this.path);

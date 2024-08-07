@@ -1,6 +1,6 @@
 import { ReactiveController, ReactiveControllerHost } from 'lit';
 import { PathTree } from '../tree/PathTree';
-import { ExtendedTreeNode } from '../tree/ExtendedTreeNode';
+import { PathTreeNode } from '../tree/PathTreeNode';
 import { Property, ModelDefinition, isModel, isList, isGroup, isElement } from '../types/ModelDefinition';
 import { BaseBlock, ModelBlock, GroupBlock, ListBlock, ElementBlock } from '../blocks/BaseBlock';
 import { ModelStateController } from './ModelStateController';
@@ -29,11 +29,14 @@ export class TreeStateController implements ReactiveController {
   }
 
   getContentByPath(path: string): any {
-    return this.tree.getNodeByPath(path)?.item;
+    const content = this.tree.getNodeByPath(path)?.item;
+    console.log(path, content);
+    return content;
   }
 
   setContentByPath(path: string, value: any) {
     const node = this.tree.getNodeByPath(path);
+    console.log(path, node, value);
     if (node) {
       node.item = value;
       this.host.requestUpdate();
@@ -47,7 +50,7 @@ export class TreeStateController implements ReactiveController {
   getChildBlocks(path: string): BaseBlock[] {
     const node = this.tree.getNodeByPath(path);
     return node ? node.children
-      .map(child => (child as ExtendedTreeNode<string, any>).block)
+      .map(child => (child as PathTreeNode<string, any>).block)
       .filter((block): block is BaseBlock => block !== undefined) : [];
   }
 
