@@ -5,6 +5,7 @@ import { ModelStateController } from '../controllers/ModelStateController';
 
 export abstract class BaseBlock implements ReactiveController {
   protected host: ReactiveControllerHost;
+  protected _content: any;
 
   constructor(
     public modelProperty: Property,
@@ -14,6 +15,7 @@ export abstract class BaseBlock implements ReactiveController {
   ) {
     this.host = treeStateController.host;
     this.host.addController(this);
+    this._content = undefined; // Initialize content as undefined
   }
 
   updateHost(newHost: ReactiveControllerHost) {
@@ -25,11 +27,20 @@ export abstract class BaseBlock implements ReactiveController {
   abstract render(): TemplateResult;
 
   getContent(): any {
-    return this.treeStateController.getContentByPath(this.path);
+    return this._content;
   }
 
   setContent(content: any): void {
-    this.treeStateController.setContentByPath(this.path, content);
+    this._content = content;
+    this.requestUpdate();
+  }
+
+  protected requestUpdate() {
+    this.host.requestUpdate();
+  }
+
+  update(_changedProperties: Map<string, any>): void {
+    // Implement update logic here
   }
 
   addChild(_child: BaseBlock): void {
@@ -42,10 +53,6 @@ export abstract class BaseBlock implements ReactiveController {
 
   getChildren(): BaseBlock[] {
     return this.treeStateController.getChildBlocks(this.path);
-  }
-
-  update(_changedProperties: Map<string, any>): void {
-    // Default update logic
   }
 
   // Implement other ReactiveController methods

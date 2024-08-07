@@ -9,18 +9,14 @@ export class BlockComponent extends LitElement {
   @property({ type: Object }) treeStateController!: TreeStateController;
   @property({ type: Object }) modelStateController!: ModelStateController;
 
-  static styles = css`
-    :host {
-      display: block;
-      margin-bottom: 10px;
-    }
-  `;
-
   render() {
     const block = this.treeStateController.getBlock(this.path);
-    if (!block) return html``;
+    if (!block) {
+      console.warn(`BlockComponent: No block found for path: ${this.path}`);
+      return html``;
+    }
 
-    return html`
+    const result = html`
       <div class="block" 
            block-type="${block.modelProperty.type}"
            block-key="${block.modelProperty.key}">
@@ -28,16 +24,18 @@ export class BlockComponent extends LitElement {
         ${this.renderChildBlocks()}
       </div>
     `;
+    return result;
   }
 
   private renderChildBlocks() {
     const childBlocks = this.treeStateController.getChildBlocks(this.path);
-    return childBlocks.map(childBlock => html`
+    const result = childBlocks.map(childBlock => html`
       <block-component
         .path=${childBlock.path}
         .treeStateController=${this.treeStateController}
         .modelStateController=${this.modelStateController}
       ></block-component>
     `);
+    return result;
   }
 }

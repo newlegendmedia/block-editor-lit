@@ -9,9 +9,7 @@ export class PathTreeNode<K, Item> extends TreeNode<K, Item> {
     item: Item,
     parentId: K | null = null,
     children: PathTreeNode<K, Item>[] = [],
-    block?: BaseBlock
   ) {
     super(id, item, parentId, children);
-    this.block = block;
   }
 }

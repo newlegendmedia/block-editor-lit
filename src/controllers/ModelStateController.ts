@@ -5,7 +5,7 @@ import { TreeStateController } from './TreeStateController';
 
 export class ModelStateController implements ReactiveController {
   private host: ReactiveControllerHost;
-  private modelTree: ContentModelTree<string>;
+  private modelTree: ContentModelTree;
   private modelDefinition: ModelDefinition;
   private treeStateController?: TreeStateController;
 
@@ -16,7 +16,7 @@ export class ModelStateController implements ReactiveController {
     this.host = host;
     this.host.addController(this);
     this.modelDefinition = modelDefinition;
-    this.modelTree = new ContentModelTree<string>('root', modelDefinition);
+    this.modelTree = new ContentModelTree('root', modelDefinition);
   }
 
   setTreeStateController(treeStateController: TreeStateController) {
@@ -32,9 +32,7 @@ export class ModelStateController implements ReactiveController {
   }
 
   getModelPropertyByPath(path: string): Property | undefined {
-    
-    if (!path) {
-      
+    if (!path || path === 'root') {
       return this.modelDefinition;
     }
     const parts = path.split('.');
@@ -48,6 +46,10 @@ export class ModelStateController implements ReactiveController {
         console.warn(`Unexpected property type at ${path}`);
         return undefined;
       }
+      if (!current) {
+        console.warn(`Property not found at ${path}`);
+        return undefined;
+      }
     }
     return current;
   }
@@ -56,7 +58,7 @@ export class ModelStateController implements ReactiveController {
     return this.modelDefinition;
   }
 
-  getModelTree(): ContentModelTree<string> {
+  getModelTree(): ContentModelTree {
     return this.modelTree;
   }
 
@@ -124,7 +126,7 @@ removeBlock(path: string): void {
     console.error('TreeStateController is not set');
     return;
   }
-  this.treeStateController.removeChildBlock(path);
+//  this.treeStateController.removeChildBlock(path);
   this.host.requestUpdate();
 }
 

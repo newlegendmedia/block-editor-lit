@@ -31,8 +31,13 @@ export class DocumentEditor extends LitElement {
 
   constructor() {
     super();
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
     this.initializeControllers();
   }
+  
 
   private async initializeControllers() {
     const modelLibrary = new ModelLibrary();
@@ -59,7 +64,7 @@ export class DocumentEditor extends LitElement {
 
     const title = this.treeStateController.getContentByPath('root.title') || 'Untitled';
 
-    return html`
+    const result = html`
       <div class="document">
         <h1>${title}</h1>
         <block-component
@@ -73,6 +78,7 @@ export class DocumentEditor extends LitElement {
         <p>Test Counter: ${this.testCounter}</p>
       </div>
     `;
+    return result;
   }
 
   private testReactivity() {

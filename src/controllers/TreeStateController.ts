@@ -1,120 +1,107 @@
 import { ReactiveController, ReactiveControllerHost } from 'lit';
 import { PathTree } from '../tree/PathTree';
 import { PathTreeNode } from '../tree/PathTreeNode';
-import { Property, ModelDefinition, isModel, isList, isGroup, isElement } from '../types/ModelDefinition';
-import { BaseBlock, ModelBlock, GroupBlock, ListBlock, ElementBlock } from '../blocks/BaseBlock';
+import { Property, ModelDefinition, isModel, isGroup, isElement, isList } from '../types/ModelDefinition';
+import { ElementBlock, ModelBlock, ListBlock, GroupBlock } from '../blocks/BaseBlock';
+import { BaseBlock } from '../blocks/BaseBlock';
 import { ModelStateController } from './ModelStateController';
 import { DocumentBlock } from '../blocks/DocumentBlock';
 import { generateId } from '../util/generateId';
 
 export class TreeStateController implements ReactiveController {
   host: ReactiveControllerHost;
-  private tree: PathTree<string, any>;
+  private tree: PathTree<string, BaseBlock>;
   private modelStateController: ModelStateController;
 
   constructor(host: ReactiveControllerHost, modelDefinition: ModelDefinition, modelStateController: ModelStateController) {
     this.host = host;
     this.host.addController(this);
-    this.tree = new PathTree<string, any>('root', {});
     this.modelStateController = modelStateController;
+    
+    this.tree = new PathTree<string, BaseBlock>('root', new DocumentBlock(modelDefinition, 'root', this, modelStateController));
     this.initializeWithDocument(modelDefinition);
   }
-
+  
   hostConnected() {
-    // Initialization logic when the host element is connected
   }
 
   hostDisconnected() {
-    // Cleanup logic when the host element is disconnected
   }
 
-  getContentByPath(path: string): any {
-    const content = this.tree.getNodeByPath(path)?.item;
-    console.log(path, content);
-    return content;
-  }
-
-  setContentByPath(path: string, value: any) {
-    const node = this.tree.getNodeByPath(path);
-    console.log(path, node, value);
-    if (node) {
-      node.item = value;
-      this.host.requestUpdate();
-    }
-  }
-
+  // Wrap key methods with debugging
   getBlock(path: string): BaseBlock | undefined {
-    return this.tree.getNodeByPath(path)?.block;
+    return this.tree.getNodeByPath(path)?.item;
+  }
+
+
+  private createChildBlocks(properties: Property[], parentPath: string) {
+    properties.forEach((prop) => {
+      const path = `${parentPath}.${prop.key}`;
+      const block = this.createBlock(prop, path);
+      const newNode = this.tree.add(block, this.tree.getNodeByPath(parentPath)?.id, prop.key);
+      
+      if (newNode && (isModel(prop) || isGroup(prop)) && prop.properties) {
+        this.createChildBlocks(prop.properties, path);
+      }
+    });
+  }
+
+  private createBlock(property: Property, path: string): BaseBlock {
+    let block: BaseBlock;
+    if (isElement(property)) {
+      block = new ElementBlock(property, path, this, this.modelStateController);
+    } else if (isModel(property)) {
+      block = new ModelBlock(property, path, this, this.modelStateController);
+    } else if (isList(property)) {
+      block = new ListBlock(property, path, this, this.modelStateController);
+    } else if (isGroup(property)) {
+      block = new GroupBlock(property, path, this, this.modelStateController);
+    } else {
+      console.warn(`Unknown property type for ${path}. Defaulting to ElementBlock.`);
+      block = new ElementBlock(property, path, this, this.modelStateController);
+    }
+    return block;
   }
 
   getChildBlocks(path: string): BaseBlock[] {
     const node = this.tree.getNodeByPath(path);
-    return node ? node.children
-      .map(child => (child as PathTreeNode<string, any>).block)
-      .filter((block): block is BaseBlock => block !== undefined) : [];
+    const childBlocks = node ? node.children.map(child => (child as PathTreeNode<string, BaseBlock>).item) : [];
+    return childBlocks;
   }
 
   addChildBlock(parentPath: string, childProperty: Property) {
     const newId = generateId();
     const newPath = parentPath ? `${parentPath}.${newId}` : newId;
-    const newNode = this.tree.add({}, parentPath ? this.tree.getNodeByPath(parentPath)?.id : undefined, newId);
-    if (newNode) {
-      newNode.block = this.createBlock(childProperty, newPath);
-      this.host.requestUpdate();
-    }
-  }
-
-  removeChildBlock(path: string) {
-    const node = this.tree.getNodeByPath(path);
-    if (node) {
-      this.tree.remove(node.id);
-      this.host.requestUpdate();
-    }
-  }
-
-  private createBlock(property: Property, path: string): BaseBlock {
-    if (isElement(property)) {
-      return new ElementBlock(property, path, this, this.modelStateController);
-    } else if (isModel(property)) {
-      return new ModelBlock(property, path, this, this.modelStateController);
-    } else if (isList(property)) {
-      return new ListBlock(property, path, this, this.modelStateController);
-    } else if (isGroup(property)) {
-      return new GroupBlock(property, path, this, this.modelStateController);
+    const newBlock = this.createBlock(childProperty, newPath);
+    const addedNode = this.tree.add(newBlock, this.tree.getNodeByPath(parentPath)?.id, newId);
+    
+    if (addedNode) {
+      this.requestUpdate(`addChildBlock: ${newPath}`);
     } else {
-      console.warn(`Unknown property type for ${path}. Defaulting to ElementBlock.`);
-      return new ElementBlock(property, path, this, this.modelStateController);
+      console.warn(`TreeStateController: Failed to add child block at path: ${newPath}`);
     }
   }
 
   initializeWithDocument(documentModel: ModelDefinition) {
-    this.tree = new PathTree<string, any>('root', {});
-    const rootNode = this.tree.getNodeByPath('root');
-    if (rootNode) {
-      rootNode.block = new DocumentBlock(documentModel, 'root', this, this.modelStateController);
-    }
+    this.tree = new PathTree<string, BaseBlock>('root', new DocumentBlock(documentModel, 'root', this, this.modelStateController));
     this.createChildBlocks(documentModel.properties, 'root');
   }
 
-  private createChildBlocks(properties: Property[], parentPath: string) {
-    properties.forEach((prop) => {
-      const path = `${parentPath}.${prop.key}`;
-      const newNode = this.tree.add({}, this.tree.getNodeByPath(parentPath)?.id, prop.key);
-      
-      if (newNode) {
-        newNode.block = this.createBlock(prop, path);
+  getContentByPath(path: string): any {
+    const block = this.getBlock(path);
+    return block ? block.getContent() : undefined;
+  }
 
-        if (isElement(prop)) {
-          newNode.item = '';
-        } else if (isModel(prop) || isGroup(prop)) {
-          newNode.item = {};
-          if (prop.properties) {
-            this.createChildBlocks(prop.properties, path);
-          }
-        } else if (isList(prop)) {
-          newNode.item = [];
-        }
-      }
-    });
+  setContentByPath(path: string, content: any): void {
+    const block = this.getBlock(path);
+    if (block) {
+      block.setContent(content);
+    } else {
+      console.warn(`No block found for path: ${path}`);
+    }
+  }
+  
+  requestUpdate(_reason: string) {
+    this.host.requestUpdate();
   }
 }
