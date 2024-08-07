@@ -23,6 +23,9 @@ export class DocumentEditor extends LitElement {
       border: 1px solid #ccc;
       padding: 16px;
     }
+    .log-button {
+      margin-top: 16px;
+    }
   `;
 
   constructor() {
@@ -58,28 +61,16 @@ export class DocumentEditor extends LitElement {
           .modelStateController=${this.modelStateController}
         ></block-component>
       </div>
-      <button @click=${this.logDocumentStructure}>Log Document Structure</button>
+      <button class="log-button" @click=${this.logDocumentStructure}>Log Document Structure</button>
     `;
   }
 
   private logDocumentStructure() {
-    console.log('=== Document Structure ===');
-    this.logTree(this.rootPath);
-  }
-
-  private logTree(path: string, depth: number = 0) {
-    const node = this.treeStateController?.getContentByPath(path);
-    const block = this.treeStateController?.getBlock(path);
-    
-    if (!node || !block) return;
-
-    const indent = '  '.repeat(depth);
-    console.log(`${indent}${block.modelProperty.key} (${block.modelProperty.type}): ${JSON.stringify(node)}`);
-
-    const childBlocks = this.treeStateController?.getChildBlocks(path) || [];
-    childBlocks.forEach((childBlock, _index) => {
-      const childPath = `${path}.${childBlock.modelProperty.key}`;
-      this.logTree(childPath, depth + 1);
-    });
+    const documentBlock = this.treeStateController?.getBlock(this.rootPath);
+    if (documentBlock && 'logDocumentStructure' in documentBlock) {
+      (documentBlock as any).logDocumentStructure();
+    } else {
+      console.error('Unable to log document structure: DocumentBlock not found or method not available');
+    }
   }
 }

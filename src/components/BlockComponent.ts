@@ -1,5 +1,6 @@
 import { LitElement, html, css, PropertyValues } from 'lit';
 import { property, customElement } from 'lit/decorators.js';
+import { BaseBlock } from '../blocks/BaseBlock';
 import { TreeStateController } from '../controllers/TreeStateController';
 import { ModelStateController } from '../controllers/ModelStateController';
 

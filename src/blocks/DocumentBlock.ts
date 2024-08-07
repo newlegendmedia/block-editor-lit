@@ -14,24 +14,15 @@ export class DocumentBlock extends ModelBlock {
     super(modelProperty, path, treeStateController, modelStateController);
   }
 
-  render(): TemplateResult {
-    const childBlocks = this.treeStateController.getChildBlocks(this.path);
-
+  renderContent(): TemplateResult {
     return html`
       <div class="document-block">
         <h1>Document Editor</h1>
-        ${childBlocks.map((child) => html`
-          <block-component
-            .path=${child.path}
-            .treeStateController=${this.treeStateController}
-            .modelStateController=${this.modelStateController}
-          ></block-component>
-        `)}
       </div>
-      <button class="log-button" @click=${this.logDocumentStructure}>Log Document Structure</button>
     `;
   }
 
+  // The logDocumentStructure method is kept here but not rendered in the template
   logDocumentStructure() {
     console.log('=== Document Structure ===');
     this.logModelTree();
