@@ -1,27 +1,25 @@
 import { ReactiveController, ReactiveControllerHost } from 'lit';
-import { ContentModelTree } from '../tree/ContentModelTree';
-import { ContentDataTree } from '../tree/ContentDataTree';
+import { PathTree } from '../tree/PathTree';
+import { ExtendedTreeNode } from '../tree/ExtendedTreeNode';
 import { Property, ModelDefinition, isModel, isList, isGroup, isElement } from '../types/ModelDefinition';
-import { BaseBlock } from '../blocks/BaseBlock';
+import { BaseBlock, ModelBlock, GroupBlock, ListBlock, ElementBlock } from '../blocks/BaseBlock';
 import { ModelStateController } from './ModelStateController';
-import { ModelBlock, GroupBlock, ListBlock, ElementBlock } from '../blocks/BaseBlock';
+import { DocumentBlock } from '../blocks/DocumentBlock';
+import { generateId } from '../util/generateId';
 
 export class TreeStateController implements ReactiveController {
   host: ReactiveControllerHost;
-  private contentTree: ContentDataTree<string>;
-  private modelTree: ContentModelTree<string>;
-  private blockRegistry: Map<string, BaseBlock> = new Map();
+  private tree: PathTree<string, any>;
   private modelStateController: ModelStateController;
 
-  constructor(host: ReactiveControllerHost, modelTree: ContentModelTree<string>, modelStateController: ModelStateController) {
+  constructor(host: ReactiveControllerHost, modelDefinition: ModelDefinition, modelStateController: ModelStateController) {
     this.host = host;
     this.host.addController(this);
-    this.modelTree = modelTree;
-    this.contentTree = new ContentDataTree<string>('root');
+    this.tree = new PathTree<string, any>('root', {});
     this.modelStateController = modelStateController;
+    this.initializeWithDocument(modelDefinition);
   }
 
-  
   hostConnected() {
     // Initialization logic when the host element is connected
   }
@@ -31,57 +29,44 @@ export class TreeStateController implements ReactiveController {
   }
 
   getContentByPath(path: string): any {
-    return this.contentTree.getValueByPath(path);
+    return this.tree.getNodeByPath(path)?.item;
   }
 
   setContentByPath(path: string, value: any) {
-    this.contentTree.setValueByPath(path, value);
-    this.host.requestUpdate();
-  }
-
-  getModelPropertyByPath(path: string): Property | undefined {
-    return this.modelTree.getPropertyByPath(path);
-  }
-
-  // New method to register a block
-  registerBlock(path: string, block: BaseBlock) {
-    this.blockRegistry.set(path, block);
+    const node = this.tree.getNodeByPath(path);
+    if (node) {
+      node.item = value;
+      this.host.requestUpdate();
+    }
   }
 
   getBlock(path: string): BaseBlock | undefined {
-    
-    const block = this.blockRegistry.get(path);
-    
-    return block;
+    return this.tree.getNodeByPath(path)?.block;
   }
 
-  // New method to get child blocks
   getChildBlocks(path: string): BaseBlock[] {
-    const childPaths = this.contentTree.getChildPaths(path);
-    return childPaths.map(childPath => this.getBlock(childPath)).filter((block): block is BaseBlock => block !== undefined);
+    const node = this.tree.getNodeByPath(path);
+    return node ? node.children
+      .map(child => (child as ExtendedTreeNode<string, any>).block)
+      .filter((block): block is BaseBlock => block !== undefined) : [];
   }
 
-  // New method to add a child block
   addChildBlock(parentPath: string, childProperty: Property) {
-    const newPath = this.contentTree.addChild(parentPath, {});
-    const parentBlock = this.getBlock(parentPath);
-    if (parentBlock) {
-      const childBlock = this.createBlock(childProperty, newPath);
-      parentBlock.addChild(childBlock);
-      this.registerBlock(newPath, childBlock);
+    const newId = generateId();
+    const newPath = parentPath ? `${parentPath}.${newId}` : newId;
+    const newNode = this.tree.add({}, parentPath ? this.tree.getNodeByPath(parentPath)?.id : undefined, newId);
+    if (newNode) {
+      newNode.block = this.createBlock(childProperty, newPath);
+      this.host.requestUpdate();
     }
   }
 
-  // New method to remove a child block
   removeChildBlock(path: string) {
-    const parentPath = this.contentTree.getParentPath(path);
-    this.contentTree.removeChild(path);
-    const parentBlock = this.getBlock(parentPath);
-    const childBlock = this.getBlock(path);
-    if (parentBlock && childBlock) {
-      parentBlock.removeChild(childBlock);
+    const node = this.tree.getNodeByPath(path);
+    if (node) {
+      this.tree.remove(node.id);
+      this.host.requestUpdate();
     }
-    this.blockRegistry.delete(path);
   }
 
   private createBlock(property: Property, path: string): BaseBlock {
@@ -100,48 +85,33 @@ export class TreeStateController implements ReactiveController {
   }
 
   initializeWithDocument(documentModel: ModelDefinition) {
-    
-    this.modelTree = new ContentModelTree<string>('root', documentModel);
-    this.contentTree = new ContentDataTree<string>('root');
-    
-    // Initialize the content tree with empty structure
-    this.contentTree.setValueByPath('', {});
-    
-    // Create the root block
-    const rootBlock = this.createBlock(documentModel, '');
-    this.registerBlock('', rootBlock);
-
-    // Recursively create child blocks
-    this.createChildBlocks(documentModel.properties, '');
-
-    
+    this.tree = new PathTree<string, any>('root', {});
+    const rootNode = this.tree.getNodeByPath('root');
+    if (rootNode) {
+      rootNode.block = new DocumentBlock(documentModel, 'root', this, this.modelStateController);
+    }
+    this.createChildBlocks(documentModel.properties, 'root');
   }
 
   private createChildBlocks(properties: Property[], parentPath: string) {
-    
     properties.forEach((prop) => {
-      const path = parentPath ? `${parentPath}.${prop.key}` : prop.key;
+      const path = `${parentPath}.${prop.key}`;
+      const newNode = this.tree.add({}, this.tree.getNodeByPath(parentPath)?.id, prop.key);
       
-      const block = this.createBlock(prop, path);
-      this.registerBlock(path, block);
-      
+      if (newNode) {
+        newNode.block = this.createBlock(prop, path);
 
-      // Initialize content
-      if (isElement(prop)) {
-        this.setContentByPath(path, '');
-      } else if (isModel(prop) || isGroup(prop)) {
-        this.setContentByPath(path, {});
-        if (prop.properties) {
-          this.createChildBlocks(prop.properties, path);
+        if (isElement(prop)) {
+          newNode.item = '';
+        } else if (isModel(prop) || isGroup(prop)) {
+          newNode.item = {};
+          if (prop.properties) {
+            this.createChildBlocks(prop.properties, path);
+          }
+        } else if (isList(prop)) {
+          newNode.item = [];
         }
-      } else if (isList(prop)) {
-        this.setContentByPath(path, []);
       }
     });
-    
   }
-
-  
-
-  // Additional methods for tree manipulation can be added here
 }

@@ -15,12 +15,18 @@ export class DocumentBlock extends ModelBlock {
   }
 
   render(): TemplateResult {
-    const children = this.getChildren();
+    const childBlocks = this.treeStateController.getChildBlocks(this.path);
 
     return html`
       <div class="document-block">
         <h1>Document Editor</h1>
-        ${children.map((child) => child.render())}
+        ${childBlocks.map((child) => html`
+          <block-component
+            .path=${child.path}
+            .treeStateController=${this.treeStateController}
+            .modelStateController=${this.modelStateController}
+          ></block-component>
+        `)}
       </div>
       <button class="log-button" @click=${this.logDocumentStructure}>Log Document Structure</button>
     `;
@@ -57,25 +63,22 @@ export class DocumentBlock extends ModelBlock {
 
   private logContentTree() {
     console.log('--- Content Tree ---');
-    this.logContentTreeRecursive();
+    this.logContentTreeRecursive(this.path);
   }
 
-  private logContentTreeRecursive(path: string = '', depth: number = 0) {
+  private logContentTreeRecursive(path: string, depth: number = 0) {
     const content = this.treeStateController.getContentByPath(path);
+    const block = this.treeStateController.getBlock(path);
     const indent = '  '.repeat(depth);
 
-    if (typeof content === 'object' && content !== null) {
-      console.log(`${indent}${path || 'root'}:`);
-      Object.entries(content).forEach(([key, value]) => {
-        const childPath = path ? `${path}.${key}` : key;
-        if (typeof value === 'object' && value !== null) {
-          this.logContentTreeRecursive(childPath, depth + 1);
-        } else {
-          console.log(`${indent}  ${key}: ${value}`);
-        }
+    if (block) {
+      console.log(`${indent}${block.modelProperty.key} (${block.modelProperty.type}): ${JSON.stringify(content)}`);
+      const childBlocks = this.treeStateController.getChildBlocks(path);
+      childBlocks.forEach(childBlock => {
+        this.logContentTreeRecursive(childBlock.path, depth + 1);
       });
     } else {
-      console.log(`${indent}${path}: ${content}`);
+      console.log(`${indent}${path}: ${JSON.stringify(content)}`);
     }
   }
 }

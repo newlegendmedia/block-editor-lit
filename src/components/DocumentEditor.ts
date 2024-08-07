@@ -3,13 +3,11 @@ import { customElement, state } from 'lit/decorators.js';
 import { TreeStateController } from '../controllers/TreeStateController';
 import { ModelStateController } from '../controllers/ModelStateController';
 import { ModelLibrary } from '../content/ModelLibrary';
-import { ContentModelTree } from '../tree/ContentModelTree';
-import { DocumentBlock } from '../blocks/DocumentBlock';
 import './BlockComponent';
 
 @customElement('document-editor')
 export class DocumentEditor extends LitElement {
-  @state() private documentBlock?: DocumentBlock;
+  @state() private rootPath: string = 'root';
 
   private treeStateController?: TreeStateController;
   private modelStateController?: ModelStateController;
@@ -42,30 +40,46 @@ export class DocumentEditor extends LitElement {
     }
 
     this.modelStateController = new ModelStateController(this, modelDefinition);
-    this.treeStateController = new TreeStateController(
-      this, 
-      new ContentModelTree<string>('root', modelDefinition),
-      this.modelStateController
-    );
+    this.treeStateController = new TreeStateController(this, modelDefinition, this.modelStateController);
     
-    this.treeStateController.initializeWithDocument(modelDefinition);
-    
-    this.documentBlock = new DocumentBlock(modelDefinition, '', this.treeStateController, this.modelStateController);
-
     this.requestUpdate();
   }
 
   render() {
+    if (!this.treeStateController || !this.modelStateController) {
+      return html`<div>Loading...</div>`;
+    }
+
     return html`
       <div class="document">
-        ${this.documentBlock ? html`
-          <block-component
-            .block=${this.documentBlock}
-            .treeStateController=${this.treeStateController}
-            .modelStateController=${this.modelStateController}
-          ></block-component>
-        ` : 'Loading...'}
+        <block-component
+          .path=${this.rootPath}
+          .treeStateController=${this.treeStateController}
+          .modelStateController=${this.modelStateController}
+        ></block-component>
       </div>
+      <button @click=${this.logDocumentStructure}>Log Document Structure</button>
     `;
+  }
+
+  private logDocumentStructure() {
+    console.log('=== Document Structure ===');
+    this.logTree(this.rootPath);
+  }
+
+  private logTree(path: string, depth: number = 0) {
+    const node = this.treeStateController?.getContentByPath(path);
+    const block = this.treeStateController?.getBlock(path);
+    
+    if (!node || !block) return;
+
+    const indent = '  '.repeat(depth);
+    console.log(`${indent}${block.modelProperty.key} (${block.modelProperty.type}): ${JSON.stringify(node)}`);
+
+    const childBlocks = this.treeStateController?.getChildBlocks(path) || [];
+    childBlocks.forEach((childBlock, _index) => {
+      const childPath = `${path}.${childBlock.modelProperty.key}`;
+      this.logTree(childPath, depth + 1);
+    });
   }
 }

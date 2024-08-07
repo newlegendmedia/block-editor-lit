@@ -2,7 +2,7 @@ import { TreeNode } from './TreeNode';
 import { generateId } from '../util/generateId';
 
 export class Tree<K, Item> {
-    private nodes: Map<K, TreeNode<K, Item>>;
+    protected nodes: Map<K, TreeNode<K, Item>>;
     protected  root: TreeNode<K, Item>;
 
     constructor(rootId: K, rootItem?: Item) {
