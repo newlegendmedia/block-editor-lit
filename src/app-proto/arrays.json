@@ -1,0 +1,9 @@
+{
+    "sectionArray": {
+      "type": "array",
+      "key": "sections",
+      "name": "Document Sections",
+      "itemType": { "type": "object", "key": "sectionModel", "ref": "sectionModel" },
+      "repeatable": true
+    }
+  }

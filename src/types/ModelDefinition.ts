@@ -1,5 +1,4 @@
 // ModelDefinition.ts
-
 export interface IBaseProperty {
   id?: string;
   key: string;

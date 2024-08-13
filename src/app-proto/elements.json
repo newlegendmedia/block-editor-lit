@@ -1,0 +1,68 @@
+{
+  "titleElement": {
+    "type": "element",
+    "key": "titleElement",
+    "name": "Document Title",
+    "base": "text"
+  },
+  "headingElement": {
+    "type": "element",
+    "key": "headingElement",
+    "name": "Section Heading",
+    "base": "text"
+  },
+  "bodyElement": {
+    "type": "element",
+    "key": "bodyElement",
+    "name": "Section Body",
+    "base": "text"
+  },
+  "dateElement": {
+    "type": "element",
+    "key": "dateElement",
+    "name": "Document Date",
+    "base": "datetime"
+  },
+  "heading": {
+    "type": "element",
+    "key": "heading",
+    "name": "Heading",
+    "base": "text"
+  },
+  "textInput": {
+      "type": "element",
+      "key": "textInput",
+      "name": "Text Input",
+      "base": "text"
+    },
+    "numberInput": {
+      "type": "element",
+      "key": "numberInput",
+      "name": "Number Input",
+      "base": "number"
+    },
+    "dateInput": {
+      "type": "element",
+      "key": "dateInput",
+      "name": "Date Input",
+      "base": "datetime"
+    },
+    "checkbox": {
+      "type": "element",
+      "key": "checkbox",
+      "name": "Checkbox",
+      "base": "boolean"
+    },
+    "authorNameElement": {
+      "type": "element",
+      "key": "authorNameElement",
+      "name": "Author Name",
+      "base": "text"
+    },
+    "authorEmailElement": {
+      "type": "element",
+      "key": "authorEmailElement",
+      "name": "Author Email",
+      "base": "text"
+    }    
+  }

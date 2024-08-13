@@ -9,12 +9,11 @@
     <h-app>
       <div slot="topbar">Your top bar content here</div>
       <div slot="sidebar">Your sidebar content here</div>
-      <div slot="main">
-        <document-editor></document-editor>
+      <div id="app" slot="main">
       </div>
     </h-app>
     
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/app-proto/app.ts"></script>
     <script type="module">
       // customElements.whenDefined('h-menu').then(() => {
       //   const menu = document.getElementById('myMenu');

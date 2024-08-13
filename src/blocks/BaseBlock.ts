@@ -2,10 +2,10 @@ import { ReactiveController, ReactiveControllerHost, TemplateResult, html } from
 import { Property } from '../types/ModelDefinition';
 import { TreeStateController } from '../controllers/TreeStateController';
 import { ModelStateController } from '../controllers/ModelStateController';
+//import { isElement, isModel, isList, isGroup } from '../types/ModelDefinition';
 
 export abstract class BaseBlock implements ReactiveController {
   protected host: ReactiveControllerHost;
-  protected _content: any;
 
   constructor(
     public modelProperty: Property,
@@ -15,8 +15,8 @@ export abstract class BaseBlock implements ReactiveController {
   ) {
     this.host = treeStateController.host;
     this.host.addController(this);
-    this._content = undefined; // Initialize content as undefined
   }
+
 
   updateHost(newHost: ReactiveControllerHost) {
     this.host.removeController(this);
@@ -27,11 +27,11 @@ export abstract class BaseBlock implements ReactiveController {
   abstract render(): TemplateResult;
 
   getContent(): any {
-    return this._content;
+    return this.treeStateController.getContentByPath(this.path);
   }
 
   setContent(content: any): void {
-    this._content = content;
+    this.treeStateController.setContentByPath(this.path, content);
     this.requestUpdate();
   }
 
@@ -68,18 +68,19 @@ export abstract class BaseBlock implements ReactiveController {
 }
 
 export class ElementBlock extends BaseBlock {
-  renderContent(): TemplateResult {
+  render(): TemplateResult {
     const content = this.getContent();
     return html`
       <div class="element-block">
         <label>${this.modelProperty.label || this.modelProperty.key}</label>
-        <input type="text" .value=${content || ''} @input=${this.handleInput} />
+        <input 
+          type="text" 
+          .value=${content || ''} 
+          @input=${this.handleInput}
+          placeholder=${this.modelProperty.label || this.modelProperty.key}
+        />
       </div>
     `;
-  }
-
-  render(): TemplateResult {
-    return this.renderContent();
   }
 
   private handleInput(e: Event) {
@@ -89,31 +90,64 @@ export class ElementBlock extends BaseBlock {
 }
 
 export class ModelBlock extends BaseBlock {
-  renderContent(): TemplateResult {
+  render(): TemplateResult {
+    console.log(`Rendering ModelBlock: ${this.path}`);
     return html`
       <div class="model-block">
         <h3>${this.modelProperty.label || this.modelProperty.key}</h3>
+        ${this.renderChildBlocks()}
       </div>
     `;
   }
 
-  render(): TemplateResult {
-    return this.renderContent();
+  protected renderChildBlocks(): TemplateResult {
+    const childBlocks = this.treeStateController.getChildBlocks(this.path);
+    console.log(`Rendering child blocks for ModelBlock ${this.path}:`, childBlocks.map(b => b.path));
+    return html`
+      <div class="model-children">
+        ${childBlocks.map(childBlock => html`
+          <block-component
+            .path=${childBlock.path}
+            .treeStateController=${this.treeStateController}
+            .modelStateController=${this.modelStateController}
+          ></block-component>
+        `)}
+      </div>
+    `;
   }
 }
 
 export class ListBlock extends BaseBlock {
-  renderContent(): TemplateResult {
+  render(): TemplateResult {
+    console.log(`Rendering ListBlock: ${this.path}`);
     return html`
       <div class="list-block">
         <h3>${this.modelProperty.label || this.modelProperty.key}</h3>
+        ${this.renderChildBlocks()}
         <button @click=${this.handleAddItem}>Add Item</button>
       </div>
     `;
   }
 
-  render(): TemplateResult {
-    return this.renderContent();
+  protected renderChildBlocks(): TemplateResult {
+    const items = this.getContent() || [];
+    console.log(`Rendering list items for ListBlock ${this.path}:`, items.length);
+    return html`
+      <ul>
+        ${items.map((_: any, index: any) => {
+          const itemPath = `${this.path}.${index}`;
+          return html`
+            <li>
+              <block-component
+                .path=${itemPath}
+                .treeStateController=${this.treeStateController}
+                .modelStateController=${this.modelStateController}
+              ></block-component>
+            </li>
+          `;
+        })}
+      </ul>
+    `;
   }
 
   private handleAddItem() {
@@ -123,15 +157,48 @@ export class ListBlock extends BaseBlock {
 }
 
 export class GroupBlock extends BaseBlock {
-  renderContent(): TemplateResult {
+  render(): TemplateResult {
+    console.log(`Rendering GroupBlock: ${this.path}`);
     return html`
       <div class="group-block">
         <h3>${this.modelProperty.label || this.modelProperty.key}</h3>
+        ${this.renderChildBlocks()}
       </div>
     `;
   }
 
-  render(): TemplateResult {
-    return this.renderContent();
+  protected renderChildBlocks(): TemplateResult {
+    const childBlocks = this.treeStateController.getChildBlocks(this.path);
+    console.log(`Rendering child blocks for GroupBlock ${this.path}:`, childBlocks.map(b => b.path));
+    return html`
+      <div class="group-children">
+        ${childBlocks.map(childBlock => html`
+          <block-component
+            .path=${childBlock.path}
+            .treeStateController=${this.treeStateController}
+            .modelStateController=${this.modelStateController}
+          ></block-component>
+        `)}
+      </div>
+    `;
   }
 }
+
+// export function createBlock(
+//   property: Property, 
+//   path: string, 
+//   treeStateController: TreeStateController, 
+//   modelStateController: ModelStateController
+// ): BaseBlock {
+//   if (isElement(property)) {
+//     return new ElementBlock(property, path, treeStateController, modelStateController);
+//   } else if (isModel(property)) {
+//     return new ModelBlock(property, path, treeStateController, modelStateController);
+//   } else if (isList(property)) {
+//     return new ListBlock(property, path, treeStateController, modelStateController);
+//   } else if (isGroup(property)) {
+//     return new GroupBlock(property, path, treeStateController, modelStateController);
+//   } else {
+//     throw new Error(`Unknown property type for ${path}`);
+//   }
+//}

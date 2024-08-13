@@ -3,24 +3,25 @@ import { PathTreeNode } from './PathTreeNode';
 import { generateId } from '../util/generateId';
 
 export class PathTree<K, Item> extends Tree<K, Item> {
-  private pathLookup: Map<string, K>;
   protected override root: PathTreeNode<K, Item>;
   protected override nodes: Map<K, PathTreeNode<K, Item>>;
+  private pathLookup: Map<string, K>;
 
   constructor(rootId: K, rootItem?: Item) {
     super(rootId, rootItem);
-    this.pathLookup = new Map();
     this.root = new PathTreeNode(rootId, rootItem || {} as Item);
     this.nodes = new Map([[rootId, this.root]]);
+    this.pathLookup = new Map();
     this.initializePathLookup();
   }
+
 
   override get(id: K): PathTreeNode<K, Item> | undefined {
     return this.nodes.get(id);
   }
 
   private initializePathLookup(): void {
-    this.buildPathLookup(this.root);
+    this.buildPathLookup(this.root as PathTreeNode<K, Item>);
   }
 
   private buildPathLookup(node: PathTreeNode<K, Item>, parentPath: string = ''): void {
@@ -32,29 +33,33 @@ export class PathTree<K, Item> extends Tree<K, Item> {
     });
   }
 
-  getNodeByPath(path: string): PathTreeNode<K, Item> | undefined {
-    const nodeId = this.pathLookup.get(path);
-    return nodeId ? this.get(nodeId) : undefined;
-  }
-
   override add(item: Item, parentId?: K, id?: K): PathTreeNode<K, Item> | undefined {
     const nodeId = id || generateId() as K;
-    const node = new PathTreeNode(nodeId, item, parentId || null);
-    if (!parentId) {
-      this.root.children.push(node);
+    let parentNode: PathTreeNode<K, Item> | undefined;
+    let parentPath = '';
+
+    if (parentId) {
+      parentNode = this.nodes.get(parentId) as PathTreeNode<K, Item>;
+      if (!parentNode) {
+        console.warn(`Failed to add node: parent not found with id ${parentId}`, item, this.nodes);
+        return undefined;
+      }
+      parentPath = this.getNodePath(parentId) || '';
     } else {
-      const parentNode = this.nodes.get(parentId);
-      if (!parentNode) return undefined;
-      parentNode.children.push(node);
+      parentNode = this.root;
     }
-    this.nodes.set(nodeId, node);
 
-    const parentPath = parentId ? this.getNodePath(parentId) : '';
-    const newPath = parentPath ? `${parentPath}.${node.id}` : `${node.id}`;
-    this.pathLookup.set(newPath, node.id);
+    const newNode = new PathTreeNode(nodeId, item, parentId || null);
+    parentNode.children.push(newNode);
+    this.nodes.set(nodeId, newNode);
 
-    return node;
+    const newPath = parentPath ? `${parentPath}.${nodeId}` : `${nodeId}`;
+    this.pathLookup.set(newPath, nodeId);
+
+    console.log(`Added node to PathTree: ${newPath}`);
+    return newNode;
   }
+
 
   override remove(nodeId: K): void {
     const nodePath = this.getNodePath(nodeId);
@@ -72,6 +77,11 @@ export class PathTree<K, Item> extends Tree<K, Item> {
     });
   }
 
+  getNodeByPath(path: string): PathTreeNode<K, Item> | undefined {
+    const nodeId = this.pathLookup.get(path);
+    return nodeId ? this.nodes.get(nodeId) as PathTreeNode<K, Item> : undefined;
+  }
+
   private getNodePath(nodeId: K): string | undefined {
     for (const [path, id] of this.pathLookup.entries()) {
       if (id === nodeId) {
@@ -79,7 +89,7 @@ export class PathTree<K, Item> extends Tree<K, Item> {
       }
     }
     return undefined;
-  }
+  }  
 
 //   movePath(fromPath: string, toPath: string): boolean {
 //     const nodeToMove = this.getNodeByPath(fromPath);

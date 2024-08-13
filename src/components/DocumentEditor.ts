@@ -1,5 +1,5 @@
 import { LitElement, html, css } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
 import { TreeStateController } from '../controllers/TreeStateController';
 import { ModelStateController } from '../controllers/ModelStateController';
 import { ModelLibrary } from '../content/ModelLibrary';
@@ -7,11 +7,13 @@ import './BlockComponent';
 
 @customElement('document-editor')
 export class DocumentEditor extends LitElement {
+  @property({ type: Object }) initialContent: any = {};
   @state() private rootPath: string = 'root';
   @state() private testCounter: number = 0;
 
   private treeStateController?: TreeStateController;
   private modelStateController?: ModelStateController;
+
 
   static styles = css`
     :host {
@@ -33,11 +35,10 @@ export class DocumentEditor extends LitElement {
     super();
   }
 
-  connectedCallback() {
+  async connectedCallback() {
     super.connectedCallback();
-    this.initializeControllers();
+    await this.initializeControllers();
   }
-  
 
   private async initializeControllers() {
     const modelLibrary = new ModelLibrary();
@@ -49,10 +50,12 @@ export class DocumentEditor extends LitElement {
     }
 
     this.modelStateController = new ModelStateController(this, modelDefinition);
-    this.treeStateController = new TreeStateController(this, modelDefinition, this.modelStateController);
-    
-    // Initialize with a default title
-    this.treeStateController.setContentByPath('root.title', 'Initial Title');
+    this.treeStateController = new TreeStateController(
+      this, 
+      modelDefinition, 
+      this.modelStateController,
+      this.initialContent
+    );
     
     this.requestUpdate();
   }

@@ -1,0 +1,11 @@
+{
+    "footerGroup": {
+      "type": "group",
+      "key": "footer",
+      "name": "Document Footer",
+      "itemTypes": [
+        { "type": "element", "ref": "dateElement" },
+        { "type": "object", "ref": "authorModel" }
+      ]
+    }
+  }
