@@ -1,14 +1,14 @@
 import { LitElement, html, css } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { property, customElement } from 'lit/decorators.js';
 import type { Model } from './model';
 import { ComponentFactory } from './app';
+import type { UnifiedLibrary } from './ModelLibrary';
 
-// Document Component
 @customElement('document-component')
 export class DocumentComponent extends LitElement {
 	@property({ type: Object }) documentModel!: Model;
-	@property({ type: Object }) documentData: any = {};
-
+	@property({ type: Object }) documentData: any;
+	@property({ type: Object }) library!: UnifiedLibrary;
 	static styles = css`
 		:host {
 			display: block;
@@ -25,12 +25,12 @@ export class DocumentComponent extends LitElement {
 	}
 
 	render() {
-		return html`
-			${ComponentFactory.createComponent(this.documentModel, this.documentData)}
+	  return html`
+		${ComponentFactory.createComponent(this.documentModel, this.documentData, this.library)}
 			<button @click=${this.saveDocument}>Save Document</button>
-		`;
+	  `;
 	}
-
+  
 	handleValueChanged(e: CustomEvent) {
 		const { key, value } = e.detail;
 		this.documentData = { ...this.documentData, [key]: value };

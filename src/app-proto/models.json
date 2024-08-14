@@ -1,45 +1,52 @@
 {
     "document": {
-		"type": "object",
-		"key": "document",
-		"name": "Sample Document",
-		"properties": [
-		  { "type": "element", "key": "title", "ref": "titleElement" },
-		  {
-			"type": "array",
-			"key": "sections",
-			"name": "Document Sections",
-			"itemType": { "type": "object", "key": "section", "ref": "sectionModel" },
-			"repeatable": true
-		  },
-		  {
-			"type": "group",
-			"key": "footer",
-			"name": "Document Footer",
-			"itemTypes": [
-			  { "type": "element", "key": "date", "ref": "dateElement" },
-			  { "type": "object", "key": "author", "ref": "authorModel" }
-			],
-			"editable": true
-		  }
-		]
-	  },
-	"sectionModel": {
-		"type": "object",
-		"key": "sectionModel",
-		"name": "Document Section",
-		"properties": [
-		  { "name": "Heading", "type": "element", "key": "heading", "ref": "headingElement" },
-		  { "name": "Body", "type": "element", "key": "body", "ref": "bodyElement" }
-		]
-	  },
-	  "authorModel": {
-		"type": "object",
-		"key": "authorModel",
-		"name": "Author",
-		"properties": [
-		  { "name": "Author", "type": "element", "key": "name", "ref": "authorNameElement" },
-		  { "name": "Email", "type": "element", "key": "email", "ref": "authorEmailElement" }
-		]
-	  }	
-}
+      "type": "object",
+      "key": "document",
+      "name": "Sample Document",
+      "properties": [
+        { "type": "element", "key": "title", "ref": "titleElement" },
+        {
+          "type": "array",
+          "key": "sections",
+          "name": "Document Sections",
+          "itemType": { "type": "object", "key": "section", "ref": "sectionModel" },
+          "repeatable": true
+        },
+        {
+          "type": "group",
+          "key": "predefinedGroup",
+          "name": "Predefined Group",
+          "editable": false,
+          "itemTypes": [
+            { "type": "element", "key": "date", "ref": "dateElement" },
+            { "type": "object", "key": "author", "ref": "authorModelX" }
+          ]
+        },
+        {
+          "type": "group",
+          "key": "editableGroup",
+          "name": "Editable Group",
+          "editable": true,
+          "itemTypes": { "type": "group", "ref": "editableGroupTypes" }
+        }
+      ]
+    },
+    "sectionModel": {
+      "type": "object",
+      "key": "sectionModel",
+      "name": "Document Section",
+      "properties": [
+        { "name": "Heading", "type": "element", "key": "heading", "ref": "headingElement" },
+        { "name": "Body", "type": "element", "key": "body", "ref": "bodyElement" }
+      ]
+    },
+    "authorModel": {
+      "type": "object",
+      "key": "authorModel",
+      "name": "Author",
+      "properties": [
+        { "name": "Name", "type": "element", "key": "name", "ref": "authorNameElement" },
+        { "name": "Email", "type": "element", "key": "email", "ref": "authorEmailElement" }
+      ]
+    }    
+  }

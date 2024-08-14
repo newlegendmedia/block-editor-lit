@@ -1,6 +1,7 @@
 import { LitElement, html, TemplateResult } from 'lit';
-import { property, customElement } from 'lit/decorators.js';
+import { property, customElement, state } from 'lit/decorators.js';
 import type { Property, Model } from './model.ts';
+import { isElement, isObject, isArray, isGroup } from './model.ts';
 import { UnifiedLibrary, resolveRefs } from './ModelLibrary.ts';
 
 // Import all custom elements
@@ -11,30 +12,54 @@ import './ElementComponent';
 import './GroupComponent';
 import './DocumentComponent';
 
-// ComponentFactory update
 export class ComponentFactory {
-	static createComponent(model: Property, data: any): TemplateResult {
+	static createComponent(model: Property, data: any, library: UnifiedLibrary): TemplateResult {
+		const actualData = data && data.__type ? data.value : data;
 		switch (model.type) {
 			case 'object':
-				return html`<object-component .model=${model} .data=${data}></object-component>`;
+				return html`<object-component
+					.library=${library}
+					.model=${model}
+					.data=${actualData}
+				></object-component>`;
+			case 'element':
+				return html`<element-component .model=${model} .data=${actualData}></element-component>`;
 			case 'array':
 				return html`<array-component
+					.library=${library}
 					.model=${model}
-					.data=${data}
-					.repeatable=${model.repeatable || false}
+					.data=${actualData}
 				></array-component>`;
-			case 'element':
-				return html`<element-component .model=${model} .data=${data}></element-component>`;
 			case 'group':
 				return html`<group-component
+					.library=${library}
 					.model=${model}
-					.data=${data}
-					.editable=${model.editable || false}
+					.data=${actualData}
 				></group-component>`;
 			default:
 				console.warn(`Unknown model type: ${(model as any).type}`);
-				return html`<base-component .model=${model} .data=${data}></base-component>`;
+				return html`<base-component
+					.library=${library}
+					.model=${model}
+					.data=${actualData}
+				></base-component>`;
 		}
+	}
+
+	static createEmptyItem(itemType: Property): any {
+		if (isElement(itemType)) {
+			return '';
+		} else if (isObject(itemType)) {
+			return itemType.properties.reduce((acc, prop) => {
+				acc[prop.key!] = this.createEmptyItem(prop);
+				return acc;
+			}, {} as Record<string, any>);
+		} else if (isArray(itemType)) {
+			return [];
+		} else if (isGroup(itemType)) {
+			return {};
+		}
+		return null;
 	}
 }
 
@@ -49,14 +74,17 @@ export class AppComponent extends LitElement {
 			{ heading: 'Introduction', body: 'This is the introduction.' },
 			{ heading: 'Conclusion', body: 'This is the conclusion.' },
 		],
-		footer: {
-			date: new Date().toISOString(),
-			author: {
-				name: 'John Doe',
-				email: 'john@example.com',
-			},
-		},
+		predefinedGroup: [
+			{ __type: 'date', value: new Date().toISOString() },
+			{ __type: 'author', value: { name: 'John Doe', email: 'john@example.com' } },
+		],
+		editableGroup: [
+			{ __type: 'dateElement', value: new Date().toISOString() },
+			{ __type: 'authorModel', value: { name: 'Jane Smith', email: 'jane@example.com' } },
+			{ __type: 'dateElement', value: new Date().toISOString() },
+		],
 	};
+	@state() private libraryErrors: string[] = [];
 
 	constructor() {
 		super();
@@ -67,15 +95,25 @@ export class AppComponent extends LitElement {
 	loadDocumentModel() {
 		const rawModel = this.library.getDefinition('document', 'object') as Model;
 		if (rawModel) {
-			this.documentModel = resolveRefs(rawModel, this.library) as Model;
+		  this.documentModel = resolveRefs(rawModel, this.library) as Model;
 		}
+		this.libraryErrors = this.library.getErrors();
 		this.requestUpdate();
-	}
-
+	  }
+	
 	render() {
-		if (!this.documentModel) {
+		if (this.libraryErrors.length > 0) {
+			return html`
+			  <h2>Library Errors</h2>
+			  <ul>
+				${this.libraryErrors.map(error => html`<li style="color: red;">${error}</li>`)}
+			  </ul>
+			`;
+		  }
+	  
+		  if (!this.documentModel) {
 			return html`<p>Loading...</p>`;
-		}
+		  }
 
 		return html`
 			<h2>Reactivity Test Panel</h2>
@@ -87,6 +125,7 @@ export class AppComponent extends LitElement {
 			<document-component
 				.documentModel=${this.documentModel}
 				.documentData=${this.documentData}
+				.library=${this.library}
 			></document-component>
 		`;
 	}

@@ -1,82 +1,80 @@
-import { html, TemplateResult } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { LitElement, html, css, TemplateResult } from 'lit';
+import { property, customElement } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
-import { ComponentFactory } from './app.ts';
-import { BaseComponent } from './BaseComponent.ts';
-import { isArray, isElement, isGroup, isObject, ArrayProperty, Property } from './model.ts';
+import type { ArrayProperty } from './model';
+import { ComponentFactory } from './app';
+import { UnifiedLibrary } from './ModelLibrary';
 
-// Array Component
 @customElement('array-component')
-export class ArrayComponent extends BaseComponent {
-	@property({ type: Boolean }) repeatable: boolean = false;
+export class ArrayComponent extends LitElement {
+  @property({ type: Object }) model!: ArrayProperty;
+  @property({ type: Array }) data: any[] = [];
+  @property({ type: Object }) library!: UnifiedLibrary;
 
-	override renderContent(): TemplateResult {
-		if (!isArray(this.model)) {
-			console.warn('Invalid model type for ArrayComponent');
-			return html``;
-		}
-		return html`
-			<div>
-				<h3>${this.model.name}</h3>
-				${repeat(
-					this.data || [],
-					(item, index) => index,
-					(item, index) => html`
-						<div class="array-item">
-							${ComponentFactory.createComponent((this.model as ArrayProperty).itemType, item)}
-							${this.repeatable
-								? html`<button @click=${() => this.removeItem(index)}>Remove</button>`
-								: ''}
-						</div>
-					`
-				)}
-				${this.repeatable
-					? html`<button @click=${this.addItem}>
-							Add ${(this.model as ArrayProperty).itemType.name || 'Item'}
-					  </button>`
-					: ''}
-			</div>
-		`;
-	}
+  get repeatable(): boolean {
+    return this.model.repeatable || false;
+  }
+  
+  static styles = css`
+    :host {
+      display: block;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      padding: 10px;
+    }
+    .array-item {
+      margin-bottom: 5px;
+    }
+  `;
 
-	private addItem() {
-		const newItem = this.createEmptyItem((this.model as ArrayProperty).itemType);
-		this.data = [...(this.data || []), newItem];
-		this.requestUpdate();
-		this.dispatchEvent(
-			new CustomEvent('value-changed', {
-				detail: { key: this.model.key, value: this.data },
-				bubbles: true,
-				composed: true,
-			})
-		);
-	}
+  render(): TemplateResult {
+    return html`
+      <div>
+        <h3>${this.model.name}</h3>
+        ${repeat(this.data || [], (item, index) => index, (item, index) => html`
+          <div class="array-item">
+            ${ComponentFactory.createComponent(this.model.itemType, item.value, this.library)}
+            ${this.repeatable ? html`<button @click=${() => this.removeItem(index)}>Remove</button>` : ''}
+          </div>
+        `)}
+        ${this.repeatable ? html`<button @click=${this.addItem}>Add ${this.model.itemType.name || 'Item'}</button>` : ''}
+      </div>
+    `;
+  }
 
-	private removeItem(index: number) {
-		this.data = this.data.filter((_, i) => i !== index);
-		this.requestUpdate();
-		this.dispatchEvent(
-			new CustomEvent('value-changed', {
-				detail: { key: this.model.key, value: this.data },
-				bubbles: true,
-				composed: true,
-			})
-		);
-	}
+  private addItem() {
+    const newItem = ComponentFactory.createEmptyItem(this.model.itemType);
+    this.data = [...this.data, newItem];
+    this.requestUpdate();
+    this.dispatchEvent(new CustomEvent('value-changed', {
+      detail: { key: this.model.key, value: this.data },
+      bubbles: true,
+      composed: true
+    }));
+  }
 
-	private createEmptyItem(itemType: Property): any {
-		if (isElement(itemType)) {
-			return '';
-		} else if (isObject(itemType)) {
-			return itemType.properties.reduce((acc, prop) => {
-				acc[prop.key!] = this.createEmptyItem(prop);
-				return acc;
-			}, {} as Record<string, any>);
-		} else if (isArray(itemType)) {
-			return [];
-		} else if (isGroup(itemType)) {
-			return {};
-		}
-		return null;
-	}
+  private removeItem(index: number) {
+    this.data = this.data.filter((_, i) => i !== index);
+    this.requestUpdate();
+    this.dispatchEvent(new CustomEvent('value-changed', {
+      detail: { key: this.model.key, value: this.data },
+      bubbles: true,
+      composed: true
+    }));
+  }
+
+  protected handleValueChanged(e: CustomEvent) {
+    const { key, value } = e.detail;
+    const index = parseInt(key);
+    if (!isNaN(index)) {
+      const newData = [...this.data];
+      newData[index] = value;
+      this.data = newData;
+      this.dispatchEvent(new CustomEvent('value-changed', {
+        detail: { key: this.model.key, value: this.data },
+        bubbles: true,
+        composed: true
+      }));
+    }
+  }
 }

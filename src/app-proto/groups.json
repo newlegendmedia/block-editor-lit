@@ -1,11 +1,30 @@
 {
-    "footerGroup": {
-      "type": "group",
-      "key": "footer",
-      "name": "Document Footer",
-      "itemTypes": [
-        { "type": "element", "ref": "dateElement" },
-        { "type": "object", "ref": "authorModel" }
-      ]
-    }
-  }
+  "footerGroup": {
+    "type": "group",
+    "key": "footer",
+    "name": "Document Footer",
+    "itemTypes": [
+      { "key": "date1", "type": "element", "ref": "dateElement" },
+      { "key": "author1", "type": "object", "ref": "authorModel" }
+    ]
+  },
+  "editableGroupTypes": {
+    "type": "group",
+    "key": "editableGroupTypes",
+    "name": "Editable Group Types",
+    "itemTypes": [
+      { "key": "date", "type": "element", "ref": "dateElement" },
+      { "key": "author", "type": "object", "ref": "authorModel" }
+    ]
+  },
+  "predefinedGroup": {
+    "type": "group",
+    "key": "predefinedGroup",
+    "name": "Predefined Group",
+    "editable": false,
+    "itemTypes": [
+      { "type": "element", "key": "date", "ref": "dateElement" },
+      { "type": "object", "key": "author", "ref": "authorModel" }
+    ]
+  }  
+}
