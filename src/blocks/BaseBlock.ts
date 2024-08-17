@@ -3,10 +3,11 @@ import { property, state } from 'lit/decorators.js';
 import type { Property } from '../util/model';
 import { globalDebugState } from '../util/debugState';
 import { libraryStore, type UnifiedLibrary } from '../library/libraryStore';
+import { blockStore, ContentBlock } from '../blocks/BlockStore';
 
-export class BaseBlock extends LitElement {
-	@property({ type: Object }) model!: Property;
-	@property({ type: Object }) data: any;
+export abstract class BaseBlock extends LitElement {
+	@property({ type: String }) blockId!: string;
+	@state() protected block?: ContentBlock;
 	@state() protected error: string | null = null;
 	@state() private showDebugButtons: boolean = false;
 	@state() protected library: UnifiedLibrary | null = null;
@@ -15,6 +16,7 @@ export class BaseBlock extends LitElement {
 
 	private debugStateListener: () => void;
 	private unsubscribeLibrary: (() => void) | null = null;
+	private unsubscribeBlock: (() => void) | null = null;
 
 	static styles = css`
 		:host {
@@ -86,7 +88,6 @@ export class BaseBlock extends LitElement {
 	constructor() {
 		super();
 		this.debugStateListener = () => {
-			console.log(`${this.tagName} updating debug state`);
 			this.showDebugButtons = globalDebugState.showDebugButtons;
 			this.requestUpdate();
 		};
@@ -96,24 +97,26 @@ export class BaseBlock extends LitElement {
 		super.connectedCallback();
 		globalDebugState.addListener(this.debugStateListener);
 		this.showDebugButtons = globalDebugState.showDebugButtons;
-		console.log(`${this.tagName} connected, showDebugButtons: ${this.showDebugButtons}`);
 
-		// Subscribe to the library store
 		this.unsubscribeLibrary = libraryStore.subscribe((library) => {
 			this.library = library;
 			this.libraryReady = true;
 			this.requestUpdate();
 		});
+
+		this.subscribeToBlock();
 	}
 
 	disconnectedCallback() {
 		super.disconnectedCallback();
 		globalDebugState.removeListener(this.debugStateListener);
-		console.log(`${this.tagName} disconnected`);
 
-		// Unsubscribe from the library store
 		if (this.unsubscribeLibrary) {
 			this.unsubscribeLibrary();
+		}
+
+		if (this.unsubscribeBlock) {
+			this.unsubscribeBlock();
 		}
 	}
 
@@ -125,6 +128,19 @@ export class BaseBlock extends LitElement {
 		if (changedProperties.has('libraryReady') && this.libraryReady) {
 			this.onLibraryReady();
 		}
+		if (changedProperties.has('blockId')) {
+			this.subscribeToBlock();
+		}
+	}
+
+	private subscribeToBlock() {
+		if (this.unsubscribeBlock) {
+			this.unsubscribeBlock();
+		}
+		this.unsubscribeBlock = blockStore.subscribeToBlock(this.blockId, (block) => {
+			this.block = block;
+			this.requestUpdate();
+		});
 	}
 
 	protected onLibraryReady() {
@@ -140,9 +156,7 @@ export class BaseBlock extends LitElement {
 		`;
 	}
 
-	protected renderContent(): TemplateResult {
-		return html`<div>${this.model?.name}: ${JSON.stringify(this.data)}</div>`;
-	}
+	protected abstract renderContent(): TemplateResult;
 
 	private renderDebugButton(): TemplateResult {
 		return html`
@@ -158,9 +172,10 @@ export class BaseBlock extends LitElement {
 	}
 
 	private renderDebugInfo() {
+		const model = this.getModel();
 		const debugInfo = {
-			model: this.model,
-			data: this.data,
+			block: this.block,
+			model: model,
 			library: this.library ? 'Loaded' : 'Not Loaded',
 		};
 		return html`
@@ -168,8 +183,8 @@ export class BaseBlock extends LitElement {
 				<div class="debug-info-content">
 					<h4>Debug Information</h4>
 					<div class="debug-info-item">
-						Model Type: ${this.model?.type}<br />
-						Data Type: ${typeof this.data}<br />
+						Block Type: ${this.block?.type}<br />
+						Model Type: ${model?.type}<br />
 						Library Status: ${this.library ? 'Loaded' : 'Not Loaded'}
 					</div>
 					<pre>${JSON.stringify(debugInfo, null, 2)}</pre>
@@ -184,5 +199,46 @@ export class BaseBlock extends LitElement {
 
 	protected clearError() {
 		this.error = null;
+	}
+
+	protected getModel(): Property | undefined {
+		if (!this.block) {
+			console.error(`${this.tagName}: Cannot get model - block is missing`);
+			return undefined;
+		}
+
+		if (this.block.inlineModel) {
+			console.log(`${this.tagName}: Using inline model:`, this.block.inlineModel);
+			return this.block.inlineModel;
+		}
+
+		if (!this.library) {
+			console.error(`${this.tagName}: Cannot get model - library is missing`);
+			return undefined;
+		}
+
+		console.log(`${this.tagName}: Attempting to get model for block:`, this.block);
+		const modelKey = this.block.modelRef || this.block.modelKey;
+		const model = this.library.getDefinition(modelKey, this.block.type);
+		console.log(`${this.tagName}: Retrieved model:`, model);
+		return model;
+	}
+
+	protected updateBlockContent(content: any) {
+		if (!this.block) return;
+
+		blockStore.updateBlock(this.block.id, (block) => ({
+			...block,
+			content: content,
+		}));
+
+		// Dispatch an event to notify parent components of the change
+		this.dispatchEvent(
+			new CustomEvent('value-changed', {
+				detail: { key: this.block.modelKey, value: content },
+				bubbles: true,
+				composed: true,
+			})
+		);
 	}
 }

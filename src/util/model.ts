@@ -41,8 +41,8 @@ export interface GroupProperty extends BaseProperty {
 	type: 'group';
 	itemTypes: (Property | PropertyReference)[] | PropertyReference;
 	editable?: boolean;
-  }
-  
+}
+
 type BasePropertyReference = {
 	type: PropertyType;
 	ref: string;
@@ -53,7 +53,7 @@ type BasePropertyReference = {
 type ElementPropertyReference = BasePropertyReference;
 type ObjectPropertyReference = BasePropertyReference;
 type ArrayPropertyReference = Pick<ArrayProperty, 'repeatable'>;
-type GroupPropertyReference = Pick<GroupProperty, 'editable'>;
+type GroupPropertyReference = Pick<GroupProperty, 'editable' | 'itemTypes'>;
 
 export type PropertyReference = BasePropertyReference &
 	(
@@ -63,14 +63,12 @@ export type PropertyReference = BasePropertyReference &
 		| ({ type: 'group' } & GroupPropertyReference)
 	);
 
-
-	export type Property =
+export type Property =
 	| ElementProperty
 	| ObjectProperty
 	| ArrayProperty
 	| GroupProperty
 	| PropertyReference;
-  
 
 export type Model = ObjectProperty;
 
@@ -87,14 +85,16 @@ export function isArray(property: Property): property is ArrayProperty {
 	return property.type === 'array' && 'itemType' in property;
 }
 
-export function isPropertyReference(property: Property | PropertyReference): property is PropertyReference {
+export function isPropertyReference(
+	property: Property | PropertyReference
+): property is PropertyReference {
 	return 'ref' in property && typeof property.ref === 'string';
-  }
-  
-  export function isGroup(property: Property | PropertyReference): property is GroupProperty {
+}
+
+export function isGroup(property: Property | PropertyReference): property is GroupProperty {
 	return property.type === 'group' && 'itemTypes' in property;
-  }
-	
+}
+
 export function isModel(property: Property): property is ObjectProperty {
 	return property.type === 'object' && 'properties' in property;
 }

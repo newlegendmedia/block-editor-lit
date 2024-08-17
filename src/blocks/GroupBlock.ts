@@ -1,141 +1,102 @@
 import { html, css, TemplateResult } from 'lit';
-import { property, customElement, state } from 'lit/decorators.js';
+import { customElement, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
-import type { Property, GroupProperty, PropertyReference } from '../util/model';
-import { ComponentFactory } from './app';
-import { isGroup, isPropertyReference } from '../util/model';
 import { BaseBlock } from './BaseBlock';
-
-interface GroupItem {
-	__type: string;
-	value: any;
-}
+import { ComponentFactory } from '../util/ComponentFactory';
+import type { GroupProperty, Property, PropertyReference } from '../util/model';
+import { blockStore, CompositeBlock } from '../blocks/BlockStore';
+import { isPropertyReference } from '../util/model';
 
 @customElement('group-component')
 export class GroupBlock extends BaseBlock {
-	@property({ type: Object }) override model!: GroupProperty;
-	@property({ type: Array }) data: GroupItem[] = [];
+	@state() private childBlockIds: string[] = [];
 	@state() private showSlashMenu: boolean = false;
 
 	static styles = [
 		BaseBlock.styles,
 		css`
-			:host {
-				display: block;
-				margin-bottom: 10px;
-				border: 1px solid var(--border-color);
-				padding: 10px;
-				border-radius: var(--border-radius);
-			}
-			.add-button {
-				margin-top: 10px;
-				margin-right: 5px;
-				background-color: var(--primary-color);
-				color: white;
-				border: none;
-				padding: 5px 10px;
-				cursor: pointer;
-				border-radius: var(--border-radius);
-			}
-			.slash-menu {
-				margin-top: 10px;
-			}
-			.info {
-				color: var(--secondary-color);
-				font-style: italic;
+			.group-content {
+				display: flex;
+				flex-direction: column;
+				gap: var(--spacing-small);
 			}
 			.group-item {
-				margin-bottom: 10px;
-				padding: 5px;
-				border: 1px solid var(--border-color);
-				border-radius: var(--border-radius);
+				display: flex;
+				align-items: center;
 			}
 			.remove-button {
-				background-color: var(--secondary-color);
-				color: white;
-				border: none;
-				padding: 3px 6px;
-				cursor: pointer;
-				border-radius: var(--border-radius);
-				margin-left: 5px;
+				margin-left: var(--spacing-small);
+			}
+			.slash-menu {
+				margin-top: var(--spacing-small);
 			}
 		`,
 	];
 
-	get editable(): boolean {
-		return this.model.editable || false;
+	protected onLibraryReady() {
+		super.onLibraryReady();
+		this.initializeChildBlocks();
 	}
 
-	protected override renderContent(): TemplateResult {
+	private initializeChildBlocks() {
+		if (!this.block || !this.library) return;
+
+		const groupModel = this.getModel() as GroupProperty;
+		if (!groupModel || groupModel.type !== 'group') return;
+
+		const compositeBlock = this.block as CompositeBlock;
+		if (!compositeBlock.children) {
+			compositeBlock.children = [];
+		}
+
+		this.childBlockIds = compositeBlock.children;
+
+		blockStore.setBlock(compositeBlock);
+	}
+
+	protected renderContent(): TemplateResult {
+		if (!this.block || !this.library) {
+			return html`<div>Loading...</div>`;
+		}
+
+		const groupModel = this.getModel() as GroupProperty;
+		if (!groupModel || groupModel.type !== 'group') {
+			return html`<div>Invalid group model</div>`;
+		}
+
 		return html`
 			<div>
-				<h3>${this.model.name}</h3>
-				${this.renderGroup()} ${this.editable ? this.renderAddButton() : ''}
-				${this.editable && this.showSlashMenu ? this.renderSlashMenu() : ''}
+				<h3>${groupModel.name || 'Group'}</h3>
+				<div class="group-content">
+					${repeat(
+						this.childBlockIds,
+						(childId) => childId,
+						(childId, index) => html`
+							<div class="group-item">
+								${ComponentFactory.createComponent(childId, this.library!)}
+								${groupModel.editable
+									? html`<button class="remove-button" @click=${() => this.removeItem(index)}>
+											Remove
+									  </button>`
+									: ''}
+							</div>
+						`
+					)}
+				</div>
+				${groupModel.editable ? this.renderAddButton() : ''}
+				${this.showSlashMenu ? this.renderSlashMenu() : ''}
 			</div>
 		`;
 	}
 
-	private renderGroup(): TemplateResult {
-		if (!Array.isArray(this.data) || this.data.length === 0) {
-			return html`<div class="info">This group is currently empty.</div>`;
-		}
-
-		return html`
-			${repeat(
-				this.data,
-				(item) => item.__type,
-				(item, index) => {
-					const itemType = this.getItemTypeByKey(item.__type);
-					if (!itemType) {
-						return html`<div class="error">Error: Unknown item type ${item.__type}</div>`;
-					}
-					return html`
-						<div class="group-item">
-							${ComponentFactory.createComponent(itemType, item.value)}
-							${this.editable
-								? html`<button class="remove-button" @click=${() => this.removeItem(index)}>
-										Remove
-								  </button>`
-								: ''}
-						</div>
-					`;
-				}
-			)}
-		`;
-	}
-
-	private getItemTypes(): (Property | PropertyReference)[] {
-		if (!this.model) {
-			console.warn('Model is not defined in GroupComponent');
-			return [];
-		}
-
-		if (Array.isArray(this.model.itemTypes)) {
-			return this.model.itemTypes;
-		} else if (isPropertyReference(this.model.itemTypes)) {
-			if (!this.library) {
-				console.warn('Library is not available in GroupComponent');
-				return [];
-			}
-			const resolved = this.library.getDefinition(
-				this.model.itemTypes.ref,
-				this.model.itemTypes.type
-			);
-			if (resolved && isGroup(resolved)) {
-				return Array.isArray(resolved.itemTypes) ? resolved.itemTypes : [resolved.itemTypes];
-			}
-		}
-		console.warn(`Invalid itemTypes: ${JSON.stringify(this.model.itemTypes)}`);
-		return [];
-	}
-
 	private renderAddButton(): TemplateResult {
-		return html`<button class="add-button" @click=${this.toggleSlashMenu}>Add Block</button>`;
+		return html`<button @click=${this.toggleSlashMenu}>Add Block</button>`;
 	}
 
 	private renderSlashMenu(): TemplateResult {
-		const itemTypes = this.getItemTypes();
+		const groupModel = this.getModel() as GroupProperty;
+		const itemTypes = this.getItemTypes(groupModel);
+
 		return html`
 			<div class="slash-menu">
 				${repeat(
@@ -151,111 +112,58 @@ export class GroupBlock extends BaseBlock {
 		`;
 	}
 
+	private getItemTypes(groupModel: GroupProperty): (Property | PropertyReference)[] {
+		if (Array.isArray(groupModel.itemTypes)) {
+			return groupModel.itemTypes;
+		} else if (isPropertyReference(groupModel.itemTypes)) {
+			const resolved = this.library!.getDefinition(
+				groupModel.itemTypes.ref,
+				groupModel.itemTypes.type
+			);
+			if (resolved && resolved.type === 'group') {
+				return this.getItemTypes(resolved as GroupProperty);
+			}
+		}
+		console.warn(`Invalid itemTypes: ${JSON.stringify(groupModel.itemTypes)}`);
+		return [];
+	}
+
 	private toggleSlashMenu() {
 		this.showSlashMenu = !this.showSlashMenu;
 	}
 
-	private getItemTypeByKey(key: string): Property | PropertyReference | undefined {
-		const itemTypes = this.getItemTypes();
-		return itemTypes.find((itemType) => {
-			if (isPropertyReference(itemType)) {
-				return itemType.ref === key || itemType.key === key;
-			} else if ('key' in itemType && 'type' in itemType) {
-				return itemType.key === key || itemType.type === key;
-			}
-			return false;
-		});
-	}
-
 	private addBlock(itemType: Property | PropertyReference) {
-		try {
-			let key: string | undefined;
-			if (isPropertyReference(itemType)) {
-				key = itemType.ref || itemType.key;
-			} else if ('key' in itemType) {
-				key = itemType.key;
-			}
+		const newChildBlock = blockStore.createBlockFromModel(itemType);
+		this.childBlockIds = [...this.childBlockIds, newChildBlock.id];
 
-			if (!key) {
-				throw new Error('Unable to determine key for new item');
-			}
+		const compositeBlock = this.block as CompositeBlock;
+		compositeBlock.children = this.childBlockIds;
+		blockStore.setBlock(compositeBlock);
 
-			const newItem: GroupItem = {
-				__type: key,
-				value: ComponentFactory.createEmptyItem(itemType),
-			};
-
-			this.data = [...this.data, newItem];
-			this.showSlashMenu = false;
-			this.error = null;
-			this.requestUpdate();
-			this.dispatchEvent(
-				new CustomEvent('value-changed', {
-					detail: { key: this.model.key, value: this.data },
-					bubbles: true,
-					composed: true,
-				})
-			);
-		} catch (error: unknown) {
-			console.error('Error adding block:', error);
-			if (error instanceof Error) {
-				this.error = `Failed to add block: ${error.message}`;
-			} else {
-				this.error = 'Failed to add block: An unknown error occurred';
-			}
-			this.requestUpdate();
-		}
+		this.showSlashMenu = false;
+		this.requestUpdate();
 	}
 
 	private removeItem(index: number) {
-		try {
-			this.data = this.data.filter((_, i) => i !== index);
-			this.error = null;
-			this.requestUpdate();
-			this.dispatchEvent(
-				new CustomEvent('value-changed', {
-					detail: { key: this.model.key, value: this.data },
-					bubbles: true,
-					composed: true,
-				})
-			);
-		} catch (error: unknown) {
-			console.error('Error removing item:', error);
-			if (error instanceof Error) {
-				this.error = `Failed to remove item: ${error.message}`;
-			} else {
-				this.error = 'Failed to remove item: An unknown error occurred';
-			}
-			this.requestUpdate();
-		}
+		const removedBlockId = this.childBlockIds[index];
+		this.childBlockIds = this.childBlockIds.filter((_, i) => i !== index);
+
+		const compositeBlock = this.block as CompositeBlock;
+		compositeBlock.children = this.childBlockIds;
+		blockStore.setBlock(compositeBlock);
+
+		blockStore.deleteBlock(removedBlockId);
+
+		this.requestUpdate();
 	}
 
 	protected handleValueChanged(e: CustomEvent) {
-		try {
-			const { key, value } = e.detail;
-			const index = this.data.findIndex((item) => item.__type === key);
-			if (index !== -1) {
-				const newData = [...this.data];
-				newData[index] = { ...newData[index], value };
-				this.data = newData;
-				this.error = null;
-				this.requestUpdate();
-				this.dispatchEvent(
-					new CustomEvent('value-changed', {
-						detail: { key: this.model.key, value: this.data },
-						bubbles: true,
-						composed: true,
-					})
-				);
-			}
-		} catch (error: unknown) {
-			console.error('Error handling value change:', error);
-			if (error instanceof Error) {
-				this.error = `Failed to update value: ${error.message}`;
-			} else {
-				this.error = 'Failed to update value: An unknown error occurred';
-			}
-			this.requestUpdate();
+		const { key, value } = e.detail;
+		const index = this.childBlockIds.indexOf(key);
+		if (index !== -1) {
+			const updatedContent = [...(this.block!.content as any[])];
+			updatedContent[index] = value;
+			this.updateBlockContent(updatedContent);
 		}
 	}
 }

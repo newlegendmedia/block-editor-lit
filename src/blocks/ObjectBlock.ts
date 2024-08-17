@@ -1,57 +1,97 @@
 import { css, html, TemplateResult } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { customElement, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
-import { ComponentFactory } from './app';
-import type { ObjectProperty } from '../util/model';
 import { BaseBlock } from './BaseBlock';
+import { ComponentFactory } from '../util/ComponentFactory';
+import type { ObjectProperty, Property } from '../util/model';
+import { blockStore, CompositeBlock } from '../blocks/BlockStore';
 
 @customElement('object-component')
 export class ObjectBlock extends BaseBlock {
-	@property({ type: Object }) override model!: ObjectProperty;
-	@property({ type: Object }) data: any;
+	@state() private childBlocks: { [key: string]: string } = {};
 
-	static styles = [BaseBlock.styles, css``];
+	static styles = [
+		BaseBlock.styles,
+		css`
+			.object-content {
+				display: flex;
+				flex-direction: column;
+				gap: var(--spacing-small);
+			}
+		`,
+	];
 
-	protected override onLibraryReady() {
+	protected onLibraryReady() {
 		super.onLibraryReady();
-		// Perform any initialization that requires the library
+		this.initializeChildBlocks();
 	}
 
-	override render(): TemplateResult {
-		if (!this.libraryReady) {
-			return html`<p>Loading...</p>`;
+	private initializeChildBlocks() {
+		if (!this.block || !this.library) return;
+
+		const objectModel = this.getModel() as ObjectProperty;
+		if (!objectModel || objectModel.type !== 'object') return;
+
+		const compositeBlock = this.block as CompositeBlock;
+		if (!compositeBlock.children) {
+			compositeBlock.children = [];
 		}
 
-		if (!this.model) {
-			return html`<div class="error">Error: Invalid object configuration</div>`;
+		objectModel.properties.forEach((prop) => {
+			let childBlockId = compositeBlock.children.find(
+				(childId) => blockStore.getBlock(childId)?.modelKey === prop.key
+			);
+
+			if (!childBlockId) {
+				const childBlock = blockStore.createBlockFromModel(prop);
+				childBlockId = childBlock.id;
+				compositeBlock.children.push(childBlockId);
+			}
+
+			this.childBlocks[prop.key!] = childBlockId;
+		});
+
+		blockStore.setBlock(compositeBlock);
+	}
+
+	protected renderContent(): TemplateResult {
+		if (!this.block || !this.library) {
+			return html`<div>Loading...</div>`;
+		}
+
+		const objectModel = this.getModel() as ObjectProperty;
+		if (!objectModel || objectModel.type !== 'object') {
+			return html`<div>Invalid object model</div>`;
 		}
 
 		return html`
 			<div>
-				<h2>${this.model.name}</h2>
-				${repeat(
-					this.model.properties || [],
-					(prop) => prop.key!,
-					(prop) => ComponentFactory.createComponent(prop, this.data?.[prop.key!])
-				)}
+				<h2>${objectModel.name || 'Object'}</h2>
+				<div class="object-content">
+					${repeat(
+						objectModel.properties,
+						(prop) => prop.key!,
+						(prop) => this.renderProperty(prop)
+					)}
+				</div>
 			</div>
 		`;
 	}
 
-	protected handleValueChanged(e: CustomEvent) {
-		if (!this.libraryReady) {
-			console.warn('Library not ready, unable to handle value change');
-			return;
+	private renderProperty(prop: Property): TemplateResult {
+		const childBlockId = this.childBlocks[prop.key!];
+		if (!childBlockId) {
+			return html`<div>Error: Child block not found for ${prop.key}</div>`;
 		}
 
-		const { key, value } = e.detail;
-		this.data = { ...this.data, [key]: value };
-		this.dispatchEvent(
-			new CustomEvent('value-changed', {
-				detail: { key: this.model.key, value: this.data },
-				bubbles: true,
-				composed: true,
-			})
-		);
+		return ComponentFactory.createComponent(childBlockId, this.library!);
 	}
+
+	protected handleValueChanged(e: CustomEvent) {
+		const { key, value } = e.detail;
+		if (!this.block) return;
+	
+		const updatedContent = { ...this.block.content, [key]: value };
+		this.updateBlockContent(updatedContent);
+	  }
 }

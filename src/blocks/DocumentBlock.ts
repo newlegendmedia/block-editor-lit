@@ -1,36 +1,68 @@
-import { html, css } from 'lit';
-import { property, customElement } from 'lit/decorators.js';
-import type { Model } from '../util/model';
-import { ComponentFactory } from './app';
-import { BaseBlock } from './BaseBlock';
+import { LitElement, html, css } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
+import { ComponentFactory } from '../util/ComponentFactory';
+import { blockStore, Document as DocumentType } from './BlockStore';
+import { libraryStore, UnifiedLibrary } from '../library/libraryStore';
 
 @customElement('document-component')
-export class DocumentBlock extends BaseBlock {
-	@property({ type: Object }) documentModel!: Model;
-	@property({ type: Object }) documentData: any;
+export class DocumentComponent extends LitElement {
+	@property({ type: String }) documentId!: string;
+	@state() private document: DocumentType | null = null;
+	@state() private library: UnifiedLibrary | null = null;
 
-	static styles = [BaseBlock.styles, css``];
+	private unsubscribeLibrary: (() => void) | null = null;
 
-	constructor() {
-		super();
-		this.addEventListener('value-changed', this.handleValueChanged as EventListener);
+	static styles = css`
+		:host {
+			display: block;
+			padding: 16px;
+		}
+	`;
+
+	connectedCallback() {
+		super.connectedCallback();
+		this.unsubscribeLibrary = libraryStore.subscribe((library) => {
+			this.library = library;
+			this.requestUpdate();
+		});
+		this.loadDocument();
 	}
 
-	render() {
-		return html`
-			${ComponentFactory.createComponent(this.documentModel, this.documentData)}
-			<button @click=${this.saveDocument}>Save Document</button>
-		`;
+	disconnectedCallback() {
+		super.disconnectedCallback();
+		if (this.unsubscribeLibrary) {
+			this.unsubscribeLibrary();
+		}
 	}
 
-	handleValueChanged(e: CustomEvent) {
-		const { key, value } = e.detail;
-		this.documentData = { ...this.documentData, [key]: value };
+	updated(changedProperties: Map<string, any>) {
+		if (changedProperties.has('documentId')) {
+			this.loadDocument();
+		}
+	}
+
+	private loadDocument() {
+		console.log('Loading document with id:', this.documentId);
+		const doc = blockStore.getDocument(this.documentId);
+		if (doc) {
+			this.document = doc;
+			console.log('Document loaded:', this.document);
+		} else {
+			this.document = null;
+			console.error(`Document with id ${this.documentId} not found`);
+		}
 		this.requestUpdate();
 	}
 
-	saveDocument() {
-		console.log('Saving document:', this.documentData);
-		// Implement actual save functionality here
+	render() {
+		console.log('Document render, document:', this.document);
+		if (!this.document || !this.library) {
+			return html`<div>Loading document...</div>`;
+		}
+
+		return html`
+			<h1>${this.document.title}</h1>
+			${ComponentFactory.createComponent(this.document.rootBlock, this.library)}
+		`;
 	}
 }

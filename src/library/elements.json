@@ -1,15 +1,4 @@
 {
-  "metaDate": {
-    "type": "element",
-    "key": "metaDate",
-    "name": "Date",
-    "base": "datetime",
-    "config": {
-      "display": {
-        "readonly": true
-      }
-    }
-  },
   "titleElement": {
     "type": "element",
     "key": "titleElement",
