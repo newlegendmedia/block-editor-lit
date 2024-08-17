@@ -1,34 +1,36 @@
-import { ModelBlock } from './BaseBlock';
-import { Property } from '../types/ModelDefinition';
-import { TreeStateController } from '../controllers/TreeStateController';
-import { ModelStateController } from '../controllers/ModelStateController';
-import { html, TemplateResult } from 'lit';
+import { html, css } from 'lit';
+import { property, customElement } from 'lit/decorators.js';
+import type { Model } from '../util/model';
+import { ComponentFactory } from './app';
+import { BaseBlock } from './BaseBlock';
 
-export class DocumentBlock extends ModelBlock {
-  constructor(
-    modelProperty: Property,
-    path: string,
-    treeStateController: TreeStateController,
-    modelStateController: ModelStateController
-  ) {
-    super(modelProperty, path, treeStateController, modelStateController);
-  }
+@customElement('document-component')
+export class DocumentBlock extends BaseBlock {
+	@property({ type: Object }) documentModel!: Model;
+	@property({ type: Object }) documentData: any;
 
-  override render(): TemplateResult {
-    console.log(`Rendering DocumentBlock: ${this.path}`);
-    const content = this.getContent();
-    const childBlocks = this.treeStateController.getChildBlocks(this.path);
-    return html`
-      <div class="document-block">
-        <h1>${content.title || 'Untitled Document'}</h1>
-        ${childBlocks.map(childBlock => html`
-          <block-component
-            .path=${childBlock.path}
-            .treeStateController=${this.treeStateController}
-            .modelStateController=${this.modelStateController}
-          ></block-component>
-        `)}
-      </div>
-    `;
-  }
+	static styles = [BaseBlock.styles, css``];
+
+	constructor() {
+		super();
+		this.addEventListener('value-changed', this.handleValueChanged as EventListener);
+	}
+
+	render() {
+		return html`
+			${ComponentFactory.createComponent(this.documentModel, this.documentData)}
+			<button @click=${this.saveDocument}>Save Document</button>
+		`;
+	}
+
+	handleValueChanged(e: CustomEvent) {
+		const { key, value } = e.detail;
+		this.documentData = { ...this.documentData, [key]: value };
+		this.requestUpdate();
+	}
+
+	saveDocument() {
+		console.log('Saving document:', this.documentData);
+		// Implement actual save functionality here
+	}
 }

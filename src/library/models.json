@@ -1,4 +1,16 @@
 {
+    "notion": {
+      "type": "object",
+      "key": "notion",
+      "name": "Notion++",
+      "properties": [
+        { "type": "element", "key": "title", "name": "Title", "base": "text" },
+        { "type": "element", "key": "createdOn", "name": "Created On", "ref": "metaDate" },
+        { "type": "element", "key": "lastUpdated", "name": "Last Updated", "ref": "metaDate" },
+        { "type": "element", "key": "tags", "name": "Tags", "base": "text" },
+        { "type": "group", "key": "page", "name": "content", "ref": "page" }
+      ]
+    },
     "document": {
       "type": "object",
       "key": "document",
@@ -19,7 +31,7 @@
           "editable": false,
           "itemTypes": [
             { "type": "element", "key": "date", "ref": "dateElement" },
-            { "type": "object", "key": "author", "ref": "authorModelX" }
+            { "type": "object", "key": "author", "ref": "authorModel" }
           ]
         },
         {

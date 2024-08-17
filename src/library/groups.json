@@ -1,0 +1,85 @@
+{
+  "page": {
+    "type": "group",
+    "key": "page",
+    "name": "Notion++ Page",
+    "editable": true,
+    "itemTypes": [
+      {
+        "type": "element",
+        "key": "textelement",
+        "name": "Text Block",
+        "base": "text"
+      },
+      {
+        "type": "array",
+        "key": "imageGallery",
+        "name": "Image Gallery",
+        "itemType": {
+          "type": "object",
+          "key": "image",
+          "name": "Image",
+          "properties": [
+            { "type": "element", "key": "url", "name": "Image URL", "base": "text" },
+            { "type": "element", "key": "caption", "name": "Caption", "base": "text" }
+          ]
+        },
+        "repeatable": true
+      },
+      {
+        "type": "object",
+        "key": "task",
+        "name": "Task",
+        "properties": [
+          { "type": "element", "key": "title", "name": "Task Title", "base": "text" },
+          { "type": "element", "key": "completed", "name": "Completed", "base": "boolean" },
+          { "type": "element", "key": "dueDate", "name": "Due Date", "base": "datetime" }
+        ]
+      },
+      {
+        "type": "array",
+        "key": "taskList",
+        "name": "Task List",
+        "itemType": {
+          "type": "object",
+          "key": "task",
+          "name": "Task",
+          "properties": [
+            { "type": "element", "key": "title", "name": "Task Title", "base": "text" },
+            { "type": "element", "key": "completed", "name": "Completed", "base": "boolean" },
+            { "type": "element", "key": "dueDate", "name": "Due Date", "base": "datetime" }
+          ]
+        },
+        "repeatable": true
+      }
+    ]
+  },
+  "footerGroup": {
+    "type": "group",
+    "key": "footer",
+    "name": "Document Footer",
+    "itemTypes": [
+      { "key": "date1", "type": "element", "ref": "dateElement" },
+      { "key": "author1", "type": "object", "ref": "authorModel" }
+    ]
+  },
+  "editableGroupTypes": {
+    "type": "group",
+    "key": "editableGroupTypes",
+    "name": "Editable Group Types",
+    "itemTypes": [
+      { "key": "date", "type": "element", "ref": "dateElement" },
+      { "key": "author", "type": "object", "ref": "authorModel" }
+    ]
+  },
+  "predefinedGroup": {
+    "type": "group",
+    "key": "predefinedGroup",
+    "name": "Predefined Group",
+    "editable": false,
+    "itemTypes": [
+      { "type": "element", "key": "date", "ref": "dateElement" },
+      { "type": "object", "key": "author", "ref": "authorModel" }
+    ]
+  }
+}

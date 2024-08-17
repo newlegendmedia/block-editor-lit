@@ -1,204 +1,188 @@
-import { ReactiveController, ReactiveControllerHost, TemplateResult, html } from 'lit';
-import { Property } from '../types/ModelDefinition';
-import { TreeStateController } from '../controllers/TreeStateController';
-import { ModelStateController } from '../controllers/ModelStateController';
-//import { isElement, isModel, isList, isGroup } from '../types/ModelDefinition';
+import { LitElement, html, css, CSSResultGroup, PropertyValues, TemplateResult } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import type { Property } from '../util/model';
+import { globalDebugState } from '../util/debugState';
+import { libraryStore, type UnifiedLibrary } from '../library/libraryStore';
 
-export abstract class BaseBlock implements ReactiveController {
-  protected host: ReactiveControllerHost;
+export class BaseBlock extends LitElement {
+	@property({ type: Object }) model!: Property;
+	@property({ type: Object }) data: any;
+	@state() protected error: string | null = null;
+	@state() private showDebugButtons: boolean = false;
+	@state() protected library: UnifiedLibrary | null = null;
+	@state() protected libraryReady: boolean = false;
+	@state() private showDebugInfo: boolean = false;
 
-  constructor(
-    public modelProperty: Property,
-    public path: string,
-    public treeStateController: TreeStateController,
-    public modelStateController: ModelStateController
-  ) {
-    this.host = treeStateController.host;
-    this.host.addController(this);
-  }
+	private debugStateListener: () => void;
+	private unsubscribeLibrary: (() => void) | null = null;
 
+	static styles = css`
+		:host {
+			--debug-bg-color: #f4f7f9;
+			--debug-border-color: #dae0e3;
+			--debug-text-color: #212529;
+			--debug-highlight-color: #e9ecef;
+		}
 
-  updateHost(newHost: ReactiveControllerHost) {
-    this.host.removeController(this);
-    this.host = newHost;
-    this.host.addController(this);
-  }
+		:host {
+			display: block;
+			margin-bottom: var(--spacing-medium);
+			border: 1px solid var(--border-color);
+			padding: var(--spacing-medium);
+			border-radius: var(--border-radius);
+		}
 
-  abstract render(): TemplateResult;
+		.debug-info {
+			background-color: var(--debug-bg-color);
+			border: 1px solid var(--debug-border-color);
+			border-radius: 4px;
+			color: var(--debug-text-color);
+			font-family: 'Courier New', Courier, monospace;
+			font-size: 14px;
+			line-height: 1.5;
+			margin-top: 20px;
+			overflow: hidden;
+		}
 
-  getContent(): any {
-    return this.treeStateController.getContentByPath(this.path);
-  }
+		.debug-info-content {
+			display: flex;
+			flex-direction: column;
+			padding: 16px;
+		}
 
-  setContent(content: any): void {
-    this.treeStateController.setContentByPath(this.path, content);
-    this.requestUpdate();
-  }
+		.debug-info h4 {
+			margin: 0 0 16px;
+			font-size: 18px;
+			font-weight: bold;
+		}
 
-  protected requestUpdate() {
-    this.host.requestUpdate();
-  }
+		.debug-info-item {
+			background-color: var(--debug-highlight-color);
+			border-radius: 4px;
+			padding: 8px;
+			margin-bottom: 16px;
+		}
 
-  update(_changedProperties: Map<string, any>): void {
-    // Implement update logic here
-  }
+		.debug-info pre {
+			background-color: white;
+			border: 1px solid var(--debug-border-color);
+			border-radius: 4px;
+			margin: 0;
+			padding: 8px;
+			overflow-x: auto;
+		}
 
-  addChild(_child: BaseBlock): void {
-    // Implementation depends on the specific block type
-  }
+		.button.secondary-button {
+			background-color: var(--secondary-color);
+			color: white;
+			border: none;
+			padding: var(--spacing-small) var(--spacing-medium);
+			margin-bottom: var(--spacing-small);
+			cursor: pointer;
+			border-radius: var(--border-radius);
+		}
+	` as CSSResultGroup;
 
-  removeChild(_child: BaseBlock): void {
-    // Implementation depends on the specific block type
-  }
+	constructor() {
+		super();
+		this.debugStateListener = () => {
+			console.log(`${this.tagName} updating debug state`);
+			this.showDebugButtons = globalDebugState.showDebugButtons;
+			this.requestUpdate();
+		};
+	}
 
-  getChildren(): BaseBlock[] {
-    return this.treeStateController.getChildBlocks(this.path);
-  }
+	connectedCallback() {
+		super.connectedCallback();
+		globalDebugState.addListener(this.debugStateListener);
+		this.showDebugButtons = globalDebugState.showDebugButtons;
+		console.log(`${this.tagName} connected, showDebugButtons: ${this.showDebugButtons}`);
 
-  // Implement other ReactiveController methods
-  hostConnected(): void {}
-  hostDisconnected(): void {}
-  hostUpdate(): void {}
-  hostUpdated(): void {}
+		// Subscribe to the library store
+		this.unsubscribeLibrary = libraryStore.subscribe((library) => {
+			this.library = library;
+			this.libraryReady = true;
+			this.requestUpdate();
+		});
+	}
 
-  // New method to render content without child blocks
-  renderContent(): TemplateResult {
-    return html``;
-  }
+	disconnectedCallback() {
+		super.disconnectedCallback();
+		globalDebugState.removeListener(this.debugStateListener);
+		console.log(`${this.tagName} disconnected`);
+
+		// Unsubscribe from the library store
+		if (this.unsubscribeLibrary) {
+			this.unsubscribeLibrary();
+		}
+	}
+
+	protected updated(changedProperties: PropertyValues) {
+		super.updated(changedProperties);
+		if (changedProperties.has('showDebugButtons')) {
+			console.log(`${this.tagName} showDebugButtons updated to: ${this.showDebugButtons}`);
+		}
+		if (changedProperties.has('libraryReady') && this.libraryReady) {
+			this.onLibraryReady();
+		}
+	}
+
+	protected onLibraryReady() {
+		// Override this method in child classes to perform actions when the library is ready
+	}
+
+	render(): TemplateResult {
+		return html`
+			${this.error ? html`<div class="error">${this.error}</div>` : ''}
+			${this.showDebugButtons ? this.renderDebugButton() : ''}
+			<div>${this.renderContent()}</div>
+			${this.showDebugInfo ? this.renderDebugInfo() : ''}
+		`;
+	}
+
+	protected renderContent(): TemplateResult {
+		return html`<div>${this.model?.name}: ${JSON.stringify(this.data)}</div>`;
+	}
+
+	private renderDebugButton(): TemplateResult {
+		return html`
+			<button class="button secondary-button debug-button" @click=${this.toggleDebug}>
+				${this.showDebugInfo ? 'Hide' : 'Show'} Debug Info
+			</button>
+		`;
+	}
+
+	private toggleDebug() {
+		this.showDebugInfo = !this.showDebugInfo;
+		this.requestUpdate();
+	}
+
+	private renderDebugInfo() {
+		const debugInfo = {
+			model: this.model,
+			data: this.data,
+			library: this.library ? 'Loaded' : 'Not Loaded',
+		};
+		return html`
+			<div class="debug-info">
+				<div class="debug-info-content">
+					<h4>Debug Information</h4>
+					<div class="debug-info-item">
+						Model Type: ${this.model?.type}<br />
+						Data Type: ${typeof this.data}<br />
+						Library Status: ${this.library ? 'Loaded' : 'Not Loaded'}
+					</div>
+					<pre>${JSON.stringify(debugInfo, null, 2)}</pre>
+				</div>
+			</div>
+		`;
+	}
+
+	protected setError(message: string) {
+		this.error = message;
+	}
+
+	protected clearError() {
+		this.error = null;
+	}
 }
-
-export class ElementBlock extends BaseBlock {
-  render(): TemplateResult {
-    const content = this.getContent();
-    return html`
-      <div class="element-block">
-        <label>${this.modelProperty.label || this.modelProperty.key}</label>
-        <input 
-          type="text" 
-          .value=${content || ''} 
-          @input=${this.handleInput}
-          placeholder=${this.modelProperty.label || this.modelProperty.key}
-        />
-      </div>
-    `;
-  }
-
-  private handleInput(e: Event) {
-    const input = e.target as HTMLInputElement;
-    this.setContent(input.value);
-  }
-}
-
-export class ModelBlock extends BaseBlock {
-  render(): TemplateResult {
-    console.log(`Rendering ModelBlock: ${this.path}`);
-    return html`
-      <div class="model-block">
-        <h3>${this.modelProperty.label || this.modelProperty.key}</h3>
-        ${this.renderChildBlocks()}
-      </div>
-    `;
-  }
-
-  protected renderChildBlocks(): TemplateResult {
-    const childBlocks = this.treeStateController.getChildBlocks(this.path);
-    console.log(`Rendering child blocks for ModelBlock ${this.path}:`, childBlocks.map(b => b.path));
-    return html`
-      <div class="model-children">
-        ${childBlocks.map(childBlock => html`
-          <block-component
-            .path=${childBlock.path}
-            .treeStateController=${this.treeStateController}
-            .modelStateController=${this.modelStateController}
-          ></block-component>
-        `)}
-      </div>
-    `;
-  }
-}
-
-export class ListBlock extends BaseBlock {
-  render(): TemplateResult {
-    console.log(`Rendering ListBlock: ${this.path}`);
-    return html`
-      <div class="list-block">
-        <h3>${this.modelProperty.label || this.modelProperty.key}</h3>
-        ${this.renderChildBlocks()}
-        <button @click=${this.handleAddItem}>Add Item</button>
-      </div>
-    `;
-  }
-
-  protected renderChildBlocks(): TemplateResult {
-    const items = this.getContent() || [];
-    console.log(`Rendering list items for ListBlock ${this.path}:`, items.length);
-    return html`
-      <ul>
-        ${items.map((_: any, index: any) => {
-          const itemPath = `${this.path}.${index}`;
-          return html`
-            <li>
-              <block-component
-                .path=${itemPath}
-                .treeStateController=${this.treeStateController}
-                .modelStateController=${this.modelStateController}
-              ></block-component>
-            </li>
-          `;
-        })}
-      </ul>
-    `;
-  }
-
-  private handleAddItem() {
-    const listProperty = this.modelProperty as Property & { items: Property };
-    this.treeStateController.addChildBlock(this.path, listProperty.items);
-  }
-}
-
-export class GroupBlock extends BaseBlock {
-  render(): TemplateResult {
-    console.log(`Rendering GroupBlock: ${this.path}`);
-    return html`
-      <div class="group-block">
-        <h3>${this.modelProperty.label || this.modelProperty.key}</h3>
-        ${this.renderChildBlocks()}
-      </div>
-    `;
-  }
-
-  protected renderChildBlocks(): TemplateResult {
-    const childBlocks = this.treeStateController.getChildBlocks(this.path);
-    console.log(`Rendering child blocks for GroupBlock ${this.path}:`, childBlocks.map(b => b.path));
-    return html`
-      <div class="group-children">
-        ${childBlocks.map(childBlock => html`
-          <block-component
-            .path=${childBlock.path}
-            .treeStateController=${this.treeStateController}
-            .modelStateController=${this.modelStateController}
-          ></block-component>
-        `)}
-      </div>
-    `;
-  }
-}
-
-// export function createBlock(
-//   property: Property, 
-//   path: string, 
-//   treeStateController: TreeStateController, 
-//   modelStateController: ModelStateController
-// ): BaseBlock {
-//   if (isElement(property)) {
-//     return new ElementBlock(property, path, treeStateController, modelStateController);
-//   } else if (isModel(property)) {
-//     return new ModelBlock(property, path, treeStateController, modelStateController);
-//   } else if (isList(property)) {
-//     return new ListBlock(property, path, treeStateController, modelStateController);
-//   } else if (isGroup(property)) {
-//     return new GroupBlock(property, path, treeStateController, modelStateController);
-//   } else {
-//     throw new Error(`Unknown property type for ${path}`);
-//   }
-//}

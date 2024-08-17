@@ -1,39 +1,35 @@
-import { LitElement, html, css, TemplateResult } from 'lit';
+import { css, html, TemplateResult } from 'lit';
 import { property, customElement } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
-import type { ArrayProperty } from './model';
+import type { ArrayProperty } from '../util/model';
 import { ComponentFactory } from './app';
-import { UnifiedLibrary } from './ModelLibrary';
+import { BaseBlock } from './BaseBlock';
 
 @customElement('array-component')
-export class ArrayComponent extends LitElement {
-  @property({ type: Object }) model!: ArrayProperty;
+export class ArrayBlock extends BaseBlock {
+  @property({ type: Object }) override model!: ArrayProperty;
   @property({ type: Array }) data: any[] = [];
-  @property({ type: Object }) library!: UnifiedLibrary;
+
+  static styles = [
+    BaseBlock.styles,
+    css``
+  ];  
 
   get repeatable(): boolean {
     return this.model.repeatable || false;
   }
-  
-  static styles = css`
-    :host {
-      display: block;
-      margin-bottom: 10px;
-      border: 1px solid #ddd;
-      padding: 10px;
-    }
-    .array-item {
-      margin-bottom: 5px;
-    }
-  `;
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
+    if (!this.model) {
+      return html`<div class="error">Error: Invalid array configuration</div>`;
+    }
+
     return html`
       <div>
         <h3>${this.model.name}</h3>
-        ${repeat(this.data || [], (item, index) => index, (item, index) => html`
+        ${repeat(this.data || [], (_item, index) => index, (item, index) => html`
           <div class="array-item">
-            ${ComponentFactory.createComponent(this.model.itemType, item.value, this.library)}
+            ${ComponentFactory.createComponent(this.model.itemType, item )}
             ${this.repeatable ? html`<button @click=${() => this.removeItem(index)}>Remove</button>` : ''}
           </div>
         `)}
