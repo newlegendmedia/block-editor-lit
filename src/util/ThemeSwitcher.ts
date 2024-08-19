@@ -13,7 +13,7 @@ export class ThemeSwitcher extends LitElement {
       background-color: var(--primary-color);
       color: var(--text-color);
       border: none;
-      padding: 10px 20px;
+      padding: 7px 15px;
       cursor: pointer;
       border-radius: 5px;
     }

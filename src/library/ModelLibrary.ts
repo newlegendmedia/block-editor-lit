@@ -24,7 +24,7 @@ interface LibraryItem {
 	definition: Property;
 }
 
-export class UnifiedLibrary {
+export class ModelLibrary {
 	private items: Map<string, LibraryItem> = new Map();
 	private errors: string[] = [];
 
@@ -33,10 +33,20 @@ export class UnifiedLibrary {
 	}
 
 	private loadAllData(): void {
-		this.loadDefinitions('object', objectsData as Record<string, ObjectProperty>);
-		this.loadDefinitions('element', elementsData as Record<string, ElementProperty>);
-		this.loadDefinitions('array', arraysData as Record<string, ArrayProperty>);
-		this.loadDefinitions('group', groupsData as Record<string, GroupProperty>);
+		this.loadDefinitions(
+			'object',
+			objectsData as Record<string, ObjectProperty | PropertyReference>
+		);
+		this.loadDefinitions(
+			'element',
+			elementsData as Record<string, ElementProperty | PropertyReference>
+		);
+		this.loadDefinitions(
+			'array',
+			arraysData as Record<string, ArrayProperty | PropertyReference>);
+		this.loadDefinitions(
+			'group',
+			groupsData as Record<string, GroupProperty | PropertyReference>);
 
 		if (this.errors.length > 0) {
 			console.error('Model Library: Errors found while loading library data:');
@@ -90,19 +100,18 @@ export class UnifiedLibrary {
 }
 
 function mergeProperties<T extends Property>(original: T, resolved: Property): T {
-
 	if (isPropertyReference(original)) {
 		const { ref, ...restOriginal } = original; // Exclude 'ref' from original
 		original = restOriginal as T;
 	}
-    const merged = { ...resolved, ...original } as T;
+	const merged = { ...resolved, ...original } as T;
 
 	return merged;
 }
 
 export function resolveRefs(
 	property: Property,
-	library: UnifiedLibrary,
+	library: ModelLibrary,
 	resolvedRefs: Set<string> = new Set()
 ): Property {
 	if (isPropertyReference(property)) {

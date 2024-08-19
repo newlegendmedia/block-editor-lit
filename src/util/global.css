@@ -2,7 +2,7 @@
 
 :root {
   /* Color palette */
-  --primary-color: #279aae;
+  --primary-color: #66b6c4;
   --secondary-color: #6c757d;
   --background-color: #f8f9fa;
   --text-color: #333333;
@@ -68,4 +68,12 @@ body {
   margin-bottom: var(--spacing-small);
   cursor: pointer;
   border-radius: var(--border-radius);
+}
+
+input {
+  padding: var(--spacing-small);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background-color: var(--background-color);
+  color: var(--text-color)
 }

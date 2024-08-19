@@ -8,89 +8,90 @@ import { blockStore, CompositeBlock } from '../blocks/BlockStore';
 
 @customElement('object-component')
 export class ObjectBlock extends BaseBlock {
-	@state() private childBlocks: { [key: string]: string } = {};
+    @state() private childBlocks: { [key: string]: string } = {};
 
-	static styles = [
-		BaseBlock.styles,
-		css`
-			.object-content {
-				display: flex;
-				flex-direction: column;
-				gap: var(--spacing-small);
-			}
-		`,
-	];
+    static styles = [
+        BaseBlock.styles,
+        css`
+            .object-content {
+                display: flex;
+                flex-direction: column;
+                gap: var(--spacing-small);
+            }
+        `,
+    ];
 
-	connectedCallback() {
-		super.connectedCallback();
-		this.initializeChildBlocks();
-	}
+    connectedCallback() {
+        super.connectedCallback();
+        this.initializeChildBlocks();
+    }
 
-	private initializeChildBlocks() {
-		if (!this.block) return;
-	
-		const objectModel = this.model as ObjectProperty;
-		if (!objectModel || objectModel.type !== 'object') return;
-	
-		const compositeBlock = this.block as CompositeBlock;
-		if (!compositeBlock.children) {
-			compositeBlock.children = [];
-		}
+    private initializeChildBlocks() {
+        if (!this.block) return;
+    
+        const objectModel = this.model as ObjectProperty;
+        if (!objectModel || objectModel.type !== 'object') return;
+    
+        const compositeBlock = this.block as CompositeBlock;
+        if (!compositeBlock.children) {
+            compositeBlock.children = [];
+        }
 
-		objectModel.properties.forEach((prop) => {
-			let childBlockId = compositeBlock.children.find(
-				(childId) => blockStore.getBlock(childId)?.modelKey === prop.key
-			);
+        objectModel.properties.forEach((prop) => {
+            let childBlockId = compositeBlock.children.find(
+                (childId) => blockStore.getBlock(childId)?.modelKey === prop.key
+            );
 
-			if (!childBlockId) {
-				const childBlock = blockStore.createBlockFromModel(prop);
-				childBlockId = childBlock.id;
-				compositeBlock.children.push(childBlockId);
-			}
+            if (!childBlockId) {
+                const childBlock = blockStore.createBlockFromModel(prop);
+                childBlockId = childBlock.id;
+                compositeBlock.children.push(childBlockId);
+            }
 
-			this.childBlocks[prop.key!] = childBlockId;
-		});
+            this.childBlocks[prop.key!] = childBlockId;
+        });
 
-		blockStore.setBlock(compositeBlock);
-	}
+        blockStore.setBlock(compositeBlock);
+    }
 
-	protected renderContent(): TemplateResult {
-		if (!this.block || !this.library) {
-			return html`<div>Loading...</div>`;
-		}
+    protected renderContent(): TemplateResult {
+        if (!this.block || !this.library) {
+            return html`<div>Loading...</div>`;
+        }
 
-		const objectModel = this.getModel() as ObjectProperty;
-		if (!objectModel || objectModel.type !== 'object') {
-			return html`<div>Invalid object model</div>`;
-		}
+        const objectModel = this.getModel() as ObjectProperty;
+        if (!objectModel || objectModel.type !== 'object') {
+            return html`<div>Invalid object model</div>`;
+        }
 
-		return html`
-			<div>
-				<h2>${objectModel.name || 'Object'}</h2>
-				<div class="object-content">
-					${repeat(
-						objectModel.properties,
-						(prop) => prop.key!,
-						(prop) => this.renderProperty(prop)
-					)}
-				</div>
-			</div>
-		`;
-	}
+        return html`
+            <div>
+                <h2>${objectModel.name || 'Object'}</h2>
+                <div class="object-content">
+                    ${repeat(
+                        objectModel.properties,
+                        (prop) => prop.key!,
+                        (prop) => this.renderProperty(prop)
+                    )}
+                </div>
+            </div>
+        `;
+    }
 
 	private renderProperty(prop: Property): TemplateResult {
-		const childBlockId = this.childBlocks[prop.key!];
-		if (!childBlockId) {
-			return html`<div>Error: Child block not found for ${prop.key}</div>`;
-		}
-		return ComponentFactory.createComponent(childBlockId, this.library!);
-	}
+        const childBlockId = this.childBlocks[prop.key!];
+        if (!childBlockId) {
+            return html`<div>Error: Child block not found for ${prop.key}</div>`;
+        }
+        const childPath = `${this.path}.${prop.key}`;
+        return ComponentFactory.createComponent(childBlockId, this.library!, childPath);
+    }
 
-	protected handleValueChanged(e: CustomEvent) {
-		const { key, value } = e.detail;
-		if (!this.block) return;
-	
-		const updatedContent = { ...this.block.content, [key]: value };
-		this.updateBlockContent(updatedContent);
-	  }
+    protected handleValueChanged(e: CustomEvent) {
+        const { key, value } = e.detail;
+        if (!this.block) return;
+    
+        const updatedContent = { ...this.block.content, [key]: value };
+        this.updateBlockContent(updatedContent);
+    }
 }
