@@ -72,6 +72,8 @@ export class UnifiedLibrary {
 			);
 			return undefined;
 		}
+		item.definition = resolveRefs(item.definition, this);
+		console.log('Model Library: Resolved definition:', item.definition);
 		return item.definition;
 	}
 
@@ -89,28 +91,21 @@ export class UnifiedLibrary {
 }
 
 function mergeProperties<T extends Property>(original: T, resolved: Property): T {
-	if (isPropertyReference(resolved)) {
-		return { ...original };
-	}
 
-	const merged = { ...resolved, ...original } as T;
-
-	if (isObject(original) && isObject(resolved)) {
-		(merged as ObjectProperty).properties = original.properties || resolved.properties;
-	} else if (isArray(original) && isArray(resolved)) {
-		(merged as ArrayProperty).itemType = original.itemType || resolved.itemType;
-	} else if (isGroup(original) && isGroup(resolved)) {
-		(merged as GroupProperty).itemTypes = original.itemTypes || resolved.itemTypes;
+	if (isPropertyReference(original)) {
+		const { ref, ...restOriginal } = original; // Exclude 'ref' from original
+		original = restOriginal as T;
 	}
+    const merged = { ...resolved, ...original } as T;
 
 	return merged;
 }
 
 export function resolveRefs(
-	property: Property | PropertyReference,
+	property: Property,
 	library: UnifiedLibrary,
 	resolvedRefs: Set<string> = new Set()
-): Property | PropertyReference {
+): Property {
 	if (isPropertyReference(property)) {
 		if (resolvedRefs.has(property.ref)) {
 			library

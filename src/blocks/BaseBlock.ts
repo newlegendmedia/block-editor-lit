@@ -1,31 +1,35 @@
 import { LitElement, html, css, CSSResultGroup, PropertyValues, TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import type { Property } from '../util/model';
-import { globalDebugState } from '../util/debugState';
 import { libraryStore, type UnifiedLibrary } from '../library/libraryStore';
-import { blockStore, ContentBlock } from '../blocks/BlockStore';
+import { BlockId, blockStore, ContentBlock } from '../blocks/BlockStore';
+import { DebugController, globalDebugState } from '../util/DebugController';
 
 export abstract class BaseBlock extends LitElement {
-	@property({ type: String }) blockId!: string;
+	//	@property({ type: String }) blockId!: string;
+	@state() protected model?: Property;
 	@state() protected block?: ContentBlock;
 	@state() protected error: string | null = null;
-	@state() private showDebugButtons: boolean = false;
-	@state() protected library: UnifiedLibrary | null = null;
-	@state() protected libraryReady: boolean = false;
-	@state() private showDebugInfo: boolean = false;
+	@state() protected library: UnifiedLibrary;
 
-	private debugStateListener: () => void;
-	private unsubscribeLibrary: (() => void) | null = null;
 	private unsubscribeBlock: (() => void) | null = null;
+	protected debugController: DebugController;
+
+	private _blockId?: string;
+
+	@property({ type: String })
+	get blockId(): string | undefined {
+		return this._blockId;
+	}
+
+	set blockId(value: string | undefined) {
+		console.log(`BlockId setter called: old=${this._blockId}, new=${value}`);
+		const oldValue = this._blockId;
+		this._blockId = value;
+		this.requestUpdate('blockId', oldValue);
+	}
 
 	static styles = css`
-		:host {
-			--debug-bg-color: #f4f7f9;
-			--debug-border-color: #dae0e3;
-			--debug-text-color: #212529;
-			--debug-highlight-color: #e9ecef;
-		}
-
 		:host {
 			display: block;
 			margin-bottom: var(--spacing-medium);
@@ -34,87 +38,40 @@ export abstract class BaseBlock extends LitElement {
 			border-radius: var(--border-radius);
 		}
 
+		.error {
+			color: red;
+			margin-bottom: var(--spacing-small);
+		}
+
 		.debug-info {
-			background-color: var(--debug-bg-color);
-			border: 1px solid var(--debug-border-color);
+			background-color: var(--debug-bg-color, #f4f7f9);
+			border: 1px solid var(--debug-border-color, #dae0e3);
 			border-radius: 4px;
-			color: var(--debug-text-color);
+			color: var(--debug-text-color, #212529);
 			font-family: 'Courier New', Courier, monospace;
 			font-size: 14px;
 			line-height: 1.5;
 			margin-top: 20px;
-			overflow: hidden;
-		}
-
-		.debug-info-content {
-			display: flex;
-			flex-direction: column;
 			padding: 16px;
-		}
-
-		.debug-info h4 {
-			margin: 0 0 16px;
-			font-size: 18px;
-			font-weight: bold;
-		}
-
-		.debug-info-item {
-			background-color: var(--debug-highlight-color);
-			border-radius: 4px;
-			padding: 8px;
-			margin-bottom: 16px;
-		}
-
-		.debug-info pre {
-			background-color: white;
-			border: 1px solid var(--debug-border-color);
-			border-radius: 4px;
-			margin: 0;
-			padding: 8px;
-			overflow-x: auto;
-		}
-
-		.button.secondary-button {
-			background-color: var(--secondary-color);
-			color: white;
-			border: none;
-			padding: var(--spacing-small) var(--spacing-medium);
-			margin-bottom: var(--spacing-small);
-			cursor: pointer;
-			border-radius: var(--border-radius);
+			overflow: hidden;
 		}
 	` as CSSResultGroup;
 
 	constructor() {
 		super();
-		this.debugStateListener = () => {
-			this.showDebugButtons = globalDebugState.showDebugButtons;
-			this.requestUpdate();
-		};
+		this.library = libraryStore.value;
+		this.debugController = new DebugController(this);
 	}
 
 	connectedCallback() {
 		super.connectedCallback();
-		globalDebugState.addListener(this.debugStateListener);
-		this.showDebugButtons = globalDebugState.showDebugButtons;
-
-		this.unsubscribeLibrary = libraryStore.subscribe((library) => {
-			this.library = library;
-			this.libraryReady = true;
-			this.requestUpdate();
-		});
-
+		console.log(`Connected: blockId=${this.blockId}`);
 		this.subscribeToBlock();
+		this.model = this.getModel();
 	}
 
 	disconnectedCallback() {
 		super.disconnectedCallback();
-		globalDebugState.removeListener(this.debugStateListener);
-
-		if (this.unsubscribeLibrary) {
-			this.unsubscribeLibrary();
-		}
-
 		if (this.unsubscribeBlock) {
 			this.unsubscribeBlock();
 		}
@@ -122,14 +79,25 @@ export abstract class BaseBlock extends LitElement {
 
 	protected updated(changedProperties: PropertyValues) {
 		super.updated(changedProperties);
-		if (changedProperties.has('showDebugButtons')) {
-			console.log(`${this.tagName} showDebugButtons updated to: ${this.showDebugButtons}`);
-		}
-		if (changedProperties.has('libraryReady') && this.libraryReady) {
-			this.onLibraryReady();
-		}
 		if (changedProperties.has('blockId')) {
-			this.subscribeToBlock();
+			const oldValue = changedProperties.get('blockId');
+			console.log('BlockId changed in updated():', {
+				old: oldValue,
+				new: this.blockId,
+				changed: oldValue !== this.blockId,
+			});
+			if (this.blockId) {
+				this.subscribeToBlock();
+//				this.model = this.getModel();
+			} else {
+				console.warn('BlockId is undefined in updated()');
+			}
+		}
+		if (globalDebugState.useDebugController) {
+			this.debugController.setDebugInfo({
+				block: this.block,
+				model: this.model,
+			});
 		}
 	}
 
@@ -137,61 +105,25 @@ export abstract class BaseBlock extends LitElement {
 		if (this.unsubscribeBlock) {
 			this.unsubscribeBlock();
 		}
-		this.unsubscribeBlock = blockStore.subscribeToBlock(this.blockId, (block) => {
+		this.unsubscribeBlock = blockStore.subscribeToBlock(this.blockId as BlockId, (block) => {
 			this.block = block;
 			this.requestUpdate();
 		});
 	}
 
-	protected onLibraryReady() {
-		// Override this method in child classes to perform actions when the library is ready
-	}
-
 	render(): TemplateResult {
+		console.log('Rendering block:', this.blockId);
 		return html`
+			<div>BLOCKID: ${this.blockId}</div>
+			${globalDebugState.useDebugController ? this.debugController.renderDebugButton() : ''}
+			${globalDebugState.useDebugController ? this.debugController.renderDebugInfo() : ''}
 			${this.error ? html`<div class="error">${this.error}</div>` : ''}
-			${this.showDebugButtons ? this.renderDebugButton() : ''}
+
 			<div>${this.renderContent()}</div>
-			${this.showDebugInfo ? this.renderDebugInfo() : ''}
 		`;
 	}
 
 	protected abstract renderContent(): TemplateResult;
-
-	private renderDebugButton(): TemplateResult {
-		return html`
-			<button class="button secondary-button debug-button" @click=${this.toggleDebug}>
-				${this.showDebugInfo ? 'Hide' : 'Show'} Debug Info
-			</button>
-		`;
-	}
-
-	private toggleDebug() {
-		this.showDebugInfo = !this.showDebugInfo;
-		this.requestUpdate();
-	}
-
-	private renderDebugInfo() {
-		const model = this.getModel();
-		const debugInfo = {
-			block: this.block,
-			model: model,
-			library: this.library ? 'Loaded' : 'Not Loaded',
-		};
-		return html`
-			<div class="debug-info">
-				<div class="debug-info-content">
-					<h4>Debug Information</h4>
-					<div class="debug-info-item">
-						Block Type: ${this.block?.type}<br />
-						Model Type: ${model?.type}<br />
-						Library Status: ${this.library ? 'Loaded' : 'Not Loaded'}
-					</div>
-					<pre>${JSON.stringify(debugInfo, null, 2)}</pre>
-				</div>
-			</div>
-		`;
-	}
 
 	protected setError(message: string) {
 		this.error = message;
@@ -208,7 +140,7 @@ export abstract class BaseBlock extends LitElement {
 		}
 
 		if (this.block.inlineModel) {
-			console.log(`${this.tagName}: Using inline model:`, this.block.inlineModel);
+			console.log('Using inline model');
 			return this.block.inlineModel;
 		}
 
@@ -217,10 +149,8 @@ export abstract class BaseBlock extends LitElement {
 			return undefined;
 		}
 
-		console.log(`${this.tagName}: Attempting to get model for block:`, this.block);
 		const modelKey = this.block.modelRef || this.block.modelKey;
 		const model = this.library.getDefinition(modelKey, this.block.type);
-		console.log(`${this.tagName}: Retrieved model:`, model);
 		return model;
 	}
 
@@ -232,7 +162,6 @@ export abstract class BaseBlock extends LitElement {
 			content: content,
 		}));
 
-		// Dispatch an event to notify parent components of the change
 		this.dispatchEvent(
 			new CustomEvent('value-changed', {
 				detail: { key: this.block.modelKey, value: content },

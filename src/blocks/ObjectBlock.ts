@@ -21,17 +21,17 @@ export class ObjectBlock extends BaseBlock {
 		`,
 	];
 
-	protected onLibraryReady() {
-		super.onLibraryReady();
+	connectedCallback() {
+		super.connectedCallback();
 		this.initializeChildBlocks();
 	}
 
 	private initializeChildBlocks() {
-		if (!this.block || !this.library) return;
-
-		const objectModel = this.getModel() as ObjectProperty;
+		if (!this.block) return;
+	
+		const objectModel = this.model as ObjectProperty;
 		if (!objectModel || objectModel.type !== 'object') return;
-
+	
 		const compositeBlock = this.block as CompositeBlock;
 		if (!compositeBlock.children) {
 			compositeBlock.children = [];
@@ -83,7 +83,7 @@ export class ObjectBlock extends BaseBlock {
 		if (!childBlockId) {
 			return html`<div>Error: Child block not found for ${prop.key}</div>`;
 		}
-
+		console.log('Rendering property:', childBlockId, prop.key);
 		return ComponentFactory.createComponent(childBlockId, this.library!);
 	}
 

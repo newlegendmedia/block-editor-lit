@@ -1,35 +1,45 @@
+// libraryStore.ts
+
 import { UnifiedLibrary } from './ModelLibrary';
 
-class Store<T> {
-  private subscribers: Set<(value: T) => void> = new Set();
-  private _value: T;
+class LibraryStore {
+  private subscribers: Set<(value: UnifiedLibrary, ready: boolean) => void> = new Set();
+  private _library: UnifiedLibrary;
+  private _ready: boolean = false;
 
-  constructor(initialValue: T) {
-    this._value = initialValue;
+  constructor() {
+    this._library = new UnifiedLibrary();
+    this.initializeLibrary();
   }
 
-  get value(): T {
-    return this._value;
-  }
-
-  set value(newValue: T) {
-    this._value = newValue;
+  private async initializeLibrary() {
+    // Simulate async loading (replace with actual async operations if needed)
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    this._ready = true;
     this.notify();
   }
 
-  subscribe(callback: (value: T) => void): () => void {
+  get value(): UnifiedLibrary {
+    return this._library;
+  }
+
+  get ready(): boolean {
+    return this._ready;
+  }
+
+  subscribe(callback: (value: UnifiedLibrary, ready: boolean) => void): () => void {
     this.subscribers.add(callback);
-    callback(this._value);
+    callback(this._library, this._ready);
     return () => this.subscribers.delete(callback);
   }
 
   private notify() {
     for (const callback of this.subscribers) {
-      callback(this._value);
+      callback(this._library, this._ready);
     }
   }
 }
 
-export const libraryStore = new Store(new UnifiedLibrary());
+export const libraryStore = new LibraryStore();
 
 export type { UnifiedLibrary };

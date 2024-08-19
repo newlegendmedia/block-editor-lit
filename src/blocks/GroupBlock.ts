@@ -33,15 +33,15 @@ export class GroupBlock extends BaseBlock {
 		`,
 	];
 
-	protected onLibraryReady() {
-		super.onLibraryReady();
+	connectedCallback() {
+		super.connectedCallback();
 		this.initializeChildBlocks();
 	}
 
 	private initializeChildBlocks() {
-		if (!this.block || !this.library) return;
+		if (!this.block) return;
 
-		const groupModel = this.getModel() as GroupProperty;
+		const groupModel = this.model as GroupProperty;
 		if (!groupModel || groupModel.type !== 'group') return;
 
 		const compositeBlock = this.block as CompositeBlock;

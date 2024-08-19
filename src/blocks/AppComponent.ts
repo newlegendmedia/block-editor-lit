@@ -1,94 +1,90 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { blockStore } from './BlockStore';
 import { libraryStore, UnifiedLibrary } from '../library/libraryStore';
+import { blockStore } from './BlockStore';
 
 import './DocumentBlock';
+import '../util/DebugToggle';
 
 @customElement('app-component')
 export class AppComponent extends LitElement {
-	@state() private documentId: string | null = null;
-	@state() private library: UnifiedLibrary | null = null;
+  @state() private libraryReady: boolean = false;
+  @state() private openDocuments: string[] = []; // List of open document IDs
+  @state() private library: UnifiedLibrary | null = null;
 
-	private unsubscribeLibrary: (() => void) | null = null;
+  private unsubscribeLibrary: (() => void) | null = null;
 
-	static styles = css`
-		:host {
-			display: block;
-			font-family: Arial, sans-serif;
-		}
-	`;
+  static styles = css`
+    :host {
+      display: block;
+      font-family: Arial, sans-serif;
+    }
+    .document-container {
+      margin-top: 20px;
+    }
+  `;
 
-	connectedCallback() {
-		super.connectedCallback();
-		this.unsubscribeLibrary = libraryStore.subscribe((library) => {
-			this.library = library;
-			if (this.library) {
-				this.initializeDocument();
-			}
-		});
-	}
+  connectedCallback() {
+    super.connectedCallback();
+    this.unsubscribeLibrary = libraryStore.subscribe((library, ready) => {
+      this.library = library;
+      this.libraryReady = ready;
+      if (this.libraryReady && this.openDocuments.length === 0) {
+        this.openNewDocument(); // Open initial document
+      }
+      this.requestUpdate();
+    });
+  }
 
-	disconnectedCallback() {
-		super.disconnectedCallback();
-		if (this.unsubscribeLibrary) {
-			this.unsubscribeLibrary();
-		}
-	}
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this.unsubscribeLibrary) {
+      this.unsubscribeLibrary();
+    }
+  }
 
-	private initializeDocument() {
-		if (!this.library) return;
+  private openNewDocument() {
+    const newDocId = this.initializeDocument();
+    this.openDocuments = [...this.openDocuments, newDocId];
+  }
 
-		console.log('Initializing document...');
-		console.log('Available definitions:', this.library.getAllDefinitions());
+  private initializeDocument(): string {
+    if (!this.library) return '';
 
-		const titleElementDef = this.library.getDefinition('titleElement', 'element');
-		console.log('Title element definition:', titleElementDef);
-		if (!titleElementDef) {
-			console.error('Title element definition not found');
-			return;
-		}
-		const titleBlock = blockStore.createBlockFromModel(titleElementDef, 'My First Notion++ Page');
-		console.log('Created title block:', titleBlock);
+    console.log('Initializing document...');
 
-		const pageDef = this.library.getDefinition('page', 'group');
-		if (!pageDef) {
-			console.error('Page definition not found');
-			return;
-		}
-		const contentBlock = blockStore.createBlockFromModel(pageDef);
+    const notionModel = this.library.getDefinition('notion', 'object');
+    console.log('Notion model:', notionModel);
+    if (!notionModel) {
+      console.error('Notion definition not found');
+      return '';
+    }
+    const rootBlock = blockStore.createBlockFromModel(notionModel);
 
-		const notionDef = this.library.getDefinition('notion', 'object');
-		if (!notionDef) {
-			console.error('Notion definition not found');
-			return;
-		}
-		const rootBlock = blockStore.createBlockFromModel(notionDef, {
-			title: titleBlock.id,
-			content: contentBlock.id,
-		});
+    const document = {
+      id: 'notionDoc' + Date.now(), // Unique ID based on timestamp
+      title: 'New Notion++ Document',
+      rootBlock: rootBlock.id,
+    };
 
-		const document = {
-			id: 'doc1',
-			title: 'My First Document',
-			rootBlock: rootBlock.id,
-		};
+    blockStore.setDocument(document);
+    console.log('Document initialized:', document);
+    return document.id;
+  }
 
-		blockStore.setDocument(document);
-		this.documentId = document.id;
+  render() {
+    if (!this.libraryReady) {
+      return html`<div>Loading library...</div>`;
+    }
 
-		console.log('Document initialized:', document);
-		console.log('Root block:', blockStore.getBlock(rootBlock.id));
-	}
-
-	render() {
-		if (!this.documentId || !this.library) {
-			return html`<div>Loading...</div>`;
-		}
-
-		return html`
-			<h1>Notion++ Block Editor</h1>
-			<document-component .documentId=${this.documentId}></document-component>
-		`;
-	}
+	  return html`
+      <button @click=${() => this.openNewDocument()}>New Document</button>
+		<debug-toggle></debug-toggle>
+      <div class="document-container">
+        ${this.openDocuments.map(
+          (docId) => html`<document-component .documentId=${docId}></document-component>`
+        )}
+      </div>
+    `;
+  }
 }

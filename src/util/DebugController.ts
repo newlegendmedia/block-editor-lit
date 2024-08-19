@@ -1,57 +1,101 @@
-import { LitElement, html, css } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
-import { globalDebugState } from './debugState';
+import { ReactiveController, ReactiveControllerHost, html } from 'lit';
 
-@customElement('debug-controller')
-export class DebugControllerComponent extends LitElement {
-	@state() private showDebugButtons: boolean = false;
+class DebugState {
+    private _showDebugButtons: boolean = false;
+    private _useDebugController: boolean = true;  // New setting
+    private listeners: Set<() => void> = new Set();
 
-	private debugStateListener: () => void;
+    get showDebugButtons(): boolean {
+        return this._showDebugButtons;
+    }
 
-	constructor() {
-		super();
-		this.debugStateListener = () => {
-			this.showDebugButtons = globalDebugState.showDebugButtons;
-			this.requestUpdate();
-		};
+    set showDebugButtons(value: boolean) {
+        this._showDebugButtons = value;
+        this.notifyListeners();
+    }
+
+    get useDebugController(): boolean {
+        return this._useDebugController;
+    }
+
+    set useDebugController(value: boolean) {
+        this._useDebugController = value;
+        this.notifyListeners();
+    }
+
+	addListener(listener: () => void) {
+        this.listeners.add(listener);
+    }
+
+    removeListener(listener: () => void) {
+        this.listeners.delete(listener);
+    }
+
+    private notifyListeners() {
+        this.listeners.forEach(listener => listener());
+    }
+}
+
+export const globalDebugState = new DebugState();
+
+export class DebugController implements ReactiveController {
+    private host: ReactiveControllerHost;
+    private debugInfo: Record<string, any> = {};
+
+    constructor(host: ReactiveControllerHost) {
+        this.host = host;
+        globalDebugState.addListener(() => this.host.requestUpdate());
+        host.addController(this);
 	}
+	
+    hostConnected() {}
+    hostDisconnected() {
+        globalDebugState.removeListener(() => this.host.requestUpdate());
+    }
 
-	connectedCallback() {
-		super.connectedCallback();
-		globalDebugState.addListener(this.debugStateListener);
-		this.showDebugButtons = globalDebugState.showDebugButtons;
-	}
+    setDebugInfo(info: Record<string, any>) {
+        if (globalDebugState.useDebugController) {
+            this.debugInfo = this.sanitizeObject(info);
+        }
+    }
 
-	disconnectedCallback() {
-		super.disconnectedCallback();
-		globalDebugState.removeListener(this.debugStateListener);
-	}
+    private sanitizeObject(obj: any): any {
+        const seen = new WeakSet();
+        return JSON.parse(JSON.stringify(obj, (key, value) => {
+            if (typeof value === "object" && value !== null) {
+                // if (seen.has(value)) {
+                //     return "[Circular]";
+                // }
+                seen.add(value);
+            }
+            return value;
+        }));
+    }
 
-	static styles = css`
-		:host {
-			display: block;
-			margin-bottom: 10px;
-		}
-		button {
-			background-color: var(--secondary-color);
-			color: white;
-			border: none;
-			padding: var(--spacing-small) var(--spacing-medium);
-			margin-bottom: var(--spacing-small);
-			cursor: pointer;
-			border-radius: var(--border-radius);
-		}
-	`;
+    get showDebugButtons(): boolean {
+        return globalDebugState.showDebugButtons;
+    }
 
-	render() {
-		return html`
-			<button @click=${this.toggleDebugButtons}>
-				${this.showDebugButtons ? 'Hide' : 'Show'} All Debug Buttons
-			</button>
-		`;
-	}
+    toggleDebugButtons() {
+        globalDebugState.showDebugButtons = !globalDebugState.showDebugButtons;
+    }
 
-	private toggleDebugButtons() {
-		globalDebugState.showDebugButtons = !globalDebugState.showDebugButtons;
-	}
+    renderDebugButton() {
+        if (!globalDebugState.useDebugController) return '';
+        return html`
+            <button @click=${this.toggleDebugButtons}>
+                ${this.showDebugButtons ? 'Hide' : 'Show'} Debug Info
+            </button>
+        `;
+    }
+
+    renderDebugInfo() {
+        if (!globalDebugState.useDebugController || !this.showDebugButtons) return '';
+        return html`
+            <div class="debug-info">
+                <h4>Debug Information</h4>
+                <pre>${JSON.stringify(this.debugInfo, null, 2)}</pre>
+            </div>
+        `;
+    }
 }

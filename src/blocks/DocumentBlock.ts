@@ -1,68 +1,56 @@
+// DocumentBlock.ts
+
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { ComponentFactory } from '../util/ComponentFactory';
 import { blockStore, Document as DocumentType } from './BlockStore';
-import { libraryStore, UnifiedLibrary } from '../library/libraryStore';
+import { libraryStore } from '../library/libraryStore';
 
 @customElement('document-component')
 export class DocumentComponent extends LitElement {
-	@property({ type: String }) documentId!: string;
-	@state() private document: DocumentType | null = null;
-	@state() private library: UnifiedLibrary | null = null;
+  @property({ type: String }) documentId!: string;
+  @state() private document: DocumentType | null = null;
 
-	private unsubscribeLibrary: (() => void) | null = null;
+  static styles = css`
+    :host {
+      display: block;
+      padding: 16px;
+      border: 1px solid #ccc;
+      margin-bottom: 16px;
+    }
+  `;
 
-	static styles = css`
-		:host {
-			display: block;
-			padding: 16px;
-		}
-	`;
+  connectedCallback() {
+    super.connectedCallback();
+    this.loadDocument();
+  }
 
-	connectedCallback() {
-		super.connectedCallback();
-		this.unsubscribeLibrary = libraryStore.subscribe((library) => {
-			this.library = library;
-			this.requestUpdate();
-		});
-		this.loadDocument();
-	}
+  updated(changedProperties: Map<string, any>) {
+    if (changedProperties.has('documentId')) {
+      this.loadDocument();
+    }
+  }
 
-	disconnectedCallback() {
-		super.disconnectedCallback();
-		if (this.unsubscribeLibrary) {
-			this.unsubscribeLibrary();
-		}
-	}
+  private loadDocument() {
+    console.log('Loading document with id:', this.documentId);
+    const doc = blockStore.getDocument(this.documentId);
+    if (doc) {
+      this.document = doc;
+      console.log('Document loaded:', this.document);
+    } else {
+      console.error(`Document with id ${this.documentId} not found`);
+    }
+//    this.requestUpdate();
+  }
 
-	updated(changedProperties: Map<string, any>) {
-		if (changedProperties.has('documentId')) {
-			this.loadDocument();
-		}
-	}
+  render() {
+    if (!this.document) {
+      return html`<div>Loading document...</div>`;
+    }
 
-	private loadDocument() {
-		console.log('Loading document with id:', this.documentId);
-		const doc = blockStore.getDocument(this.documentId);
-		if (doc) {
-			this.document = doc;
-			console.log('Document loaded:', this.document);
-		} else {
-			this.document = null;
-			console.error(`Document with id ${this.documentId} not found`);
-		}
-		this.requestUpdate();
-	}
-
-	render() {
-		console.log('Document render, document:', this.document);
-		if (!this.document || !this.library) {
-			return html`<div>Loading document...</div>`;
-		}
-
-		return html`
-			<h1>${this.document.title}</h1>
-			${ComponentFactory.createComponent(this.document.rootBlock, this.library)}
-		`;
-	}
+    return html`
+      <h1>${this.document.title}</h1>
+      ${ComponentFactory.createComponent(this.document.rootBlock, libraryStore.value)}
+    `;
+  }
 }

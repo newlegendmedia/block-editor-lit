@@ -19,7 +19,7 @@ export class ElementBlock extends BaseBlock {
 	];
 
 	protected renderContent(): TemplateResult {
-		if (!this.block || !this.library) {
+		if (!this.block) {
 			return html`<div>Loading...</div>`;
 		}
 

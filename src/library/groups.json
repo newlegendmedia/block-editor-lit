@@ -28,13 +28,9 @@
       },
       {
         "type": "object",
-        "key": "task",
+        "key": "taskItem1",
         "name": "Task",
-        "properties": [
-          { "type": "element", "key": "title", "name": "Task Title", "base": "text" },
-          { "type": "element", "key": "completed", "name": "Completed", "base": "boolean" },
-          { "type": "element", "key": "dueDate", "name": "Due Date", "base": "datetime" }
-        ]
+        "ref": "taskModel"
       },
       {
         "type": "array",
