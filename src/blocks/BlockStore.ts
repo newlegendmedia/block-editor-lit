@@ -160,7 +160,6 @@ export class BlockStore {
 			type: model.type,
 			content: content ?? (this.getDefaultContent(model) as T),
 		};
-		console.log('Created block:', block);
 		this.setBlock(block);
 		return block;
 	}

@@ -14,7 +14,7 @@ import {
 } from '../util/model';
 
 // Import JSON data
-import modelsData from './models.json';
+import objectsData from './objects.json';
 import elementsData from './elements.json';
 import arraysData from './arrays.json';
 import groupsData from './groups.json';
@@ -33,7 +33,7 @@ export class UnifiedLibrary {
 	}
 
 	private loadAllData(): void {
-		this.loadDefinitions('object', modelsData as Record<string, Property>);
+		this.loadDefinitions('object', objectsData as Record<string, ObjectProperty>);
 		this.loadDefinitions('element', elementsData as Record<string, ElementProperty>);
 		this.loadDefinitions('array', arraysData as Record<string, ArrayProperty>);
 		this.loadDefinitions('group', groupsData as Record<string, GroupProperty>);
@@ -73,7 +73,6 @@ export class UnifiedLibrary {
 			return undefined;
 		}
 		item.definition = resolveRefs(item.definition, this);
-		console.log('Model Library: Resolved definition:', item.definition);
 		return item.definition;
 	}
 

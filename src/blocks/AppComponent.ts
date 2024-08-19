@@ -51,10 +51,9 @@ export class AppComponent extends LitElement {
   private initializeDocument(): string {
     if (!this.library) return '';
 
-    console.log('Initializing document...');
-
     const notionModel = this.library.getDefinition('notion', 'object');
-    console.log('Notion model:', notionModel);
+//    const notionModel = this.library.getDefinition('titleElement1', 'element');
+
     if (!notionModel) {
       console.error('Notion definition not found');
       return '';
@@ -68,7 +67,6 @@ export class AppComponent extends LitElement {
     };
 
     blockStore.setDocument(document);
-    console.log('Document initialized:', document);
     return document.id;
   }
 

@@ -32,15 +32,12 @@ export class DocumentComponent extends LitElement {
   }
 
   private loadDocument() {
-    console.log('Loading document with id:', this.documentId);
     const doc = blockStore.getDocument(this.documentId);
     if (doc) {
       this.document = doc;
-      console.log('Document loaded:', this.document);
     } else {
       console.error(`Document with id ${this.documentId} not found`);
     }
-//    this.requestUpdate();
   }
 
   render() {

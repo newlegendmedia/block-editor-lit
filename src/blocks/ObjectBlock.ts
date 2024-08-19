@@ -83,7 +83,6 @@ export class ObjectBlock extends BaseBlock {
 		if (!childBlockId) {
 			return html`<div>Error: Child block not found for ${prop.key}</div>`;
 		}
-		console.log('Rendering property:', childBlockId, prop.key);
 		return ComponentFactory.createComponent(childBlockId, this.library!);
 	}
 

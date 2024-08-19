@@ -1,4 +1,10 @@
 {
+  "titleElement1": {
+    "type": "element",
+    "key": "titleElement1",
+    "name": "Title 1", 
+    "ref": "titleElement" 
+  },
   "titleElement": {
     "type": "element",
     "key": "titleElement",

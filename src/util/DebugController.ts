@@ -2,7 +2,7 @@ import { ReactiveController, ReactiveControllerHost, html } from 'lit';
 
 class DebugState {
     private _showDebugButtons: boolean = false;
-    private _useDebugController: boolean = true;  // New setting
+    private _useDebugController: boolean = false;  // New setting
     private listeners: Set<() => void> = new Set();
 
     get showDebugButtons(): boolean {

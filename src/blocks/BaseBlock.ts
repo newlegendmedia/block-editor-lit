@@ -6,7 +6,7 @@ import { BlockId, blockStore, ContentBlock } from '../blocks/BlockStore';
 import { DebugController, globalDebugState } from '../util/DebugController';
 
 export abstract class BaseBlock extends LitElement {
-	//	@property({ type: String }) blockId!: string;
+	@property({ type: String }) blockId: string = '';
 	@state() protected model?: Property;
 	@state() protected block?: ContentBlock;
 	@state() protected error: string | null = null;
@@ -14,20 +14,6 @@ export abstract class BaseBlock extends LitElement {
 
 	private unsubscribeBlock: (() => void) | null = null;
 	protected debugController: DebugController;
-
-	private _blockId?: string;
-
-	@property({ type: String })
-	get blockId(): string | undefined {
-		return this._blockId;
-	}
-
-	set blockId(value: string | undefined) {
-		console.log(`BlockId setter called: old=${this._blockId}, new=${value}`);
-		const oldValue = this._blockId;
-		this._blockId = value;
-		this.requestUpdate('blockId', oldValue);
-	}
 
 	static styles = css`
 		:host {
@@ -65,7 +51,6 @@ export abstract class BaseBlock extends LitElement {
 
 	connectedCallback() {
 		super.connectedCallback();
-		console.log(`Connected: blockId=${this.blockId}`);
 		this.subscribeToBlock();
 		this.model = this.getModel();
 	}
@@ -79,20 +64,6 @@ export abstract class BaseBlock extends LitElement {
 
 	protected updated(changedProperties: PropertyValues) {
 		super.updated(changedProperties);
-		if (changedProperties.has('blockId')) {
-			const oldValue = changedProperties.get('blockId');
-			console.log('BlockId changed in updated():', {
-				old: oldValue,
-				new: this.blockId,
-				changed: oldValue !== this.blockId,
-			});
-			if (this.blockId) {
-				this.subscribeToBlock();
-//				this.model = this.getModel();
-			} else {
-				console.warn('BlockId is undefined in updated()');
-			}
-		}
 		if (globalDebugState.useDebugController) {
 			this.debugController.setDebugInfo({
 				block: this.block,
@@ -112,18 +83,29 @@ export abstract class BaseBlock extends LitElement {
 	}
 
 	render(): TemplateResult {
-		console.log('Rendering block:', this.blockId);
 		return html`
-			<div>BLOCKID: ${this.blockId}</div>
-			${globalDebugState.useDebugController ? this.debugController.renderDebugButton() : ''}
-			${globalDebugState.useDebugController ? this.debugController.renderDebugInfo() : ''}
-			${this.error ? html`<div class="error">${this.error}</div>` : ''}
+			${this.renderDebug()}
+			${this.renderError()}
 
 			<div>${this.renderContent()}</div>
 		`;
 	}
 
 	protected abstract renderContent(): TemplateResult;
+
+	protected renderDebug(): TemplateResult {
+		if (!globalDebugState.useDebugController) {
+			return html``;
+		}
+		return html`${this.debugController.renderDebugButton()} ${this.debugController.renderDebugInfo()}`;
+	}
+
+	protected renderError(): TemplateResult {
+		if (!this.error) {
+			return html``;
+		}
+		return html`<div class="error">${this.error}</div>`;
+	}
 
 	protected setError(message: string) {
 		this.error = message;
@@ -140,7 +122,6 @@ export abstract class BaseBlock extends LitElement {
 		}
 
 		if (this.block.inlineModel) {
-			console.log('Using inline model');
 			return this.block.inlineModel;
 		}
 
@@ -151,6 +132,9 @@ export abstract class BaseBlock extends LitElement {
 
 		const modelKey = this.block.modelRef || this.block.modelKey;
 		const model = this.library.getDefinition(modelKey, this.block.type);
+		if (!model) {
+			console.error(`${this.tagName}: Model not found for key ${modelKey}`);
+		}
 		return model;
 	}
 
