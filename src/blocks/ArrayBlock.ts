@@ -1,17 +1,18 @@
-import { css, html, TemplateResult } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
+import { html, css, TemplateResult } from 'lit';
+import { customElement } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
-import { BaseBlock } from './BaseBlock';
+import { CompositeBlockBase } from './CompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
-import type { ArrayProperty } from '../util/model';
-import { blockStore, CompositeBlock } from '../blocks/BlockStore';
+import { ArrayProperty } from '../util/model';
 
 @customElement('array-component')
-export class ArrayBlock extends BaseBlock {
-    @state() private childBlockIds: string[] = [];
+export class ArrayBlock extends CompositeBlockBase {
+    constructor() {
+        super('indexed');
+    }
 
     static styles = [
-        BaseBlock.styles,
+        CompositeBlockBase.styles,
         css`
             .array-content {
                 display: flex;
@@ -28,97 +29,36 @@ export class ArrayBlock extends BaseBlock {
         `,
     ];
 
-    connectedCallback() {
-        super.connectedCallback();
-        this.initializeChildBlocks();
-    }
-
-    private initializeChildBlocks() {
-        if (!this.block) return;
-
-        const arrayModel = this.model as ArrayProperty;
-        if (!arrayModel || arrayModel.type !== 'array') return;
-
-        const compositeBlock = this.block as CompositeBlock;
-        if (!compositeBlock.children) {
-            compositeBlock.children = [];
-        }
-
-        this.childBlockIds = compositeBlock.children;
-
-        blockStore.setBlock(compositeBlock);
-    }
-
-    protected renderContent(): TemplateResult {
-        if (!this.block || !this.library) {
+    public renderContent(): TemplateResult {
+        if (!this.block || !this.library || !this.compositeModel) {
             return html`<div>Loading...</div>`;
         }
 
-        const arrayModel = this.getModel() as ArrayProperty;
-        if (!arrayModel || arrayModel.type !== 'array') {
-            return html`<div>Invalid array model</div>`;
-        }
+        const arrayModel = this.compositeModel as ArrayProperty;
 
         return html`
             <div>
                 <h3>${arrayModel.name || 'Array'}</h3>
                 <div class="array-content">
                     ${repeat(
-                        this.childBlockIds,
-                        (childId) => childId,
-                        (childId, index) => html`
+                        Object.entries(this.childBlocks),
+                        ([index, _]) => index,
+                        ([index, childId]) => html`
                             <div class="array-item">
                                 ${ComponentFactory.createComponent(childId, this.library!, `${this.path}[${index}]`)}
-                                ${arrayModel.repeatable
-                                    ? html`<button class="remove-button" @click=${() => this.removeItem(index)}>
-                                            Remove
-                                      </button>`
-                                    : ''}
+                                <button class="remove-button" @click=${() => this.removeChildBlock(index)}>
+                                    Remove
+                                </button>
                             </div>
                         `
                     )}
                 </div>
                 ${arrayModel.repeatable
-                    ? html`<button @click=${this.addItem}>Add ${arrayModel.itemType.name || 'Item'}</button>`
+                    ? html`<button @click=${() => this.addChildBlock(arrayModel.itemType)}>
+                           Add ${arrayModel.itemType.name || 'Item'}
+                       </button>`
                     : ''}
             </div>
         `;
-    }
-
-    private addItem() {
-        const arrayModel = this.getModel() as ArrayProperty;
-        if (!arrayModel || arrayModel.type !== 'array') return;
-
-        const newChildBlock = blockStore.createBlockFromModel(arrayModel.itemType);
-        this.childBlockIds = [...this.childBlockIds, newChildBlock.id];
-
-        const compositeBlock = this.block as CompositeBlock;
-        compositeBlock.children = this.childBlockIds;
-        blockStore.setBlock(compositeBlock);
-
-        this.requestUpdate();
-    }
-
-    private removeItem(index: number) {
-        const removedBlockId = this.childBlockIds[index];
-        this.childBlockIds = this.childBlockIds.filter((_, i) => i !== index);
-
-        const compositeBlock = this.block as CompositeBlock;
-        compositeBlock.children = this.childBlockIds;
-        blockStore.setBlock(compositeBlock);
-
-        blockStore.deleteBlock(removedBlockId);
-
-        this.requestUpdate();
-    }
-
-    protected handleValueChanged(e: CustomEvent) {
-        const { key, value } = e.detail;
-        const index = this.childBlockIds.indexOf(key);
-        if (index !== -1) {
-            const updatedContent = [...(this.block!.content as any[])];
-            updatedContent[index] = value;
-            this.updateBlockContent(updatedContent);
-        }
     }
 }

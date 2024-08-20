@@ -20,8 +20,9 @@ export interface ContentBlock<T = any> {
 }
 
 export interface CompositeBlock extends ContentBlock {
-	type: 'group' | 'object' | 'array';
-	children: BlockId[];
+    type: 'group' | 'object' | 'array'; // Add your new type here
+    children: string[];
+    childrenType: 'keyed' | 'indexed';
 }
 
 export interface Document {

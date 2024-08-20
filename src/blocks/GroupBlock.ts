@@ -1,19 +1,20 @@
 import { html, css, TemplateResult } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
-import { BaseBlock } from './BaseBlock';
+import { CompositeBlockBase } from './CompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
-import type { GroupProperty, Property, PropertyReference } from '../util/model';
-import { blockStore, CompositeBlock } from '../blocks/BlockStore';
-import { isPropertyReference } from '../util/model';
+import { GroupProperty, Property, isPropertyReference } from '../util/model';
 
 @customElement('group-component')
-export class GroupBlock extends BaseBlock {
-    @state() private childBlockIds: string[] = [];
+export class GroupBlock extends CompositeBlockBase {
+    constructor() {
+        super('indexed');
+    }
+
     @state() private showSlashMenu: boolean = false;
 
     static styles = [
-        BaseBlock.styles,
+        CompositeBlockBase.styles,
         css`
             .group-content {
                 display: flex;
@@ -33,58 +34,30 @@ export class GroupBlock extends BaseBlock {
         `,
     ];
 
-    connectedCallback() {
-        super.connectedCallback();
-        this.initializeChildBlocks();
-    }
-
-    private initializeChildBlocks() {
-        if (!this.block) return;
-
-        const groupModel = this.model as GroupProperty;
-        if (!groupModel || groupModel.type !== 'group') return;
-
-        const compositeBlock = this.block as CompositeBlock;
-        if (!compositeBlock.children) {
-            compositeBlock.children = [];
-        }
-
-        this.childBlockIds = compositeBlock.children;
-
-        blockStore.setBlock(compositeBlock);
-    }
-
-    protected renderContent(): TemplateResult {
-        if (!this.block || !this.library) {
+    public renderContent(): TemplateResult {
+        if (!this.block || !this.library || !this.compositeModel) {
             return html`<div>Loading...</div>`;
         }
 
-        const groupModel = this.getModel() as GroupProperty;
-        if (!groupModel || groupModel.type !== 'group') {
-            return html`<div>Invalid group model</div>`;
-        }
+        const groupModel = this.compositeModel as GroupProperty;
 
         return html`
             <div>
                 <h3>${groupModel.name || 'Group'}</h3>
                 <div class="group-content">
                     ${repeat(
-                        this.childBlockIds,
-                        (childId) => childId,
-                        (childId) => {
-                            const childBlock = blockStore.getBlock(childId);
-                            const childPath = `${this.path}.${childBlock?.modelKey}`;
-                            return html`
-                                <div class="group-item">
-                                    ${ComponentFactory.createComponent(childId, this.library!, childPath)}
-                                    ${groupModel.editable
-                                        ? html`<button class="remove-button" @click=${() => this.removeItem(childId)}>
-                                                Remove
-                                          </button>`
-                                        : ''}
-                                </div>
-                            `;
-                        }
+                        Object.entries(this.childBlocks),
+                        ([key, _]) => key,
+                        ([key, childId]) => html`
+                            <div class="group-item">
+                                ${ComponentFactory.createComponent(childId, this.library!, `${this.path}.${key}`)}
+                                ${groupModel.editable
+                                    ? html`<button class="remove-button" @click=${() => this.removeChildBlock(key)}>
+                                            Remove
+                                        </button>`
+                                    : ''}
+                            </div>
+                        `
                     )}
                 </div>
                 ${groupModel.editable ? this.renderAddButton() : ''}
@@ -92,13 +65,13 @@ export class GroupBlock extends BaseBlock {
             </div>
         `;
     }
-	
+
     private renderAddButton(): TemplateResult {
-        return html`<button @click=${this.toggleSlashMenu}>Add Block</button>`;
+        return html`<button @click=${this.toggleSlashMenu}>Add Item</button>`;
     }
 
     private renderSlashMenu(): TemplateResult {
-        const groupModel = this.getModel() as GroupProperty;
+        const groupModel = this.compositeModel as GroupProperty;
         const itemTypes = this.getItemTypes(groupModel);
 
         return html`
@@ -107,7 +80,7 @@ export class GroupBlock extends BaseBlock {
                     itemTypes,
                     (itemType) => itemType.key,
                     (itemType) => html`
-                        <button @click=${() => this.addBlock(itemType)}>
+                        <button @click=${() => this.addItem(itemType)}>
                             ${itemType.name || itemType.key}
                         </button>
                     `
@@ -116,7 +89,7 @@ export class GroupBlock extends BaseBlock {
         `;
     }
 
-    private getItemTypes(groupModel: GroupProperty): (Property | PropertyReference)[] {
+    private getItemTypes(groupModel: GroupProperty): Property[] {
         if (Array.isArray(groupModel.itemTypes)) {
             return groupModel.itemTypes;
         } else if (isPropertyReference(groupModel.itemTypes)) {
@@ -124,7 +97,7 @@ export class GroupBlock extends BaseBlock {
                 groupModel.itemTypes.ref,
                 groupModel.itemTypes.type
             );
-            if (resolved && resolved.type === 'group') {
+            if (resolved && 'itemTypes' in resolved) {
                 return this.getItemTypes(resolved as GroupProperty);
             }
         }
@@ -136,37 +109,9 @@ export class GroupBlock extends BaseBlock {
         this.showSlashMenu = !this.showSlashMenu;
     }
 
-	private addBlock(itemType: Property | PropertyReference) {
-        const newChildBlock = blockStore.createBlockFromModel(itemType);
-        this.childBlockIds = [...this.childBlockIds, newChildBlock.id];
-
-        const compositeBlock = this.block as CompositeBlock;
-        compositeBlock.children = this.childBlockIds;
-        blockStore.setBlock(compositeBlock);
-
+    private addItem(itemType: Property) {
+        const key = itemType.key || `item_${Date.now()}`;
+        this.addChildBlock(itemType, key);
         this.showSlashMenu = false;
-        this.requestUpdate();
-    }
-
-    private removeItem(childId: string) {
-        this.childBlockIds = this.childBlockIds.filter((id) => id !== childId);
-
-        const compositeBlock = this.block as CompositeBlock;
-        compositeBlock.children = this.childBlockIds;
-        blockStore.setBlock(compositeBlock);
-
-        blockStore.deleteBlock(childId);
-
-        this.requestUpdate();
-    }
-
-    protected handleValueChanged(e: CustomEvent) {
-        const { key, value } = e.detail;
-        const index = this.childBlockIds.indexOf(key);
-        if (index !== -1) {
-            const updatedContent = [...(this.block!.content as any[])];
-            updatedContent[index] = value;
-            this.updateBlockContent(updatedContent);
-        }
     }
 }
