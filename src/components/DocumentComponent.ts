@@ -3,8 +3,9 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { ComponentFactory } from '../util/ComponentFactory';
-import { blockStore, Document as DocumentType } from './BlockStore';
-import { libraryStore } from '../library/libraryStore';
+import { Document as DocumentType } from '../content/content';
+import { contentStore } from '../content/ContentStore';
+import { libraryStore } from '../model/libraryStore';
 
 @customElement('document-component')
 export class DocumentComponent extends LitElement {
@@ -32,7 +33,7 @@ export class DocumentComponent extends LitElement {
   }
 
   private loadDocument() {
-    const doc = blockStore.getDocument(this.documentId);
+    const doc = contentStore.getDocument(this.documentId);
     if (doc) {
       this.document = doc;
     } else {

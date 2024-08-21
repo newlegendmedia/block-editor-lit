@@ -1,9 +1,9 @@
 import { html, css, TemplateResult } from 'lit';
 import { customElement } from 'lit/decorators.js';
 import { BaseBlock } from './BaseBlock';
-import { ElementProperty, AtomType, isElement } from '../util/model';
+import { ElementModel, AtomType, isElement } from '../model/model';
 
-@customElement('element-component')
+@customElement('element-block')
 export class ElementBlock extends BaseBlock {
     static styles = [
         BaseBlock.styles,
@@ -24,7 +24,7 @@ export class ElementBlock extends BaseBlock {
     ];
 
     protected renderContent(): TemplateResult {
-        if (!this.block) {
+        if (!this.content) {
             return html`<div>Loading...</div>`;
         }
 
@@ -33,8 +33,8 @@ export class ElementBlock extends BaseBlock {
             return html`<div>Invalid model ${model}</div>`;
         }
 
-        const elementModel = model as ElementProperty;
-        const content = this.block.content;
+        const elementModel = model as ElementModel;
+        const content = this.content.content;
         const isReadonly = false; // elementModel.config?.display?.readonly === true;
 
         return html`
@@ -46,7 +46,7 @@ export class ElementBlock extends BaseBlock {
     }
 
     private renderInputElement(
-        model: ElementProperty,
+        model: ElementModel,
         content: any,
         isReadonly: boolean
     ): TemplateResult {

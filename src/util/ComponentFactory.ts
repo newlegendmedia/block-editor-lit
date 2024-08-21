@@ -1,38 +1,32 @@
 import { html, TemplateResult } from 'lit';
-import { blockStore } from '../blocks/BlockStore';
-import type { ModelLibrary } from '../library/libraryStore';
+import { contentStore } from '../content/ContentStore.ts';
+import type { ModelLibrary } from '../model/libraryStore.ts';
 
 import '../blocks/BaseBlock.ts';
 import '../blocks/ObjectBlock.ts';
 import '../blocks/ArrayBlock.ts';
 import '../blocks/ElementBlock.ts';
 import '../blocks/GroupBlock.ts';
-import '../blocks/DocumentBlock.ts';
+import '../components/DocumentComponent.ts';
 
 export class ComponentFactory {
-    static createComponent(blockId: string, library: ModelLibrary, parentPath: string = ''): TemplateResult {
-        const block = blockStore.getBlock(blockId);
+    static createComponent(contentId: string, library: ModelLibrary, parentPath: string = ''): TemplateResult {
+        const block = contentStore.getBlock(contentId);
         if (!block) {
             return html`<div>Error: Block not found</div>`;
         }
 
         const fullPath = parentPath || block.modelKey;
 
-        const commonProps = {
-            blockId: blockId,
-            library: library,
-            path: fullPath,
-        };
-
         switch (block.type) {
             case 'object':
-                return html`<object-component .blockId=${blockId} .library=${library} .path=${fullPath}></object-component>`;
+                return html`<object-block .contentId=${contentId} .library=${library} .path=${fullPath}></object-block>`;
             case 'element':
-                return html`<element-component .blockId=${blockId} .library=${library} .path=${fullPath}></element-component>`;
+                return html`<element-block .contentId=${contentId} .library=${library} .path=${fullPath}></element-block>`;
             case 'array':
-                return html`<array-component .blockId=${blockId} .library=${library} .path=${fullPath}></array-component>`;
+                return html`<array-block .contentId=${contentId} .library=${library} .path=${fullPath}></array-block>`;
             case 'group':
-                return html`<group-component .blockId=${blockId} .library=${library} .path=${fullPath}></group-component>`;
+                return html`<group-block .contentId=${contentId} .library=${library} .path=${fullPath}></group-block>`;
             default:
                 console.warn(`Unknown block type: ${block.type}`);
                 return html`<div>Unknown block type: ${block.type}</div>`;

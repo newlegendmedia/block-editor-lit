@@ -1,17 +1,16 @@
 import {
 	Model,
-	Property,
-	PropertyType,
-	ElementProperty,
-	ObjectProperty,
-	ArrayProperty,
-	GroupProperty,
-	PropertyReference,
+	ModelType,
+	ElementModel,
+	ObjectModel,
+	ArrayModel,
+	GroupModel,
+	ModelReference,
 	isObject,
 	isArray,
 	isGroup,
-	isPropertyReference,
-} from '../util/model';
+	isModelReference,
+} from './model';
 
 // Import JSON data
 import objectsData from './objects.json';
@@ -20,8 +19,8 @@ import arraysData from './arrays.json';
 import groupsData from './groups.json';
 
 interface LibraryItem {
-	type: PropertyType;
-	definition: Property;
+	type: ModelType;
+	definition: Model;
 }
 
 export class ModelLibrary {
@@ -35,18 +34,18 @@ export class ModelLibrary {
 	private loadAllData(): void {
 		this.loadDefinitions(
 			'object',
-			objectsData as Record<string, ObjectProperty | PropertyReference>
+			objectsData as Record<string, ObjectModel | ModelReference>
 		);
 		this.loadDefinitions(
 			'element',
-			elementsData as Record<string, ElementProperty | PropertyReference>
+			elementsData as Record<string, ElementModel | ModelReference>
 		);
 		this.loadDefinitions(
 			'array',
-			arraysData as Record<string, ArrayProperty | PropertyReference>);
+			arraysData as Record<string, ArrayModel | ModelReference>);
 		this.loadDefinitions(
 			'group',
-			groupsData as Record<string, GroupProperty | PropertyReference>);
+			groupsData as Record<string, GroupModel | ModelReference>);
 
 		if (this.errors.length > 0) {
 			console.error('Model Library: Errors found while loading library data:');
@@ -54,7 +53,7 @@ export class ModelLibrary {
 		}
 	}
 
-	private loadDefinitions(type: PropertyType, data: Record<string, Property | Model>): void {
+	private loadDefinitions(type: ModelType, data: Record<string, Model | Model>): void {
 		Object.entries(data).forEach(([key, value]) => {
 			if (!value.type) {
 				this.errors.push(`Missing type for definition: ${key}`);
@@ -68,7 +67,7 @@ export class ModelLibrary {
 		});
 	}
 
-	getDefinition(key: string, type?: PropertyType): Property | Model | undefined {
+	getDefinition(key: string, type?: ModelType): Model | Model | undefined {
 		const item = this.items.get(key);
 		if (!item) {
 			this.errors.push(
@@ -99,8 +98,8 @@ export class ModelLibrary {
 	}
 }
 
-function mergeProperties<T extends Property>(original: T, resolved: Property): T {
-	if (isPropertyReference(original)) {
+function mergeProperties<T extends Model>(original: T, resolved: Model): T {
+	if (isModelReference(original)) {
 		const { ref, ...restOriginal } = original; // Exclude 'ref' from original
 		original = restOriginal as T;
 	}
@@ -110,11 +109,11 @@ function mergeProperties<T extends Property>(original: T, resolved: Property): T
 }
 
 export function resolveRefs(
-	property: Property,
+	property: Model,
 	library: ModelLibrary,
 	resolvedRefs: Set<string> = new Set()
-): Property {
-	if (isPropertyReference(property)) {
+): Model {
+	if (isModelReference(property)) {
 		if (resolvedRefs.has(property.ref)) {
 			library
 				.getErrors()
@@ -135,7 +134,7 @@ export function resolveRefs(
 	}
 
 	if (isGroup(property)) {
-		let resolvedItemTypes: (Property | PropertyReference)[];
+		let resolvedItemTypes: (Model | ModelReference)[];
 		if (Array.isArray(property.itemTypes)) {
 			resolvedItemTypes = property.itemTypes.map((item) =>
 				resolveRefs(item, library, new Set(resolvedRefs))

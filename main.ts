@@ -1,4 +1,4 @@
-import './src/blocks/AppComponent';  // Make sure this path is correct
+import './src/components/AppComponent';  // Make sure this path is correct
 
 document.addEventListener('DOMContentLoaded', () => {
   const app = document.querySelector('#app');

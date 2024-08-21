@@ -1,15 +1,16 @@
 import { LitElement, html, css, CSSResultGroup, PropertyValues, TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import type { Property } from '../util/model';
-import { libraryStore, type ModelLibrary } from '../library/libraryStore';
-import { BlockId, blockStore, ContentBlock } from '../blocks/BlockStore';
+import type { Model } from '../model/model';
+import { libraryStore, type ModelLibrary } from '../model/libraryStore';
+import { contentStore } from '../content/ContentStore';
+import { ContentId, Content } from '../content/content';
 import { DebugController, globalDebugState } from '../util/DebugController';
 
 export abstract class BaseBlock extends LitElement {
-    @property({ type: String }) blockId: string = '';
+    @property({ type: String }) contentId: string = '';
     @property({ type: String }) path: string = '';
-    @state() protected model?: Property;
-    @state() protected block?: ContentBlock;
+    @state() protected model?: Model;
+    @state() protected content?: Content;
     @state() protected error: string | null = null;
     @state() protected library: ModelLibrary;
 
@@ -85,7 +86,7 @@ export abstract class BaseBlock extends LitElement {
         super.updated(changedProperties);
         if (globalDebugState.useDebugController) {
             this.debugController.setDebugInfo({
-                block: this.block,
+                content: this.content,
                 model: this.model,
                 path: this.path,
             });
@@ -96,8 +97,8 @@ export abstract class BaseBlock extends LitElement {
         if (this.unsubscribeBlock) {
             this.unsubscribeBlock();
         }
-        this.unsubscribeBlock = blockStore.subscribeToBlock(this.blockId as BlockId, (block) => {
-            this.block = block;
+        this.unsubscribeBlock = contentStore.subscribeToBlock(this.contentId as ContentId, (content) => {
+            this.content = content;
             this.requestUpdate();
         });
     }
@@ -152,14 +153,14 @@ export abstract class BaseBlock extends LitElement {
         this.error = null;
     }
 
-    protected getModel(): Property | undefined {
-        if (!this.block) {
+    protected getModel(): Model | undefined {
+        if (!this.content) {
             console.error(`${this.tagName}: Cannot get model - block is missing`);
             return undefined;
         }
 
-        if (this.block.inlineModel) {
-            return this.block.inlineModel;
+        if (this.content.inlineModel) {
+            return this.content.inlineModel;
         }
 
         if (!this.library) {
@@ -167,8 +168,8 @@ export abstract class BaseBlock extends LitElement {
             return undefined;
         }
 
-        const modelKey = this.block.modelRef || this.block.modelKey;
-        const model = this.library.getDefinition(modelKey, this.block.type);
+        const modelKey = this.content.modelRef || this.content.modelKey;
+        const model = this.library.getDefinition(modelKey, this.content.type);
         if (!model) {
             console.error(`${this.tagName}: Model not found for key ${modelKey}`);
         }
@@ -176,16 +177,16 @@ export abstract class BaseBlock extends LitElement {
     }
 
     protected updateBlockContent(content: any) {
-        if (!this.block) return;
+        if (!this.content) return;
 
-        blockStore.updateBlock(this.block.id, (block) => ({
-            ...block,
+        contentStore.updateBlock(this.content.id, (content) => ({
+            ...content,
             content: content,
         }));
 
         this.dispatchEvent(
             new CustomEvent('value-changed', {
-                detail: { key: this.block.modelKey, value: content },
+                detail: { key: this.content.modelKey, value: content },
                 bubbles: true,
                 composed: true,
             })

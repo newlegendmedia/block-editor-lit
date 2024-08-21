@@ -1,10 +1,10 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { blockStore, ContentBlock } from '../blocks/BlockStore';
+import { contentStore, Content } from '../content/ContentStore';
 
 @customElement('block-store-viewer')
 export class BlockStoreViewer extends LitElement {
-  @state() private blocks: Map<string, ContentBlock> = new Map();
+  @state() private blocks: Map<string, Content> = new Map();
 
   static styles = css`
     :host {
@@ -54,11 +54,11 @@ export class BlockStoreViewer extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    blockStore.subscribeToAllBlocks(() => this.updateBlocks());
+    contentStore.subscribeToAllBlocks(() => this.updateBlocks());
   }
 
   private updateBlocks() {
-    this.blocks = new Map(blockStore.getAllBlocks());
+    this.blocks = new Map(contentStore.getAllBlocks());
     this.requestUpdate();
   }
 

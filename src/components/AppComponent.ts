@@ -1,9 +1,10 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { libraryStore, ModelLibrary } from '../library/libraryStore';
-import { blockStore } from './BlockStore';
+import { libraryStore, ModelLibrary } from '../model/libraryStore';
+import { contentStore } from '../content/ContentStore';
+import { Document } from '../content/content';
 
-import './DocumentBlock';
+import './DocumentComponent';
 import '../util/DebugToggle';
 import './PathRenderer';
 import './Breadcrumbs';
@@ -107,16 +108,16 @@ export class AppComponent extends LitElement {
 			return '';
 		}
 
-		const rootBlock = blockStore.createBlockFromModel(notionModel);
+		const rootBlock = contentStore.createBlockFromModel(notionModel);
 
-		const document = {
+		const theDocument: Document = {
 			id: 'notionDoc' + Date.now(),
 			title: 'New Notion++ Document',
 			rootBlock: rootBlock.id,
 		};
 
-		blockStore.setDocument(document);
-		return document.id;
+		contentStore.setDocument(theDocument);
+		return theDocument.id;
 	}
 
 	render() {

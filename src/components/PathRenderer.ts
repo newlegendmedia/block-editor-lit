@@ -1,12 +1,12 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { ComponentFactory } from '../util/ComponentFactory';
-import { blockStore, ContentBlock, CompositeBlock } from '../blocks/BlockStore';
-import { libraryStore } from '../library/libraryStore';
+import { contentStore, Content, CompositeContent } from '../content/ContentStore';
+import { libraryStore } from '../model/libraryStore';
 
 @customElement('path-renderer')
 export class PathRenderer extends LitElement {
-	@state() private targetBlockId: string | null = null;
+	@state() private targetContentId: string | null = null;
 	private _path: string = '';
 
 	@property({ type: String })
@@ -27,33 +27,33 @@ export class PathRenderer extends LitElement {
 		console.log(`Processing path: ${this._path}`);
 		const pathParts = this._path.split('.');
 
-		const document = blockStore.getDocument(pathParts[0]);
+		const document = contentStore.getDocument(pathParts[0]);
 		console.log(`Document found:`, document);
 
 		if (!document) {
 			console.error(`Document not found: ${pathParts[0]}`);
-			this.targetBlockId = null;
+			this.targetContentId = null;
 			return;
 		}
 
-		let currentBlock = blockStore.getBlock(document.rootBlock);
+		let currentBlock = contentStore.getBlock(document.rootBlock);
 		console.log(`Root block:`, currentBlock);
 
 		if (!currentBlock) {
 			console.error(`Root block not found for document: ${pathParts[0]}`);
-			this.targetBlockId = null;
+			this.targetContentId = null;
 			return;
 		}
 
 		if (pathParts.length === 1) {
-			this.targetBlockId = currentBlock.id;
+			this.targetContentId = currentBlock.id;
 			return;
 		}
 
 		for (let i = 1; i < pathParts.length; i++) {
 			if (!this.isCompositeBlock(currentBlock)) {
 				console.error(`Non-composite block encountered: ${currentBlock.id}`);
-				this.targetBlockId = null;
+				this.targetContentId = null;
 				return;
 			}
 
@@ -62,7 +62,7 @@ export class PathRenderer extends LitElement {
 			console.log(`Current block children:`, currentBlock.children);
 			console.log(`Current block childrenType:`, currentBlock.childrenType);
 
-			let childBlockId: string | undefined;
+			let childContentId: string | undefined;
 
 			if (!currentBlock.childrenType) {
 				if (currentBlock.type === 'group') {
@@ -73,15 +73,15 @@ export class PathRenderer extends LitElement {
 					currentBlock.childrenType = 'indexed';
 				} else {
 					console.error(`Invalid Block Type for Composites: ${currentBlock.type}`);
-					this.targetBlockId = null;
+					this.targetContentId = null;
 					return;
 				}
 			}
 
 			// Default to keyed lookup if childrenType is undefined
 			if (currentBlock.childrenType !== 'indexed') {
-				childBlockId = currentBlock.children.find((childId) => {
-					const child = blockStore.getBlock(childId);
+				childContentId = currentBlock.children.find((childId) => {
+					const child = contentStore.getBlock(childId);
 					console.log(`1 - Checking child:`, child);
 					return child && (child.modelKey === childKey || child.id === childKey);
 				});
@@ -89,42 +89,42 @@ export class PathRenderer extends LitElement {
 				const index = parseInt(childKey, 10);
 				console.log(`2 - Parsed index: ${index}`, currentBlock.children);
 				if (!isNaN(index) && index >= 0 && index < currentBlock.children.length) {
-					childBlockId = currentBlock.children[index];
+					childContentId = currentBlock.children[index];
 				}
 			}
 
-			if (!childBlockId) {
+			if (!childContentId) {
 				console.error(`Child block not found for key: ${childKey}`);
-				this.targetBlockId = null;
+				this.targetContentId = null;
 				return;
 			}
 
-			currentBlock = blockStore.getBlock(childBlockId);
+			currentBlock = contentStore.getBlock(childContentId);
 			if (!currentBlock) {
-				console.error(`Block not found for id: ${childBlockId}`);
-				this.targetBlockId = null;
+				console.error(`Block not found for id: ${childContentId}`);
+				this.targetContentId = null;
 				return;
 			}
 
 			console.log(`Found child block:`, currentBlock);
 		}
 
-		this.targetBlockId = currentBlock.id;
-		console.log(`Final target block ID: ${this.targetBlockId}`);
+		this.targetContentId = currentBlock.id;
+		console.log(`Final target block ID: ${this.targetContentId}`);
 	}
 
-	private isCompositeBlock(block: ContentBlock): block is CompositeBlock {
-		return 'children' in block && Array.isArray((block as CompositeBlock).children);
+	private isCompositeBlock(block: Content): block is CompositeContent {
+		return 'children' in block && Array.isArray((block as CompositeContent).children);
 	}
 
 	render() {
-		if (!this.targetBlockId) {
+		if (!this.targetContentId) {
 			return html` <div>Block not found at path: ${this._path}</div> `;
 		}
 
 		return html`
 			<div>
-				${ComponentFactory.createComponent(this.targetBlockId, libraryStore.value, this._path)}
+				${ComponentFactory.createComponent(this.targetContentId, libraryStore.value, this._path)}
 			</div>
 		`;
 	}

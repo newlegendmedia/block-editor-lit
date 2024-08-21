@@ -3,9 +3,9 @@ import { customElement, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { CompositeBlockBase } from './CompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
-import { GroupProperty, Property, isPropertyReference } from '../util/model';
+import { GroupModel, Model, isModelReference } from '../model/model';
 
-@customElement('group-component')
+@customElement('group-block')
 export class GroupBlock extends CompositeBlockBase {
     constructor() {
         super('indexed');
@@ -35,11 +35,11 @@ export class GroupBlock extends CompositeBlockBase {
     ];
 
     public renderContent(): TemplateResult {
-        if (!this.block || !this.library || !this.compositeModel) {
+        if (!this.content || !this.library || !this.compositeModel) {
             return html`<div>Loading...</div>`;
         }
 
-        const groupModel = this.compositeModel as GroupProperty;
+        const groupModel = this.compositeModel as GroupModel;
 
         return html`
             <div>
@@ -72,7 +72,7 @@ export class GroupBlock extends CompositeBlockBase {
     }
 
     private renderSlashMenu(): TemplateResult {
-        const groupModel = this.compositeModel as GroupProperty;
+        const groupModel = this.compositeModel as GroupModel;
         const itemTypes = this.getItemTypes(groupModel);
 
         return html`
@@ -90,16 +90,16 @@ export class GroupBlock extends CompositeBlockBase {
         `;
     }
 
-    private getItemTypes(groupModel: GroupProperty): Property[] {
+    private getItemTypes(groupModel: GroupModel): Model[] {
         if (Array.isArray(groupModel.itemTypes)) {
             return groupModel.itemTypes;
-        } else if (isPropertyReference(groupModel.itemTypes)) {
+        } else if (isModelReference(groupModel.itemTypes)) {
             const resolved = this.library!.getDefinition(
                 groupModel.itemTypes.ref,
                 groupModel.itemTypes.type
             );
             if (resolved && 'itemTypes' in resolved) {
-                return this.getItemTypes(resolved as GroupProperty);
+                return this.getItemTypes(resolved as GroupModel);
             }
         }
         console.warn(`Invalid itemTypes: ${JSON.stringify(groupModel.itemTypes)}`);
@@ -110,7 +110,7 @@ export class GroupBlock extends CompositeBlockBase {
         this.showSlashMenu = !this.showSlashMenu;
     }
 
-    private addItem(itemType: Property) {
+    private addItem(itemType: Model) {
         const key = itemType.key || `item_${Date.now()}`;
         this.addChildBlock(itemType, key);
         this.showSlashMenu = false;

@@ -3,9 +3,9 @@ import { customElement } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { CompositeBlockBase } from './CompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
-import { ArrayProperty } from '../util/model';
+import { ArrayModel } from '../model/model';
 
-@customElement('array-component')
+@customElement('array-block')
 export class ArrayBlock extends CompositeBlockBase {
     constructor() {
         super('indexed');
@@ -30,11 +30,11 @@ export class ArrayBlock extends CompositeBlockBase {
     ];
 
     public renderContent(): TemplateResult {
-        if (!this.block || !this.library || !this.compositeModel) {
+        if (!this.content || !this.library || !this.compositeModel) {
             return html`<div>Loading...</div>`;
         }
 
-        const arrayModel = this.compositeModel as ArrayProperty;
+        const arrayModel = this.compositeModel as ArrayModel;
 
         return html`
             <div>

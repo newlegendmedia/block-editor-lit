@@ -1,54 +1,26 @@
-export type BlockId = string;
-export type DocumentId = string;
-import {
-	PropertyType,
-	Property,
-	isElement,
-	isObject,
-	isArray,
-	isGroup,
-	AtomType,
-} from '../util/model';
 
-export interface ContentBlock<T = any> {
-	id: BlockId;
-	modelKey: string;
-	modelRef?: string;
-	inlineModel?: Property;
-	type: PropertyType;
-	content: T;
-}
+import { AtomType, Model } from '../model/model';
+import { ContentId, DocumentId, Content, Document } from './content';
+import { isArray, isElement, isGroup, isObject } from '../model/model';
 
-export interface CompositeBlock extends ContentBlock {
-    type: 'group' | 'object' | 'array'; // Add your new type here
-    children: string[];
-    childrenType: 'keyed' | 'indexed';
-}
-
-export interface Document {
-	id: DocumentId;
-	title: string;
-	rootBlock: BlockId;
-}
-
-export class BlockStore {
-	private blocks: Map<BlockId, ContentBlock> = new Map();
+export class ContentStore {
+	private blocks: Map<ContentId, Content> = new Map();
 	private documents: Map<DocumentId, Document> = new Map();
-	private subscribers: Map<BlockId, Set<(block: ContentBlock) => void>> = new Map();
+	private subscribers: Map<ContentId, Set<(block: Content) => void>> = new Map();
 	private allBlocksSubscribers: Set<() => void> = new Set();
 
 	// Block methods
-	getBlock<T>(id: BlockId): ContentBlock<T> | undefined {
-		return this.blocks.get(id) as ContentBlock<T> | undefined;
+	getBlock<T>(id: ContentId): Content<T> | undefined {
+		return this.blocks.get(id) as Content<T> | undefined;
 	}
 
-	setBlock<T>(block: ContentBlock<T>): void {
+	setBlock<T>(block: Content<T>): void {
 		this.blocks.set(block.id, block);
 		this.notifySubscribers(block.id);
 	}
 
-	updateBlock<T>(id: BlockId, updater: (block: ContentBlock<T>) => ContentBlock<T>): void {
-		const block = this.blocks.get(id) as ContentBlock<T> | undefined;
+	updateBlock<T>(id: ContentId, updater: (block: Content<T>) => Content<T>): void {
+		const block = this.blocks.get(id) as Content<T> | undefined;
 		if (block) {
 			const updatedBlock = updater(block);
 			this.blocks.set(id, updatedBlock);
@@ -56,7 +28,7 @@ export class BlockStore {
 		}
 	}
 
-	deleteBlock(id: BlockId): void {
+	deleteBlock(id: ContentId): void {
 		this.blocks.delete(id);
 		this.notifySubscribers(id);
 	}
@@ -66,8 +38,8 @@ export class BlockStore {
 		return this.documents.get(id);
 	}
 
-	setDocument(document: Document): void {
-		this.documents.set(document.id, document);
+	setDocument(newDocument: Document): void {
+		this.documents.set(newDocument.id, newDocument);
 	}
 
 	updateDocument(id: DocumentId, updater: (doc: Document) => Document): void {
@@ -83,7 +55,7 @@ export class BlockStore {
 	}
 
 	// Subscription methods
-	subscribeToBlock(id: BlockId, callback: (block: ContentBlock) => void): () => void {
+	subscribeToBlock(id: ContentId, callback: (block: Content) => void): () => void {
 		if (!this.subscribers.has(id)) {
 			this.subscribers.set(id, new Set());
 		}
@@ -112,11 +84,11 @@ export class BlockStore {
 		};
 	  }
 	
-	  getAllBlocks(): [BlockId, ContentBlock][] {
+	  getAllBlocks(): [ContentId, Content][] {
 		return Array.from(this.blocks.entries());
 	  }
 
-	  private notifySubscribers(id: BlockId): void {
+	  private notifySubscribers(id: ContentId): void {
 		const block = this.blocks.get(id);
 		if (block) {
 		  // Notify subscribers for this specific block
@@ -134,7 +106,7 @@ export class BlockStore {
 		return 'id_' + Math.random().toString(36).slice(2, 11);
 	}
 
-	getDefaultContent(property: Property): any {
+	getDefaultContent(property: Model): any {
 		if (isElement(property)) {
 			switch (property.base) {
 				case AtomType.Boolean:
@@ -167,9 +139,9 @@ export class BlockStore {
 		}
 	}
 
-	createBlockFromModel<T>(model: Property, content?: T): ContentBlock<T> {
+	createBlockFromModel<T>(model: Model, content?: T): Content<T> {
 		const id = this.generateUniqueId();
-		const block: ContentBlock<T> = {
+		const block: Content<T> = {
 			id,
 			modelKey: model.key || '',
 			modelRef: 'ref' in model ? model.ref : undefined,
@@ -182,5 +154,5 @@ export class BlockStore {
 	}
 }
 
-// Create a singleton instance of the BlockStore
-export const blockStore = new BlockStore();
+// Create a singleton instance of the ContentStore
+export const contentStore = new ContentStore();
