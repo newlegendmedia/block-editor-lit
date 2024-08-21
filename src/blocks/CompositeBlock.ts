@@ -1,4 +1,4 @@
-import { TemplateResult } from 'lit';
+import { TemplateResult, PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { BaseBlock } from './BaseBlock';
 import { blockStore, CompositeBlock as CompositeBlockType } from '../blocks/BlockStore';
@@ -14,19 +14,13 @@ export abstract class CompositeBlockBase extends BaseBlock {
     constructor(defaultChildrenType: 'keyed' | 'indexed') {
         super();
         this.defaultChildrenType = defaultChildrenType;
+        console.log('CompositeBlockBase constructor');
     }
 
     connectedCallback(): void {
         super.connectedCallback();
         this.initializeChildBlocks();
     }
-
-    // protected updated(changedProperties: PropertyValues) {
-    //     super.updated(changedProperties);
-    //     if (changedProperties.has('blockId') || changedProperties.has('model')) {
-    //         this.initializeChildBlocks();
-    //     }
-    // }
 
     private initializeChildBlocks() {
         if (!this.block) return;

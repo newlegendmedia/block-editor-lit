@@ -35,6 +35,7 @@ export class BlockStore {
 	private blocks: Map<BlockId, ContentBlock> = new Map();
 	private documents: Map<DocumentId, Document> = new Map();
 	private subscribers: Map<BlockId, Set<(block: ContentBlock) => void>> = new Map();
+	private allBlocksSubscribers: Set<() => void> = new Set();
 
 	// Block methods
 	getBlock<T>(id: BlockId): ContentBlock<T> | undefined {
@@ -104,16 +105,31 @@ export class BlockStore {
 		};
 	}
 
-	private notifySubscribers(id: BlockId): void {
+	subscribeToAllBlocks(callback: () => void): () => void {
+		this.allBlocksSubscribers.add(callback);
+		return () => {
+		  this.allBlocksSubscribers.delete(callback);
+		};
+	  }
+	
+	  getAllBlocks(): [BlockId, ContentBlock][] {
+		return Array.from(this.blocks.entries());
+	  }
+
+	  private notifySubscribers(id: BlockId): void {
 		const block = this.blocks.get(id);
 		if (block) {
-			const subscribers = this.subscribers.get(id);
-			if (subscribers) {
-				subscribers.forEach((callback) => callback(block));
-			}
+		  // Notify subscribers for this specific block
+		  const subscribers = this.subscribers.get(id);
+		  if (subscribers) {
+			subscribers.forEach((callback) => callback(block));
+		  }
 		}
-	}
-
+	
+		// Notify subscribers for all blocks
+		this.allBlocksSubscribers.forEach(callback => callback());
+	  }
+	
 	private generateUniqueId(): string {
 		return 'id_' + Math.random().toString(36).slice(2, 11);
 	}

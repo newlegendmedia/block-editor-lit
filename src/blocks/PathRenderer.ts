@@ -24,9 +24,11 @@ export class PathRenderer extends LitElement {
 	static styles = css``;
 
 	private findTargetBlock() {
+		console.log(`Processing path: ${this._path}`);
 		const pathParts = this._path.split('.');
 
 		const document = blockStore.getDocument(pathParts[0]);
+		console.log(`Document found:`, document);
 
 		if (!document) {
 			console.error(`Document not found: ${pathParts[0]}`);
@@ -35,6 +37,7 @@ export class PathRenderer extends LitElement {
 		}
 
 		let currentBlock = blockStore.getBlock(document.rootBlock);
+		console.log(`Root block:`, currentBlock);
 
 		if (!currentBlock) {
 			console.error(`Root block not found for document: ${pathParts[0]}`);
@@ -55,17 +58,36 @@ export class PathRenderer extends LitElement {
 			}
 
 			const childKey = pathParts[i];
+			console.log(`Looking for child with key: ${childKey}`);
+			console.log(`Current block children:`, currentBlock.children);
+			console.log(`Current block childrenType:`, currentBlock.childrenType);
 
 			let childBlockId: string | undefined;
+
+			if (!currentBlock.childrenType) {
+				if (currentBlock.type === 'group') {
+					currentBlock.childrenType = 'indexed';
+				} else if (currentBlock.type === 'object') {
+					currentBlock.childrenType = 'keyed';
+				} else if (currentBlock.type === 'array') {
+					currentBlock.childrenType = 'indexed';
+				} else {
+					console.error(`Invalid Block Type for Composites: ${currentBlock.type}`);
+					this.targetBlockId = null;
+					return;
+				}
+			}
 
 			// Default to keyed lookup if childrenType is undefined
 			if (currentBlock.childrenType !== 'indexed') {
 				childBlockId = currentBlock.children.find((childId) => {
 					const child = blockStore.getBlock(childId);
+					console.log(`1 - Checking child:`, child);
 					return child && (child.modelKey === childKey || child.id === childKey);
 				});
 			} else {
 				const index = parseInt(childKey, 10);
+				console.log(`2 - Parsed index: ${index}`, currentBlock.children);
 				if (!isNaN(index) && index >= 0 && index < currentBlock.children.length) {
 					childBlockId = currentBlock.children[index];
 				}
@@ -83,9 +105,12 @@ export class PathRenderer extends LitElement {
 				this.targetBlockId = null;
 				return;
 			}
+
+			console.log(`Found child block:`, currentBlock);
 		}
 
 		this.targetBlockId = currentBlock.id;
+		console.log(`Final target block ID: ${this.targetBlockId}`);
 	}
 
 	private isCompositeBlock(block: ContentBlock): block is CompositeBlock {

@@ -45,6 +45,7 @@ export class GroupBlock extends CompositeBlockBase {
             <div>
                 <h3>${groupModel.name || 'Group'}</h3>
                 <div class="group-content">
+                            childrenType: ${groupModel.childrenType}
                     ${repeat(
                         Object.entries(this.childBlocks),
                         ([key, _]) => key,

@@ -1,53 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="/src/util/global.css">
-    <title>My Lit Project</title>
-	</head>
-	<body>
-    <h-app>
-      <div slot="topbar">Your top bar content here</div>
-      <div slot="sidebar">Your sidebar content here</div>
-      <div id="app" slot="main">
-      </div>
-    </h-app>
-    
-    <script type="module" src="main.ts"></script>
-    <script type="module">
-      // customElements.whenDefined('h-menu').then(() => {
-      //   const menu = document.getElementById('myMenu');
-      //   const button = document.getElementById('menuButton');
-    
-      //   // Your JSON data
-      //   const menuData = [
-      //     { type: 'section', title: 'File' },
-      //     { icon: '📄', title: 'New' },
-      //     { icon: '📂', title: 'Open' },
-      //     { type: 'section', title: 'Edit' },
-      //     { title: 'Cut' },
-      //     { title: 'Copy' },
-      //     { title: 'Paste' },
-      //   ];
-    
-      //   // Generate menu items from JSON
-      //   menu.generateMenuFromJSON(menuData);
-    
-      //   // Add event listener for item selection
-      //   menu.addEventListener('item-selected', (event) => {
-      //     console.log(
-      //       'Selected item:',
-      //       event.detail.item.querySelector('.menu-item-title').textContent
-      //     );
-      //   });
-    
-      //   // Add event listener for button click to toggle menu
-      //   button.addEventListener('click', (event) => {
-      //     const rect = button.getBoundingClientRect();
-      //     menu.toggle(rect.left, rect.bottom);
-      //   });
-      // });
-    </script>
-	</body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notion++</title>
+    <link rel="stylesheet" href="./src/util/global.css">
+    <script type="module" src="./main.ts"></script>
+</head>
+<body>
+    <div id="app"></div>
+</body>
 </html>
