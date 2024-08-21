@@ -1,7 +1,8 @@
 import { TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { BaseBlock } from './BaseBlock';
-import { contentStore, CompositeContent } from '../content/ContentStore';
+import { contentStore } from '../content/ContentStore';
+import { CompositeContent } from '../content/content';
 import { Model, CompositeModel, isCompositeModel } from '../model/model';
 
 export abstract class CompositeBlockBase extends BaseBlock {
