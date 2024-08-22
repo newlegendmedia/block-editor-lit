@@ -155,23 +155,30 @@ export abstract class BaseBlock extends LitElement {
 
     protected getModel(): Model | undefined {
         if (!this.content) {
-            console.error(`${this.tagName}: Cannot get model - block is missing`);
+            console.error(`${this.tagName}: Cannot get model - content is missing`);
             return undefined;
         }
 
-        if (this.content.inlineModel) {
-            return this.content.inlineModel;
+        const { modelInfo, modelDefinition } = this.content;
+
+        if (modelDefinition) {
+            return modelDefinition;
         }
 
-        if (!this.library) {
+        if (!modelInfo.ref) {
+            console.error(`${this.tagName}: Cannot get model - modelRef is missing`);
+            return undefined;
+        }
+
+        const library = libraryStore.value;
+        if (!library) {
             console.error(`${this.tagName}: Cannot get model - library is missing`);
             return undefined;
         }
 
-        const modelKey = this.content.modelRef || this.content.modelKey;
-        const model = this.library.getDefinition(modelKey, this.content.type);
+        const model = library.getDefinition(modelInfo.ref, modelInfo.type);
         if (!model) {
-            console.error(`${this.tagName}: Model not found for key ${modelKey}`);
+            console.error(`${this.tagName}: Model not found for key ${modelInfo.ref}`);
         }
         return model;
     }
@@ -186,7 +193,7 @@ export abstract class BaseBlock extends LitElement {
 
         this.dispatchEvent(
             new CustomEvent('value-changed', {
-                detail: { key: this.content.modelKey, value: content },
+                detail: { key: this.content.modelInfo.key, value: content },
                 bubbles: true,
                 composed: true,
             })

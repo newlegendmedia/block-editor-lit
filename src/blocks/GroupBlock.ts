@@ -1,20 +1,16 @@
 import { html, css, TemplateResult } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
-import { CompositeBlockBase } from './CompositeBlock';
+import { CompositeBlock } from './CompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
 import { GroupModel, Model, isModelReference } from '../model/model';
 
 @customElement('group-block')
-export class GroupBlock extends CompositeBlockBase {
-    constructor() {
-        super('indexed');
-    }
-
+export class GroupBlock extends CompositeBlock<'indexed'> {
     @state() private showSlashMenu: boolean = false;
 
     static styles = [
-        CompositeBlockBase.styles,
+        CompositeBlock.styles,
         css`
             .group-content {
                 display: flex;
@@ -34,7 +30,7 @@ export class GroupBlock extends CompositeBlockBase {
         `,
     ];
 
-    public renderContent(): TemplateResult {
+    renderContent(): TemplateResult {
         if (!this.content || !this.library || !this.compositeModel) {
             return html`<div>Loading...</div>`;
         }
@@ -45,15 +41,14 @@ export class GroupBlock extends CompositeBlockBase {
             <div>
                 <h3>${groupModel.name || 'Group'}</h3>
                 <div class="group-content">
-                            childrenType: ${groupModel.childrenType}
                     ${repeat(
-                        Object.entries(this.childBlocks),
-                        ([key, _]) => key,
-                        ([key, childId]) => html`
+                        this.childBlocks as string[],
+                        (childId) => childId,
+                        (childId, index) => html`
                             <div class="group-item">
-                                ${ComponentFactory.createComponent(childId, this.library!, `${this.path}.${key}`)}
+                                ${ComponentFactory.createComponent(childId, this.library!, this.getChildPath(index))}
                                 ${groupModel.editable
-                                    ? html`<button class="remove-button" @click=${() => this.removeChildBlock(key)}>
+                                    ? html`<button class="remove-button" @click=${() => this.removeChildBlock(index)}>
                                             Remove
                                         </button>`
                                     : ''}
@@ -111,8 +106,8 @@ export class GroupBlock extends CompositeBlockBase {
     }
 
     private addItem(itemType: Model) {
-        const key = itemType.key || `item_${Date.now()}`;
-        this.addChildBlock(itemType, key);
+        // For indexed blocks, we don't need to provide a key/index when adding a child
+        this.addChildBlock(itemType);
         this.showSlashMenu = false;
     }
 }

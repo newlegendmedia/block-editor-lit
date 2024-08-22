@@ -1,6 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { contentStore, Content } from '../content/ContentStore';
+import { contentStore } from '../content/ContentStore';
+import { Content } from '../content/content';
 
 @customElement('block-store-viewer')
 export class BlockStoreViewer extends LitElement {
@@ -71,9 +72,9 @@ export class BlockStoreViewer extends LitElement {
           ${Array.from(this.blocks).map(([id, block]) => html`
             <div class="block-item">
               <div class="block-id">${id}</div>
-              <div>Type: ${block.type}</div>
-              <div>Model Key: ${block.modelKey}</div>
-              ${block.modelRef ? html`<div>Model Ref: ${block.modelRef}</div>` : ''}
+              <div>Type: ${block.modelInfo.type}</div>
+              <div>Model Key: ${block.modelInfo.key}</div>
+              ${block.modelInfo.ref ? html`<div>Model Ref: ${block.modelInfo.ref}</div>` : ''}
               <div class="block-content">${JSON.stringify(block.content, null, 2)}</div>
             </div>
           `)}

@@ -1,18 +1,18 @@
 import { html, css, TemplateResult } from 'lit';
 import { customElement } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
-import { CompositeBlockBase } from './CompositeBlock';
+import { CompositeBlock } from './CompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
 import { ObjectModel } from '../model/model';
 
 @customElement('object-block')
-export class ObjectBlock extends CompositeBlockBase {
+export class ObjectBlock extends CompositeBlock<'keyed'> {
     constructor() {
         super('keyed');
     }
     
     static styles = [
-        CompositeBlockBase.styles,
+        CompositeBlock.styles,
         css`
             .object-content {
                 display: flex;

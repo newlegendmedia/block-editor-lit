@@ -16,9 +16,9 @@ export class ComponentFactory {
             return html`<div>Error: Block not found</div>`;
         }
 
-        const fullPath = parentPath || block.modelKey;
+        const fullPath = parentPath || block.modelInfo.key;
 
-        switch (block.type) {
+        switch (block.modelInfo.type) {
             case 'object':
                 return html`<object-block .contentId=${contentId} .library=${library} .path=${fullPath}></object-block>`;
             case 'element':
@@ -28,8 +28,8 @@ export class ComponentFactory {
             case 'group':
                 return html`<group-block .contentId=${contentId} .library=${library} .path=${fullPath}></group-block>`;
             default:
-                console.warn(`Unknown block type: ${block.type}`);
-                return html`<div>Unknown block type: ${block.type}</div>`;
+                console.warn(`Unknown block type: ${block.modelInfo.type}`);
+                return html`<div>Unknown block type: ${block.modelInfo.type}</div>`;
         }
     }
 }

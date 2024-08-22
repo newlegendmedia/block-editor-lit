@@ -1,18 +1,13 @@
 import { html, css, TemplateResult } from 'lit';
 import { customElement } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
-import { CompositeBlockBase } from './CompositeBlock';
+import { CompositeBlock } from './CompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
 import { ArrayModel } from '../model/model';
-
 @customElement('array-block')
-export class ArrayBlock extends CompositeBlockBase {
-    constructor() {
-        super('indexed');
-    }
-
+export class ArrayBlock extends CompositeBlock<'indexed'> {
     static styles = [
-        CompositeBlockBase.styles,
+        CompositeBlock.styles,
         css`
             .array-content {
                 display: flex;
@@ -29,7 +24,7 @@ export class ArrayBlock extends CompositeBlockBase {
         `,
     ];
 
-    public renderContent(): TemplateResult {
+    renderContent(): TemplateResult {
         if (!this.content || !this.library || !this.compositeModel) {
             return html`<div>Loading...</div>`;
         }
@@ -41,9 +36,9 @@ export class ArrayBlock extends CompositeBlockBase {
                 <h3>${arrayModel.name || 'Array'}</h3>
                 <div class="array-content">
                     ${repeat(
-                        Object.entries(this.childBlocks),
-                        ([index, _]) => index,
-                        ([index, childId]) => html`
+                        this.childBlocks as string[],
+                        (childId) => childId,
+                        (childId, index) => html`
                             <div class="array-item">
                                 ${ComponentFactory.createComponent(childId, this.library!, `${this.path}[${index}]`)}
                                 <button class="remove-button" @click=${() => this.removeChildBlock(index)}>

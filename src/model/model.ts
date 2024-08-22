@@ -26,25 +26,30 @@ export interface ElementModel extends BaseModel {
   base: AtomType;
 }
 
+export type CompositeType = 'keyed' | 'indexed';
+
 export interface CompositeModelBase extends BaseModel {
-  childrenType?: 'keyed' | 'indexed';
+  childrenType?: CompositeType;
 }
 
 export interface ObjectModel extends CompositeModelBase {
   type: 'object';
   properties: Model[];
+  childrenType?: 'keyed';
 }
 
 export interface ArrayModel extends CompositeModelBase {
   type: 'array';
   itemType: Model | ModelReference;
   repeatable?: boolean;
+  childrenType?: 'indexed';
 }
 
 export interface GroupModel extends CompositeModelBase {
   type: 'group';
   itemTypes: (Model | ModelReference)[] | ModelReference;
   editable?: boolean;
+  childrenType?: 'indexed';
 }
 
 export type ModelReference = BaseModel & {

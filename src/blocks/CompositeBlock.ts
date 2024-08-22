@@ -4,18 +4,18 @@ import { BaseBlock } from './BaseBlock';
 import { contentStore } from '../content/ContentStore';
 import { CompositeContent } from '../content/content';
 import { Model, CompositeModel, isCompositeModel } from '../model/model';
+import type { CompositeType } from '../model/model';
 
-export abstract class CompositeBlockBase extends BaseBlock {
-    @property({ type: Object }) childBlocks: Record<string | number, string> = {};
+type KeyedChildren = Record<string, string>;
+type IndexedChildren = string[];
+
+export abstract class CompositeBlock<T extends CompositeType> extends BaseBlock {
+    @property({ type: Object }) childBlocks: T extends 'keyed' ? KeyedChildren : IndexedChildren = {} as any;
     
     @state() protected compositeModel?: CompositeModel;
 
-    private defaultChildrenType: 'keyed' | 'indexed';
-
-    constructor(defaultChildrenType: 'keyed' | 'indexed') {
+    constructor(private childrenType: T) {
         super();
-        this.defaultChildrenType = defaultChildrenType;
-        console.log('CompositeBlockBase constructor');
     }
 
     connectedCallback(): void {
@@ -36,9 +36,8 @@ export abstract class CompositeBlockBase extends BaseBlock {
             compositeBlock.children = [];
         }
 
-        this.childBlocks = {};
-        const childrenType = model.childrenType || this.defaultChildrenType;
-        if (childrenType === 'keyed') {
+        this.childBlocks = {} as any;
+        if (this.childrenType === 'keyed') {
             this.initializeKeyedChildren(compositeBlock, this.compositeModel);
         } else {
             this.initializeIndexedChildren(compositeBlock);
@@ -48,6 +47,7 @@ export abstract class CompositeBlockBase extends BaseBlock {
     }
 
     private initializeKeyedChildren(compositeBlock: CompositeContent, model: CompositeModel) {
+        if (this.childrenType !== 'keyed') return;
         const childProperties = this.getChildProperties(model);
         childProperties.forEach((prop, index) => {
             let childContentId = compositeBlock.children[index];
@@ -56,54 +56,71 @@ export abstract class CompositeBlockBase extends BaseBlock {
                 childContentId = childBlock.id;
                 compositeBlock.children[index] = childContentId;
             }
-            this.childBlocks[prop.key!] = childContentId;
+            (this.childBlocks as KeyedChildren)[prop.key!] = childContentId;
         });
     }
 
     private initializeIndexedChildren(compositeBlock: CompositeContent) {
-        compositeBlock.children.forEach((childId, index) => {
-            this.childBlocks[index] = childId;
-        });
+        this.childBlocks = compositeBlock.children as T extends 'keyed' ? KeyedChildren : IndexedChildren;
     }
 
     private getChildProperties(model: CompositeModel): Model[] {
         if ('properties' in model) {
             return model.properties;
         } else if ('itemType' in model) {
-            // For array types, we might not have child properties initially
-            return [];
+            return Array.isArray(model.itemType) ? model.itemType : [model.itemType];
         } else if ('itemTypes' in model) {
-            // For group types, itemTypes defines the allowed types, not necessarily existing children
-            return Array.isArray(model.itemTypes) ? model.itemTypes : [];
+            return Array.isArray(model.itemTypes) ? model.itemTypes : [model.itemTypes];
         }
         return [];
     }
 
-    protected addChildBlock(itemType: Model, key?: string | number) {
+    protected getChildPath(childKey: string | number): string {
+        if (this.childrenType === 'keyed') {
+            return `${this.path}.${childKey}`;
+        } else {
+            return `${this.path}[${childKey}]`;
+        }
+    }
+
+    // New method to get child content ID
+    protected getChildContentId(childKey: string | number): string | undefined {
+        if (this.childrenType === 'keyed') {
+            return (this.childBlocks as KeyedChildren)[childKey as string];
+        } else {
+            return (this.childBlocks as IndexedChildren)[childKey as number];
+        }
+    }
+
+    protected addChildBlock(itemType: Model, key?: T extends 'keyed' ? string : number) {
         const newChildBlock = contentStore.createBlockFromModel(itemType);
         const compositeBlock = this.content as CompositeContent;
 
-        if (this.compositeModel?.childrenType === 'keyed' || this.defaultChildrenType === 'keyed') {
+        if (this.childrenType === 'keyed') {
             if (key === undefined) {
                 throw new Error('Key is required for keyed children');
             }
-            this.childBlocks[key] = newChildBlock.id;
+            (this.childBlocks as KeyedChildren)[key as string] = newChildBlock.id;
         } else {
-            key = Object.keys(this.childBlocks).length;
-            this.childBlocks[key] = newChildBlock.id;
+            (this.childBlocks as IndexedChildren).push(newChildBlock.id);
         }
-        compositeBlock.children.push(newChildBlock.id);
 
         contentStore.setBlock(compositeBlock);
         this.requestUpdate();
     }
 
-    protected removeChildBlock(keyOrIndex: string | number) {
+    protected removeChildBlock(keyOrIndex: T extends 'keyed' ? string : number) {
         const compositeBlock = this.content as CompositeContent;
-        const childId = this.childBlocks[keyOrIndex];
+        const childId = this.childrenType === 'keyed' 
+            ? (this.childBlocks as KeyedChildren)[keyOrIndex as string]
+            : (this.childBlocks as IndexedChildren)[keyOrIndex as number];
 
         if (childId) {
-            delete this.childBlocks[keyOrIndex];
+            if (this.childrenType === 'keyed') {
+                delete (this.childBlocks as KeyedChildren)[keyOrIndex as string];
+            } else {
+                (this.childBlocks as IndexedChildren).splice(keyOrIndex as number, 1);
+            }
             compositeBlock.children = compositeBlock.children.filter(id => id !== childId);
             contentStore.deleteBlock(childId);
             contentStore.setBlock(compositeBlock);
@@ -114,26 +131,17 @@ export abstract class CompositeBlockBase extends BaseBlock {
     protected handleValueChanged(e: CustomEvent) {
         const { key, value } = e.detail;
         
-        if (this.compositeModel?.childrenType === 'keyed' || this.defaultChildrenType === 'keyed') {
+        if (this.childrenType === 'keyed') {
             const updatedContent = { ...this.content!.content, [key]: value };
             this.updateBlockContent(updatedContent);
         } else {
-            const index = Object.values(this.childBlocks).indexOf(key);
+            const index = (this.childBlocks as IndexedChildren).indexOf(key);
             if (index !== -1) {
                 const updatedContent = [...this.content!.content];
                 updatedContent[index] = value;
                 this.updateBlockContent(updatedContent);
             }
         }
-    }
-
-    protected updateChildModel(keyOrIndex: string | number, value: any) {
-        const isKeyed = this.compositeModel?.childrenType === 'keyed' || this.defaultChildrenType === 'keyed';
-        const updatedContent = isKeyed
-            ? { ...this.content!.content, [keyOrIndex]: value }
-            : [...this.content!.content].map((item, index) => index.toString() === keyOrIndex.toString() ? value : item);
-        
-        this.updateBlockContent(updatedContent);
     }
 
     abstract renderContent(): TemplateResult;
