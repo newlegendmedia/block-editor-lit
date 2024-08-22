@@ -7,9 +7,6 @@ import { ObjectModel } from '../model/model';
 
 @customElement('object-block')
 export class ObjectBlock extends CompositeBlock<'keyed'> {
-    constructor() {
-        super('keyed');
-    }
     
     static styles = [
         CompositeBlock.styles,
@@ -24,7 +21,7 @@ export class ObjectBlock extends CompositeBlock<'keyed'> {
 
     renderContent(): TemplateResult {
         if (!this.content || !this.library || !this.compositeModel) {
-            return html`<div>Loading...</div>`;
+            return html`<div>Object Loading...</div>`;
         }
 
         const objectModel = this.compositeModel as ObjectModel;
@@ -44,6 +41,7 @@ export class ObjectBlock extends CompositeBlock<'keyed'> {
     }
 
     private renderModel(key: string): TemplateResult {
+        console.log('key - childblocks', key, this.childBlocks);
         const childContentId = this.childBlocks[key];
         if (!childContentId) {
             return html`<div>Error: Child block not found for ${key}</div>`;

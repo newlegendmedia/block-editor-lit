@@ -34,7 +34,7 @@ export class ElementBlock extends BaseBlock {
         }
 
         const elementModel = model as ElementModel;
-        const content = this.content.content;
+        const content = this.content.content; // Directly access the content
         const isReadonly = false; // elementModel.config?.display?.readonly === true;
 
         return html`

@@ -84,13 +84,13 @@ export abstract class BaseBlock extends LitElement {
 
     protected updated(changedProperties: PropertyValues) {
         super.updated(changedProperties);
-        if (globalDebugState.useDebugController) {
-            this.debugController.setDebugInfo({
-                content: this.content,
-                model: this.model,
-                path: this.path,
-            });
-        }
+        // if (globalDebugState.useDebugController) {
+        //     this.debugController.setDebugInfo({
+        //         content: this.content,
+        //         model: this.model,
+        //         path: this.path,
+        //     });
+        // }
     }
 
     private subscribeToBlock() {
@@ -162,6 +162,7 @@ export abstract class BaseBlock extends LitElement {
         const { modelInfo, modelDefinition } = this.content;
 
         if (modelDefinition) {
+            console.log(`${this.tagName}: Model found in content`, modelDefinition);
             return modelDefinition;
         }
 
@@ -183,20 +184,21 @@ export abstract class BaseBlock extends LitElement {
         return model;
     }
 
-    protected updateBlockContent(content: any) {
+    protected updateBlockContent(newContent: any) {
         if (!this.content) return;
 
-        contentStore.updateBlock(this.content.id, (content) => ({
-            ...content,
-            content: content,
+        contentStore.updateBlock(this.content.id, (block) => ({
+            ...block,
+            content: newContent, // Directly update the content without nesting
         }));
 
         this.dispatchEvent(
             new CustomEvent('value-changed', {
-                detail: { key: this.content.modelInfo.key, value: content },
+                detail: { key: this.content.modelInfo.key, value: newContent },
                 bubbles: true,
                 composed: true,
             })
         );
     }
+
 }

@@ -4,6 +4,7 @@
     "key": "page",
     "name": "Notion++ Page",
     "editable": true,
+    "childrenType": "indexed",
     "itemTypes": [
       {
         "type": "element",

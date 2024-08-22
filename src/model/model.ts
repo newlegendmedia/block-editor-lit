@@ -28,28 +28,29 @@ export interface ElementModel extends BaseModel {
 
 export type CompositeType = 'keyed' | 'indexed';
 
-export interface CompositeModelBase extends BaseModel {
-  childrenType?: CompositeType;
-}
-
-export interface ObjectModel extends CompositeModelBase {
+export interface ObjectModel extends BaseModel {
   type: 'object';
   properties: Model[];
-  childrenType?: 'keyed';
 }
 
-export interface ArrayModel extends CompositeModelBase {
+export interface ArrayModel extends BaseModel {
   type: 'array';
   itemType: Model | ModelReference;
   repeatable?: boolean;
-  childrenType?: 'indexed';
 }
 
-export interface GroupModel extends CompositeModelBase {
+export interface GroupModel extends BaseModel {
   type: 'group';
   itemTypes: (Model | ModelReference)[] | ModelReference;
   editable?: boolean;
-  childrenType?: 'indexed';
+}
+
+export function isKeyedComposite(model: Model): model is ObjectModel {
+  return isObject(model);
+}
+
+export function isIndexedComposite(model: Model): model is ArrayModel | GroupModel {
+  return (isArray(model) || isGroup(model));
 }
 
 export type ModelReference = BaseModel & {

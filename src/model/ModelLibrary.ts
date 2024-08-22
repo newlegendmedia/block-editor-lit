@@ -32,20 +32,10 @@ export class ModelLibrary {
 	}
 
 	private loadAllData(): void {
-		this.loadDefinitions(
-			'object',
-			objectsData as Record<string, ObjectModel | ModelReference>
-		);
-		this.loadDefinitions(
-			'element',
-			elementsData as Record<string, ElementModel | ModelReference>
-		);
-		this.loadDefinitions(
-			'array',
-			arraysData as Record<string, ArrayModel | ModelReference>);
-		this.loadDefinitions(
-			'group',
-			groupsData as Record<string, GroupModel | ModelReference>);
+		this.loadDefinitions('object', objectsData as Record<string, ObjectModel | ModelReference>);
+		this.loadDefinitions('element', elementsData as Record<string, ElementModel | ModelReference>);
+		this.loadDefinitions('array', arraysData as Record<string, ArrayModel | ModelReference>);
+		this.loadDefinitions('group', groupsData as Record<string, GroupModel | ModelReference>);
 
 		if (this.errors.length > 0) {
 			console.error('Model Library: Errors found while loading library data:');

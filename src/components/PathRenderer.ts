@@ -4,6 +4,7 @@ import { ComponentFactory } from '../util/ComponentFactory';
 import { contentStore } from '../content/ContentStore';
 import { Content, CompositeContent } from '../content/content';
 import { libraryStore } from '../model/libraryStore';
+import { isIndexedComposite } from '../model/model';
 
 @customElement('path-renderer')
 export class PathRenderer extends LitElement {
@@ -60,21 +61,26 @@ export class PathRenderer extends LitElement {
             const childKey = pathParts[i];
             let childContentId: string | undefined;
 
-            if (!currentBlock.modelInfo.childrenType) {
-                if (currentBlock.modelInfo.type === 'group') {
-                    currentBlock.modelInfo.childrenType = 'indexed';
-                } else if (currentBlock.modelInfo.type === 'object') {
-                    currentBlock.modelInfo.childrenType = 'keyed';
-                } else if (currentBlock.modelInfo.type === 'array') {
-                    currentBlock.modelInfo.childrenType = 'indexed';
-                } else {
-                    console.error(`Invalid Block Type for Composites: ${currentBlock.modelInfo.type}`);
-                    this.targetContentId = null;
-                    return;
-                }
-            }
-
-            if (currentBlock.modelInfo.childrenType === 'indexed') {
+            // if (!currentBlock.modelInfo.childrenType) {
+            //     if (currentBlock.modelInfo.type === 'group') {
+            //         currentBlock.modelInfo.childrenType = 'indexed';
+            //     } else if (currentBlock.modelInfo.type === 'object') {
+            //         currentBlock.modelInfo.childrenType = 'keyed';
+            //     } else if (currentBlock.modelInfo.type === 'array') {
+            //         currentBlock.modelInfo.childrenType = 'indexed';
+            //     } else {
+            //         console.error(`Invalid Block Type for Composites: ${currentBlock.modelInfo.type}`);
+            //         this.targetContentId = null;
+            //         return;
+            //     }
+            // }
+			if (!currentBlock.modelDefinition) {
+				console.error(`Model definition not found for block: ${currentBlock.id}`);
+				this.targetContentId = null;
+				return;
+			}
+			
+            if (isIndexedComposite(currentBlock.modelDefinition)) {
                 const index = parseInt(childKey, 10);
                 console.log(`Processing indexed child: ${index}`, currentBlock.children);
                 if (!isNaN(index) && index >= 0 && index < currentBlock.children.length) {

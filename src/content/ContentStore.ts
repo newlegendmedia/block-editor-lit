@@ -147,17 +147,18 @@ export class ContentStore {
 	}
 
 	createBlockFromModel<T>(model: Model, content?: T): Content<T> {
+		console.log('createBlockFromModel - model', model);
 		const id = this.generateUniqueId();
 		const modelInfo: ModelInfo = {
 		  key: model.key || '',
 		  ref: 'ref' in model ? model.ref : undefined,
 		  type: model.type,
-		  childrenType: isCompositeModel(model) ? model.childrenType : undefined,
 		};
 		
 		let block: Content<T>;
 		
 		if (isCompositeModel(model)) {
+			console.log('createBlockFromModel compositeBlock - modelInfo', modelInfo);
 		  block = {
 			id,
 			modelInfo,
