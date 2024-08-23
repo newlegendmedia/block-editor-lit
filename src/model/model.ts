@@ -31,6 +31,7 @@ export type CompositeType = 'keyed' | 'indexed';
 export interface ObjectModel extends BaseModel {
   type: 'object';
   properties: Model[];
+  inlineChildren?: boolean;
 }
 
 export interface ArrayModel extends BaseModel {

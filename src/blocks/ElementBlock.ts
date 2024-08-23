@@ -1,68 +1,98 @@
 import { html, css, TemplateResult } from 'lit';
-import { customElement } from 'lit/decorators.js';
+import { customElement, property } from 'lit/decorators.js';
 import { BaseBlock } from './BaseBlock';
-import { ElementModel, AtomType, isElement } from '../model/model';
+import { ElementModel, AtomType } from '../model/model';
 
 @customElement('element-block')
 export class ElementBlock extends BaseBlock {
-    static styles = [
-        BaseBlock.styles,
-        css`
-            input {
-                width: 100%;
-                padding: 5px;
-                margin: 5px 0;
-                border: 1px solid var(--border-color);
-                border-radius: var(--border-radius);
-                padding: var(--spacing-small);
-                border: 1px solid var(--border-color);
-                border-radius: var(--border-radius);
-                background-color: var(--background-color);
-                color: var(--text-color)
-            }
-        `,
-    ];
+  @property({ type: Boolean }) isInline: boolean = false;
 
-    protected renderContent(): TemplateResult {
-        if (!this.content) {
-            return html`<div>Loading...</div>`;
-        }
+  static styles = [
+    BaseBlock.styles,
+    css`
+      input {
+        width: 100%;
+        padding: 5px;
+        margin: 5px 0;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        padding: var(--spacing-small);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        background-color: var(--background-color);
+        color: var(--text-color)
+      }
+    `,
+  ];
 
-        const model = this.getModel();
-        if (!model || !isElement(model)) {
-            return html`<div>Invalid model ${model}</div>`;
-        }
+  connectedCallback() {
+    super.connectedCallback();
+    if (this.isInline) {
+      this.initializeInlineElement();
+    }
+  }
 
-        const elementModel = model as ElementModel;
-        const content = this.content.content; // Directly access the content
-        const isReadonly = false; // elementModel.config?.display?.readonly === true;
+  private initializeInlineElement() {
+    const elementModel = this.model as ElementModel;
+    const initialValue = this.getDefaultValue(elementModel);
+    this.dispatchEvent(new CustomEvent('element-updated', {
+      detail: { id: this.contentId, value: initialValue },
+      bubbles: true,
+      composed: true
+    }));
+  }
 
-        return html`
-            <div>
-                <label>${elementModel.name || elementModel.key}:</label>
-                ${this.renderInputElement(elementModel, content, isReadonly)}
-            </div>
-        `;
+  private getDefaultValue(model: ElementModel): any {
+    switch (model.base) {
+      case AtomType.Text:
+        return '';
+      case AtomType.Number:
+        return 0;
+      case AtomType.Boolean:
+        return false;
+      case AtomType.Datetime:
+        return new Date().toISOString();
+      default:
+        return null;
+    }
+  }
+
+  protected renderContent(): TemplateResult {
+    if (!this.isInline && !this.content) {
+      return html`<div>Loading...</div>`;
     }
 
-    private renderInputElement(
-        model: ElementModel,
-        content: any,
-        isReadonly: boolean
-    ): TemplateResult {
-        switch (model.base) {
-            case AtomType.Text:
-                return this.renderTextElement(content, isReadonly);
-            case AtomType.Number:
-                return this.renderNumberElement(content, isReadonly);
-            case AtomType.Boolean:
-                return this.renderBooleanElement(content, isReadonly);
-            case AtomType.Datetime:
-                return this.renderDatetimeElement(content, isReadonly);
-            default:
-                return html`<div>Unsupported element type: ${model.base}</div>`;
-        }
+    const elementModel = this.model as ElementModel;
+    const content = this.isInline ? undefined : this.content?.content;
+    const isReadonly = false;
+
+    return html`
+      <div>
+        <label>${elementModel.name || elementModel.key}:</label>
+        ${this.renderInputElement(elementModel, content, isReadonly)}
+      </div>
+    `;
+  }
+
+  private renderInputElement(
+    model: ElementModel,
+    content: any,
+    isReadonly: boolean
+  ): TemplateResult {
+    switch (model.base) {
+      case AtomType.Text:
+        return this.renderTextElement(content, isReadonly);
+      case AtomType.Number:
+        return this.renderNumberElement(content, isReadonly);
+      case AtomType.Boolean:
+        return this.renderBooleanElement(content, isReadonly);
+      case AtomType.Datetime:
+        return this.renderDatetimeElement(content, isReadonly);
+      default:
+        return html`<div>Unsupported element type: ${model.base}</div>`;
     }
+  }
+
 
     private renderTextElement(content: string, isReadonly: boolean): TemplateResult {
         return html`
@@ -99,6 +129,17 @@ export class ElementBlock extends BaseBlock {
     private handleInput(e: Event) {
         const target = e.target as HTMLInputElement;
         const value = target.type === 'checkbox' ? target.checked : target.value;
-        this.updateBlockContent(value);
-    }
+        
+        if (this.isInline) {
+          this.dispatchEvent(new CustomEvent('element-updated', {
+            detail: { id: this.contentId, value },
+            bubbles: true,
+            composed: true
+          }));
+        } else {
+          this.updateBlockContent(value);
+        }
+      }
+
+    
 }

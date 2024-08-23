@@ -3,7 +3,15 @@ import { customElement } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { CompositeBlock } from './CompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
-import { ObjectModel } from '../model/model';
+import { isElement, isObject, Model } from '../model/model';
+
+// Define the custom event interface
+interface ElementUpdatedEvent extends CustomEvent {
+	detail: {
+		id: string;
+		value: any;
+	};
+}
 
 @customElement('object-block')
 export class ObjectBlock extends CompositeBlock<'keyed'> {
@@ -18,12 +26,26 @@ export class ObjectBlock extends CompositeBlock<'keyed'> {
 		`,
 	];
 
+	connectedCallback() {
+		super.connectedCallback();
+		if (this.inlineChildren) {
+			this.addEventListener('element-updated', this.handleInlineElementUpdate as EventListener);
+		}
+	}
+
+	disconnectedCallback() {
+		super.disconnectedCallback();
+		if (this.inlineChildren) {
+			this.removeEventListener('element-updated', this.handleInlineElementUpdate as EventListener);
+		}
+	}
+
 	renderContent(): TemplateResult {
-		if (!this.content || !this.library || !this.model) {
+		if (!this.content || !this.library || !this.model || !isObject(this.model)) {
 			return html`<div>Object Loading...</div>`;
 		}
 
-		const objectModel = this.model as ObjectModel;
+		const objectModel = this.model;
 
 		return html`
 			<div>
@@ -32,19 +54,46 @@ export class ObjectBlock extends CompositeBlock<'keyed'> {
 					${repeat(
 						objectModel.properties,
 						(prop) => prop.key!,
-						(prop) => this.renderProp(prop.key!)
+						(prop) => this.renderChild(prop)
 					)}
 				</div>
 			</div>
 		`;
 	}
 
-	private renderProp(key: string): TemplateResult {
-		const childContentId = this.childBlocks[key];
-		if (!childContentId) {
-			return html`<div>Error: Child block not found for ${key}</div>`;
+	private renderChild(property: Model): TemplateResult {
+		if (!property.key || !this.model || !isObject(this.model)) {
+			return html`<div>Invalid property</div>`;
 		}
-		const childPath = `${this.path}.${key}`;
-		return ComponentFactory.createComponent(childContentId, this.library!, childPath);
+
+		const childKey = property.key;
+		const childPath = `${this.path}.${childKey}`;
+
+		if (this.inlineChildren && isElement(property)) {
+			console.log('inline child', `inline:${this.contentId}:${childKey}`, childPath, property);
+			return ComponentFactory.createComponent(
+				`inline:${this.contentId}:${childKey}`,
+				this.library!,
+				childPath,
+				property
+			);
+		}
+
+		const childContentId = this.getChildBlockId(childKey);
+		return ComponentFactory.createComponent(childContentId!, this.library!, childPath);
+	}
+
+	private handleInlineElementUpdate(event: ElementUpdatedEvent) {
+		const { id, value } = event.detail;
+		if (id.startsWith('inline:')) {
+			const [, parentId, childKey] = id.split(':');
+			if (parentId === this.contentId && this.content && this.content.content) {
+				const updatedContent = {
+					...(this.content.content as Record<string, unknown>),
+					[childKey]: value,
+				};
+				this.updateBlockContent(updatedContent);
+			}
+		}
 	}
 }

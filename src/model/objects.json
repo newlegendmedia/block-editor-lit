@@ -14,13 +14,14 @@
     "taskModel": {
       "type": "object",
       "key": "taskModel",
+      "inlineChildren": true,
       "name": "Task",
       "properties": [
         { "type": "element", "key": "title", "name": "Task Title", "base": "text" },
         { "type": "element", "key": "completed", "name": "Completed", "base": "boolean" },
         { "type": "element", "key": "dueDate", "name": "Due Date", "base": "datetime" }
       ]
-    },    
+    },
     "document": {
       "type": "object",
       "key": "document",

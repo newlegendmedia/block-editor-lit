@@ -6,21 +6,32 @@ import { CompositeContent } from '../content/content';
 import {
 	Model,
 	CompositeModel,
-	isCompositeModel,
+	isKeyedComposite,
 	isIndexedComposite,
 	isObject,
 	isArray,
 	isGroup,
+	isElement,
 } from '../model/model';
 import type { CompositeType } from '../model/model';
 
 type KeyedChildren = Record<string, string>;
 type IndexedChildren = string[];
+type MixedKeyedChildren = Record<string, string | any>;
 
 export abstract class CompositeBlock<T extends CompositeType> extends BaseBlock {
-	@property({ type: Object }) childBlocks: T extends 'keyed' ? KeyedChildren : IndexedChildren =
-		{} as any;
+	@property({ type: Object })
+	childBlocks!: T extends 'keyed' ? KeyedChildren | MixedKeyedChildren : IndexedChildren;
+
 	@state() protected compositeType: CompositeType = 'keyed';
+	@property({ type: Boolean }) inlineChildren: boolean = false;
+
+	constructor() {
+		super();
+		this.childBlocks = (this.compositeType === 'keyed' ? {} : []) as T extends 'keyed'
+			? KeyedChildren | MixedKeyedChildren
+			: IndexedChildren;
+	}
 
 	connectedCallback(): void {
 		super.connectedCallback();
@@ -30,26 +41,54 @@ export abstract class CompositeBlock<T extends CompositeType> extends BaseBlock 
 	private initializeChildBlocks() {
 		if (!this.content || !this.model) return;
 
-		if (!isCompositeModel(this.model)) {
-			console.error('Model is not a composite model:', this.model);
-			return;
-		}
-
 		if (isIndexedComposite(this.model)) {
 			this.compositeType = 'indexed';
-		} else {
-			this.compositeType = 'keyed';
-		}
-
-		this.childBlocks = {} as any;
-		if (this.compositeType === 'keyed') {
-			this.initializeKeyedChildren(this.content as CompositeContent, this.model);
-		} else {
 			this.initializeIndexedChildren(this.content as CompositeContent);
+		} else if (isKeyedComposite(this.model)) {
+			this.compositeType = 'keyed';
+			if (isObject(this.model)) {
+				this.inlineChildren = !!this.model?.inlineChildren;
+			}	
+			if (this.inlineChildren) {
+				this.initializeInlineKeyedChildren(this.content as CompositeContent, this.model);
+			} else {
+				this.initializeKeyedChildren(this.content as CompositeContent, this.model);
+			}
+		} else {
+			console.error('Invalid model for composite:', this.model);
+			return;
 		}
 
 		this.content.content = this.childBlocks;
 		contentStore.setBlock(this.content as CompositeContent);
+	}
+
+	private initializeInlineKeyedChildren(compositeBlock: CompositeContent, model: CompositeModel) {
+		const childProperties = this.getChildProperties(model);
+		this.childBlocks = {} as T extends 'keyed'
+			? KeyedChildren | MixedKeyedChildren
+			: IndexedChildren;
+
+		childProperties.forEach((prop) => {
+			if (isElement(prop)) {
+				// For elements, initialize with a placeholder or default value
+				(this.childBlocks as MixedKeyedChildren)[prop.key!] = null;
+			} else {
+				// For composites, create a content block as before
+				let childContentId = compositeBlock.children.find((childId) => {
+					const childBlock = contentStore.getBlock(childId);
+					return childBlock && childBlock.modelInfo.key === prop.key;
+				});
+
+				if (!childContentId) {
+					const childBlock = contentStore.createBlockFromModel(prop);
+					childContentId = childBlock.id;
+					compositeBlock.children.push(childContentId);
+				}
+
+				(this.childBlocks as MixedKeyedChildren)[prop.key!] = childContentId;
+			}
+		});
 	}
 
 	private initializeKeyedChildren(compositeBlock: CompositeContent, model: CompositeModel) {

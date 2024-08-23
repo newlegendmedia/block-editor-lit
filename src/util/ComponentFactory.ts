@@ -1,6 +1,7 @@
 import { html, TemplateResult } from 'lit';
 import { contentStore } from '../content/ContentStore.ts';
 import type { ModelLibrary } from '../model/libraryStore.ts';
+import type { Model } from '../model/model.ts';
 
 import '../blocks/BaseBlock.ts';
 import '../blocks/ObjectBlock.ts';
@@ -13,14 +14,26 @@ export class ComponentFactory {
 	static createComponent(
 		contentId: string,
 		library: ModelLibrary,
-		parentPath: string = ''
+		path: string,
+		inlineModel?: Model
 	): TemplateResult {
+        if (contentId.startsWith('inline:')) {
+            console.log("ComponentFactory - inline child", contentId, path, inlineModel);
+			return html`<element-block
+				.contentId=${contentId}
+				.library=${library}
+				.path=${path}
+				.inlineModel=${inlineModel}
+				.isInline=${true}
+			></element-block>`;
+		}
+
 		const block = contentStore.getBlock(contentId);
 		if (!block) {
 			return html`<div>Error: Block not found</div>`;
 		}
 
-		const fullPath = parentPath || block.modelInfo.key;
+		const fullPath = path || block.modelInfo.key;
 
 		switch (block.modelInfo.type) {
 			case 'object':

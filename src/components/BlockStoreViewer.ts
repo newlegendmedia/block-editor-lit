@@ -76,6 +76,7 @@ export class BlockStoreViewer extends LitElement {
               <div>${block.modelInfo.type} | ${block.modelInfo.key}</div>
               ${block.modelInfo.ref ? html`<div>Model Ref: ${block.modelInfo.ref}</div>` : ''}
               <div class="block-content">${JSON.stringify(block.content, null, 2)}</div>
+              <div>${JSON.stringify(block.modelInfo)}</div>
             </div>
           `)}
         </div>

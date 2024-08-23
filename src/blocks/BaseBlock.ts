@@ -9,6 +9,7 @@ import { DebugController, globalDebugState } from '../util/DebugController';
 export abstract class BaseBlock extends LitElement {
 	@property({ type: String }) contentId: string = '';
 	@property({ type: String }) path: string = '';
+	@property({ type: Object }) inlineModel?: Model; // New property for inline elements
 	@state() protected model?: Model;
 	@state() protected content?: Content;
 	@state() protected error: string | null = null;
@@ -155,34 +156,39 @@ export abstract class BaseBlock extends LitElement {
 	}
 
 	protected getModel(): Model | undefined {
+		if (this.inlineModel) {
+		  return this.inlineModel;
+		}
+	
 		if (!this.content) {
-			console.error(`${this.tagName}: Cannot get model - content is missing`);
-			return undefined;
+		  console.error(`${this.tagName}: Cannot get model - content is missing`);
+		  return undefined;
 		}
-
+	
 		const { modelInfo, modelDefinition } = this.content;
-
+	
 		if (modelDefinition) {
-			return modelDefinition;
+		  return modelDefinition;
 		}
-
+	
 		if (!modelInfo.ref) {
-			console.error(`${this.tagName}: Cannot get model - modelRef is missing`);
-			return undefined;
+		  console.error(`${this.tagName}: Cannot get model - modelRef is missing`);
+		  return undefined;
 		}
-
+	
 		const library = libraryStore.value;
 		if (!library) {
-			console.error(`${this.tagName}: Cannot get model - library is missing`);
-			return undefined;
+		  console.error(`${this.tagName}: Cannot get model - library is missing`);
+		  return undefined;
 		}
-
+	
 		const model = library.getDefinition(modelInfo.ref, modelInfo.type);
 		if (!model) {
-			console.error(`${this.tagName}: Model not found for key ${modelInfo.ref}`);
+		  console.error(`${this.tagName}: Model not found for key ${modelInfo.ref}`);
 		}
 		return model;
 	}
+	
 
 	protected updateBlockContent(newContent: any) {
 		if (!this.content) return;
@@ -200,4 +206,17 @@ export abstract class BaseBlock extends LitElement {
 			})
 		);
 	}
+
+	// protected updateBlockContent(newContent: any, modelInfo?: any) {
+	// 	if (!this.content) return;
+	  
+	// 	contentStore.updateBlock(this.content.id, (block) => ({
+	// 	  ...block,
+	// 	  content: {
+	// 		value: newContent,
+	// 		modelInfo: modelInfo || block.content.modelInfo,
+	// 	  },
+	// 	}));
+	//   }
+	  
 }

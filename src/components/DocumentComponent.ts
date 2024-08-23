@@ -48,7 +48,7 @@ export class DocumentComponent extends LitElement {
 
     return html`
       <h1>${this.document.title}</h1>
-      ${ComponentFactory.createComponent(this.document.rootBlock, libraryStore.value)}
+      ${ComponentFactory.createComponent(this.document.rootBlock, libraryStore.value, this.document.id)}
     `;
   }
 }
