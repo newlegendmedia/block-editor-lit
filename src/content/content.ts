@@ -1,4 +1,4 @@
-import { ModelType } from '../model/model';
+import { ModelType, Model } from '../model/model';
 
 export type ContentId = string;
 
@@ -17,6 +17,7 @@ export type IndexedCompositeContent = ContentId[];
 export type Content<T = unknown> = {
     id: ContentId;
     modelInfo: ModelInfo;
+    modelDefinition?: Model,
     content: T | KeyedCompositeContent | IndexedCompositeContent;
 };
 

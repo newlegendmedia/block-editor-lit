@@ -29,14 +29,15 @@ export class BlockStoreViewer extends LitElement {
       margin-top: var(--spacing-small);
     }
     .block-item {
-      margin-bottom: var(--spacing-medium);
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-xsmall);
       padding: var(--spacing-small);
       border: 1px solid var(--border-color);
       border-radius: var(--border-radius);
     }
     .block-id {
       font-weight: bold;
-      margin-bottom: var(--spacing-small);
     }
     .block-content {
       white-space: pre-wrap;
@@ -66,14 +67,13 @@ export class BlockStoreViewer extends LitElement {
   render() {
     return html`
       <div class="block-store-viewer">
-        <h3>Block Store Contents</h3>
+        <h3>Content Store</h3>
         <div>Block Count: ${this.blocks.size}</div>
         <div class="block-list">
           ${Array.from(this.blocks).map(([id, block]) => html`
             <div class="block-item">
               <div class="block-id">${id}</div>
-              <div>Type: ${block.modelInfo.type}</div>
-              <div>Model Key: ${block.modelInfo.key}</div>
+              <div>${block.modelInfo.type} | ${block.modelInfo.key}</div>
               ${block.modelInfo.ref ? html`<div>Model Ref: ${block.modelInfo.ref}</div>` : ''}
               <div class="block-content">${JSON.stringify(block.content, null, 2)}</div>
             </div>

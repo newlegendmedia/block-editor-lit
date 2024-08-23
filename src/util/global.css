@@ -14,8 +14,9 @@
   --font-size-large: 18px;
 
   /* Spacing */
-  --spacing-small: 8px;
-  --spacing-medium: 16px;
+  --spacing-xsmall: 5px;
+  --spacing-small: 10px;
+  --spacing-medium: 20px;
 
   /* Border */
   --border-color: #dee2e6;

@@ -7,198 +7,197 @@ import { ContentId, Content } from '../content/content';
 import { DebugController, globalDebugState } from '../util/DebugController';
 
 export abstract class BaseBlock extends LitElement {
-    @property({ type: String }) contentId: string = '';
-    @property({ type: String }) path: string = '';
-    @state() protected model?: Model;
-    @state() protected content?: Content;
-    @state() protected error: string | null = null;
-    @state() protected library: ModelLibrary;
+	@property({ type: String }) contentId: string = '';
+	@property({ type: String }) path: string = '';
+	@state() protected model?: Model;
+	@state() protected content?: Content;
+	@state() protected error: string | null = null;
+	@state() protected library: ModelLibrary;
 
-    private unsubscribeBlock: (() => void) | null = null;
-    protected debugController: DebugController;
+	private unsubscribeBlock: (() => void) | null = null;
+	protected debugController: DebugController;
 
-    static styles = css`
-        :host {
-            display: block;
-            margin-bottom: var(--spacing-medium);
-            border: 1px solid var(--border-color);
-            padding: var(--spacing-medium);
-            border-radius: var(--border-radius);
-        }
-        
-        .error {
-            color: red;
-            margin-bottom: var(--spacing-small);
-        }
+	static styles = css`
+		:host {
+			display: block;
+			margin-bottom: var(--spacing-medium);
+			border: 1px solid var(--border-color);
+			padding: var(--spacing-medium);
+			border-radius: var(--border-radius);
+		}
 
-        .debug-info {
-            background-color: var(--debug-bg-color, #f4f7f9);
-            border: 1px solid var(--debug-border-color, #dae0e3);
-            border-radius: 4px;
-            color: var(--debug-text-color, #212529);
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 14px;
-            line-height: 1.5;
-            margin-top: 20px;
-            padding: 16px;
-            overflow: hidden;
-        }
+		.error {
+			color: red;
+			margin-bottom: var(--spacing-small);
+		}
 
-        .path-display {
-            font-size: 0.8em;
-            margin-bottom: 10px;
-            padding: var(--spacing-small);
-            border: 1px solid var(--border-color);
-            border-radius: var(--border-radius);
-            background-color: var(--background-color);
-            color: var(--text-color);
-            cursor: pointer;
-            transition: background-color 0.3s;
-            display: inline-block;
-        }
+		.debug-info {
+			background-color: var(--debug-bg-color, #f4f7f9);
+			border: 1px solid var(--debug-border-color, #dae0e3);
+			border-radius: 4px;
+			color: var(--debug-text-color, #212529);
+			font-family: 'Courier New', Courier, monospace;
+			font-size: 14px;
+			line-height: 1.5;
+			margin-top: 20px;
+			padding: 16px;
+			overflow: hidden;
+		}
 
-        .path-display:hover {
-            background-color: #e0e0e0;
-        }
+		.path-display {
+			font-size: 0.8em;
+			margin-bottom: 10px;
+			padding: var(--spacing-small);
+			border: 1px solid var(--border-color);
+			border-radius: var(--border-radius);
+			background-color: var(--background-color);
+			color: var(--text-color);
+			cursor: pointer;
+			transition: background-color 0.3s;
+			display: inline-block;
+		}
 
-    ` as CSSResultGroup;
+		.path-display:hover {
+			background-color: #e0e0e0;
+		}
+	` as CSSResultGroup;
 
-    constructor() {
-        super();
-        this.library = libraryStore.value;
-        this.debugController = new DebugController(this);
-    }
+	constructor() {
+		super();
+		this.library = libraryStore.value;
+		this.debugController = new DebugController(this);
+	}
 
-    connectedCallback() {
-        super.connectedCallback();
-        this.subscribeToBlock();
-        this.model = this.getModel();
-    }
+	connectedCallback() {
+		super.connectedCallback();
+		this.subscribeToBlock();
+		this.model = this.getModel();
+	}
 
-    disconnectedCallback() {
-        super.disconnectedCallback();
-        if (this.unsubscribeBlock) {
-            this.unsubscribeBlock();
-        }
-    }
+	disconnectedCallback() {
+		super.disconnectedCallback();
+		if (this.unsubscribeBlock) {
+			this.unsubscribeBlock();
+		}
+	}
 
-    protected updated(changedProperties: PropertyValues) {
-        super.updated(changedProperties);
-        // if (globalDebugState.useDebugController) {
-        //     this.debugController.setDebugInfo({
-        //         content: this.content,
-        //         model: this.model,
-        //         path: this.path,
-        //     });
-        // }
-    }
+	protected updated(changedProperties: PropertyValues) {
+		super.updated(changedProperties);
+		if (globalDebugState.useDebugController) {
+			this.debugController.setDebugInfo({
+				content: this.content,
+				model: this.model,
+				path: this.path,
+			});
+		}
+	}
 
-    private subscribeToBlock() {
-        if (this.unsubscribeBlock) {
-            this.unsubscribeBlock();
-        }
-        this.unsubscribeBlock = contentStore.subscribeToBlock(this.contentId as ContentId, (content) => {
-            this.content = content;
-            this.requestUpdate();
-        });
-    }
+	private subscribeToBlock() {
+		if (this.unsubscribeBlock) {
+			this.unsubscribeBlock();
+		}
+		this.unsubscribeBlock = contentStore.subscribeToBlock(
+			this.contentId as ContentId,
+			(content) => {
+				this.content = content;
+				this.requestUpdate();
+			}
+		);
+	}
 
-    render(): TemplateResult {
-        return html`
-            ${this.renderDebug()}
-            ${this.renderError()}
-            ${this.renderPath()}
-            <div>${this.renderContent()}</div>
-        `;
-    }
+	render(): TemplateResult {
+		return html`
+			${this.renderDebug()} ${this.renderError()} ${this.renderPath()}
+			<div>${this.renderContent()}</div>
+		`;
+	}
 
-    protected renderPath(): TemplateResult {
-        return html`
-            <div class="path-display" @click=${this.handlePathClick}>
-                Current Path: ${this.path}
-            </div>
-        `;
-    }
+	protected renderPath(): TemplateResult {
+		return html`
+			<div class="path-display" @click=${this.handlePathClick}>Current Path: ${this.path}</div>
+		`;
+	}
 
-    private handlePathClick(e: Event) {
-        e.stopPropagation(); // Prevent event from bubbling up
-        this.dispatchEvent(new CustomEvent('path-clicked', {
-            detail: { path: this.path },
-            bubbles: true,
-            composed: true
-        }));
-    }
-    
-    protected abstract renderContent(): TemplateResult;
+	private handlePathClick(e: Event) {
+		e.stopPropagation(); // Prevent event from bubbling up
+		this.dispatchEvent(
+			new CustomEvent('path-clicked', {
+				detail: { path: this.path },
+				bubbles: true,
+				composed: true,
+			})
+		);
+	}
 
-    protected renderDebug(): TemplateResult {
-        if (!globalDebugState.useDebugController) {
-            return html``;
-        }
-        return html`${this.debugController.renderDebugButton()} ${this.debugController.renderDebugInfo()}`;
-    }
+	protected abstract renderContent(): TemplateResult;
 
-    protected renderError(): TemplateResult {
-        if (!this.error) {
-            return html``;
-        }
-        return html`<div class="error">${this.error}</div>`;
-    }
+	protected renderDebug(): TemplateResult {
+		if (!globalDebugState.useDebugController) {
+			return html``;
+		}
+		return html`${this.debugController.renderDebugButton()}
+		${this.debugController.renderDebugInfo()}`;
+	}
 
-    protected setError(message: string) {
-        this.error = message;
-    }
+	protected renderError(): TemplateResult {
+		if (!this.error) {
+			return html``;
+		}
+		return html`<div class="error">${this.error}</div>`;
+	}
 
-    protected clearError() {
-        this.error = null;
-    }
+	protected setError(message: string) {
+		this.error = message;
+	}
 
-    protected getModel(): Model | undefined {
-        if (!this.content) {
-            console.error(`${this.tagName}: Cannot get model - content is missing`);
-            return undefined;
-        }
+	protected clearError() {
+		this.error = null;
+	}
 
-        const { modelInfo, modelDefinition } = this.content;
+	protected getModel(): Model | undefined {
+		if (!this.content) {
+			console.error(`${this.tagName}: Cannot get model - content is missing`);
+			return undefined;
+		}
 
-        if (modelDefinition) {
-            console.log(`${this.tagName}: Model found in content`, modelDefinition);
-            return modelDefinition;
-        }
+		const { modelInfo, modelDefinition } = this.content;
 
-        if (!modelInfo.ref) {
-            console.error(`${this.tagName}: Cannot get model - modelRef is missing`);
-            return undefined;
-        }
+		if (modelDefinition) {
+			return modelDefinition;
+		}
 
-        const library = libraryStore.value;
-        if (!library) {
-            console.error(`${this.tagName}: Cannot get model - library is missing`);
-            return undefined;
-        }
+		if (!modelInfo.ref) {
+			console.error(`${this.tagName}: Cannot get model - modelRef is missing`);
+			return undefined;
+		}
 
-        const model = library.getDefinition(modelInfo.ref, modelInfo.type);
-        if (!model) {
-            console.error(`${this.tagName}: Model not found for key ${modelInfo.ref}`);
-        }
-        return model;
-    }
+		const library = libraryStore.value;
+		if (!library) {
+			console.error(`${this.tagName}: Cannot get model - library is missing`);
+			return undefined;
+		}
 
-    protected updateBlockContent(newContent: any) {
-        if (!this.content) return;
+		const model = library.getDefinition(modelInfo.ref, modelInfo.type);
+		if (!model) {
+			console.error(`${this.tagName}: Model not found for key ${modelInfo.ref}`);
+		}
+		return model;
+	}
 
-        contentStore.updateBlock(this.content.id, (block) => ({
-            ...block,
-            content: newContent, // Directly update the content without nesting
-        }));
+	protected updateBlockContent(newContent: any) {
+		if (!this.content) return;
 
-        this.dispatchEvent(
-            new CustomEvent('value-changed', {
-                detail: { key: this.content.modelInfo.key, value: newContent },
-                bubbles: true,
-                composed: true,
-            })
-        );
-    }
+		contentStore.updateBlock(this.content.id, (block) => ({
+			...block,
+			content: newContent, // Directly update the content without nesting
+		}));
 
+		this.dispatchEvent(
+			new CustomEvent('value-changed', {
+				detail: { key: this.content.modelInfo.key, value: newContent },
+				bubbles: true,
+				composed: true,
+			})
+		);
+	}
 }
