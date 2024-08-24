@@ -2,9 +2,9 @@ import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { ComponentFactory } from '../util/ComponentFactory';
 import { contentStore } from '../content/ContentStore';
-import { Content, CompositeContent } from '../content/content';
+import { Content, isCompositeContent } from '../content/content';
 import { libraryStore } from '../model/libraryStore';
-import { isIndexedComposite } from '../model/model';
+import { isElement, isObject, Model, isKeyedComposite, isIndexedComposite } from '../model/model';
 
 @customElement('path-renderer')
 export class PathRenderer extends LitElement {
@@ -52,7 +52,7 @@ export class PathRenderer extends LitElement {
         }
 
         for (let i = 1; i < pathParts.length; i++) {
-            if (!this.isCompositeBlock(currentBlock)) {
+            if (!isCompositeContent(currentBlock)) {
                 console.error(`Non-composite block encountered: ${currentBlock.id}`);
                 this.targetContentId = null;
                 return;
@@ -61,42 +61,49 @@ export class PathRenderer extends LitElement {
             const childKey = pathParts[i];
             let childContentId: string | undefined;
 
-            // if (!currentBlock.modelInfo.childrenType) {
-            //     if (currentBlock.modelInfo.type === 'group') {
-            //         currentBlock.modelInfo.childrenType = 'indexed';
-            //     } else if (currentBlock.modelInfo.type === 'object') {
-            //         currentBlock.modelInfo.childrenType = 'keyed';
-            //     } else if (currentBlock.modelInfo.type === 'array') {
-            //         currentBlock.modelInfo.childrenType = 'indexed';
-            //     } else {
-            //         console.error(`Invalid Block Type for Composites: ${currentBlock.modelInfo.type}`);
-            //         this.targetContentId = null;
-            //         return;
-            //     }
-            // }
-			if (!currentBlock.modelDefinition) {
-				console.error(`Model definition not found for block: ${currentBlock.id}`);
-				this.targetContentId = null;
-				return;
-			}
-			
-            if (isIndexedComposite(currentBlock.modelDefinition)) {
+            const model = this.getModelForBlock(currentBlock);
+            if (!model) {
+                console.error(`Model not found for block: ${currentBlock.id}`);
+                this.targetContentId = null;
+                return;
+            }
+
+            if (isIndexedComposite(model)) {
                 const index = parseInt(childKey, 10);
                 console.log(`Processing indexed child: ${index}`, currentBlock.children);
                 if (!isNaN(index) && index >= 0 && index < currentBlock.children.length) {
                     childContentId = currentBlock.children[index];
                 }
-            } else {
+            } else if (isKeyedComposite(model)) {
+                // Handle both regular and inline elements
                 childContentId = currentBlock.children.find((childId) => {
                     const child = contentStore.getBlock(childId);
                     console.log(`Processing keyed child:`, child);
                     return child && (child.modelInfo.key === childKey || child.id === childKey);
                 });
+
+                // If not found, it might be an inline element
+                if (!childContentId && isObject(model)) {
+                    const childProperty = model.properties.find(prop => prop.key === childKey);
+                    if (childProperty && isElement(childProperty)) {
+                        childContentId = `inline:${currentBlock.id}:${childKey}`;
+                    }
+                }
+            } else {
+                console.error(`Invalid composite type for block: ${currentBlock.id}`);
+                this.targetContentId = null;
+                return;
             }
 
             if (!childContentId) {
                 console.error(`Child block not found for key: ${childKey}`);
                 this.targetContentId = null;
+                return;
+            }
+
+            if (childContentId.startsWith('inline:')) {
+                // We've reached an inline element, so we're done
+                this.targetContentId = childContentId;
                 return;
             }
 
@@ -114,8 +121,8 @@ export class PathRenderer extends LitElement {
         console.log(`Final target block ID: ${this.targetContentId}`);
     }
 
-    private isCompositeBlock(block: Content): block is CompositeContent {
-        return 'children' in block && Array.isArray((block as CompositeContent).children);
+    private getModelForBlock(block: Content): Model | undefined {
+        return block.modelDefinition || libraryStore.value.getDefinition(block.modelInfo.ref!, block.modelInfo.type);
     }
 
     render() {

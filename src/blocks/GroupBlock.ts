@@ -1,5 +1,5 @@
 import { html, css, TemplateResult } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
+import { customElement, state, property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { CompositeBlock } from './CompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
@@ -8,6 +8,10 @@ import { GroupModel, Model, isModelReference } from '../model/model';
 @customElement('group-block')
 export class GroupBlock extends CompositeBlock<'indexed'> {
 	@state() private showSlashMenu: boolean = false;
+	@property({ type: Array }) mirroredBlocks: string[] = [];
+	
+	// Add this line to create a feature toggle
+	private enableMirroring: boolean = false; // Set to false to disable mirroring
 
 	static styles = [
 		CompositeBlock.styles,
@@ -15,11 +19,20 @@ export class GroupBlock extends CompositeBlock<'indexed'> {
 			.group-content {
 				display: flex;
 				flex-direction: column;
-				gap: var(--spacing-small);
+				gap: var(--spacing-medium);
 			}
 			.group-item {
 				display: flex;
-				align-items: center;
+				align-items: flex-start;
+				gap: var(--spacing-medium);
+			}
+			.item-container {
+				flex: 1;
+			}
+			.mirror-container {
+				flex: 1;
+				border-left: 2px dashed var(--border-color);
+				padding-left: var(--spacing-medium);
 			}
 			.remove-button {
 				margin-left: var(--spacing-small);
@@ -36,22 +49,26 @@ export class GroupBlock extends CompositeBlock<'indexed'> {
 	}
 
 	private initializeChildren() {
-		if (!this.model || (this.model as GroupModel).editable) {
+		if (!this.model) {
 			return;
 		}
+	
+		// if not editable, add all itemTypes as children
+		if (!(this.model as GroupModel).editable) {
+			const groupModel = this.model as GroupModel;
+			const itemTypes = this.getItemTypes(groupModel);
 
-		const groupModel = this.model as GroupModel;
-		const itemTypes = this.getItemTypes(groupModel);
-
-		// If there are no children and the group is not editable, add all itemTypes as children
-		if (this.childBlocks.length === 0) {
-			itemTypes.forEach((itemType) => this.addChildBlock(itemType, this.childBlocks.length));
+			if (this.childBlocks.length === 0) {
+				itemTypes.forEach((itemType) => this.addChildBlock(itemType, this.childBlocks.length));
+			} else {
+				console.warn('GroupBlock: Child blocks already initialized');
+			}
 		}
 	}
 
 	renderContent(): TemplateResult {
 		if (!this.content || !this.library || !this.model) {
-			return html`<div>Loading...</div>`;
+			return html`<div>Group Loading...</div>`;
 		}
 
 		const groupModel = this.model as GroupModel;
@@ -62,14 +79,25 @@ export class GroupBlock extends CompositeBlock<'indexed'> {
 				<div class="group-content">
 					${repeat(
 						this.childBlocks as string[],
-						(childId) => childId,
+						(childId, _index) => childId,
 						(childId, index) => html`
 							<div class="group-item">
-								${ComponentFactory.createComponent(
-									childId,
-									this.library!,
-									this.getChildPath(index)
-								)}
+								<div class="item-container">
+									${ComponentFactory.createComponent(
+										childId,
+										this.library!,
+										this.getChildPath(index)
+									)}
+								</div>
+								${this.enableMirroring && this.mirroredBlocks[index] ? html`
+									<div class="mirror-container">
+										${ComponentFactory.createComponent(
+											`mirror:${childId}`,
+											this.library!,
+											`${this.getChildPath(index)}.mirror`
+										)}
+									</div>
+								` : ''}
 								${groupModel.editable
 									? html`<button class="remove-button" @click=${() => this.removeChildBlock(index)}>
 											Remove
@@ -127,7 +155,26 @@ export class GroupBlock extends CompositeBlock<'indexed'> {
 	}
 
 	private addItem(itemType: Model) {
-		this.addChildBlock(itemType, this.childBlocks.length);
+		const newIndex = this.childBlocks.length;
+		const newChildId = this.addChildBlock(itemType, newIndex);
+		
+		// Only add a mirrored block if mirroring is enabled
+		if (this.enableMirroring) {
+			this.mirroredBlocks = [...this.mirroredBlocks, newChildId];
+		}
+		
 		this.showSlashMenu = false;
+		this.requestUpdate();
+	}
+
+	protected removeChildBlock(index: number) {
+		super.removeChildBlock(index);
+		
+		// Only remove the mirrored block if mirroring is enabled
+		if (this.enableMirroring) {
+			this.mirroredBlocks = this.mirroredBlocks.filter((_, i) => i !== index);
+		}
+		
+		this.requestUpdate();
 	}
 }

@@ -4,6 +4,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { CompositeBlock } from './CompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
 import { isElement, isObject, Model } from '../model/model';
+//import { contentStore } from '../content/ContentStore';
 
 // Define the custom event interface
 interface ElementUpdatedEvent extends CustomEvent {
@@ -45,17 +46,15 @@ export class ObjectBlock extends CompositeBlock<'keyed'> {
 			return html`<div>Object Loading...</div>`;
 		}
 
-		const objectModel = this.model;
-
 		return html`
 			<div>
-				<h2>${objectModel.name || 'Object'}</h2>
+				<h2>${this.model.name || 'Object'}</h2>
 				<div class="object-content">
 					${repeat(
-						objectModel.properties,
-						(prop) => prop.key!,
-						(prop) => this.renderChild(prop)
-					)}
+			this.model.properties,
+			(prop) => prop.key!,
+			(prop) => this.renderChild(prop)
+		)}
 				</div>
 			</div>
 		`;
@@ -70,7 +69,6 @@ export class ObjectBlock extends CompositeBlock<'keyed'> {
 		const childPath = `${this.path}.${childKey}`;
 
 		if (this.inlineChildren && isElement(property)) {
-			console.log('inline child', `inline:${this.contentId}:${childKey}`, childPath, property);
 			return ComponentFactory.createComponent(
 				`inline:${this.contentId}:${childKey}`,
 				this.library!,

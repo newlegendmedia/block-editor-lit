@@ -35,6 +35,15 @@ export class ContentStore {
 		}
 	}
 
+	updateBlockObjectProperty(id: ContentId, key: string, value: any): void {
+		const block = this.blocks.get(id) as CompositeContent | undefined;
+		if (block) {
+			(block.content as Record<string, any>)[key] = value;
+//			this.blocks.set(id, block);
+			this.notifySubscribers(id);
+		}
+	}
+
 	deleteBlock(id: ContentId): void {
 		this.blocks.delete(id);
 		this.notifySubscribers(id);
@@ -147,7 +156,6 @@ export class ContentStore {
 	}
 
 	createBlockFromModel<T>(model: Model, content?: T): Content<T> {
-		console.log('createBlockFromModel - model', model);
 		const id = this.generateUniqueId();
 		const modelInfo: ModelInfo = {
 		  key: model.key || '',
@@ -158,7 +166,6 @@ export class ContentStore {
 		let block: Content<T>;
 		
 		if (isCompositeModel(model)) {
-			console.log('createBlockFromModel compositeBlock - modelInfo', modelInfo);
 		  block = {
 			id,
 			modelInfo,

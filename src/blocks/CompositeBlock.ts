@@ -2,7 +2,7 @@ import { TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { BaseBlock } from './BaseBlock';
 import { contentStore } from '../content/ContentStore';
-import { CompositeContent } from '../content/content';
+import { CompositeContent, ContentId } from '../content/content';
 import {
 	Model,
 	CompositeModel,
@@ -137,20 +137,22 @@ export abstract class CompositeBlock<T extends CompositeType> extends BaseBlock 
 		}
 	}
 
-	protected addChildBlock(itemType: Model, key: T extends 'keyed' ? string : number) {
-		const newChildBlock = contentStore.createBlockFromModel(itemType);
-		if (this.compositeType === 'keyed') {
-			(this.childBlocks as KeyedChildren)[key as string] = newChildBlock.id;
-		} else {
-			(this.childBlocks as IndexedChildren).push(newChildBlock.id);
-		}
+    protected addChildBlock(itemType: Model, key: T extends 'keyed' ? string : number): ContentId {
+        const newChildBlock = contentStore.createBlockFromModel(itemType);
+        if (this.compositeType === 'keyed') {
+            (this.childBlocks as KeyedChildren)[key as string] = newChildBlock.id;
+        } else {
+            (this.childBlocks as IndexedChildren).push(newChildBlock.id);
+        }
 
-		const compositeContent = this.content as CompositeContent;
-		compositeContent.content = this.childBlocks;
-		contentStore.setBlock(compositeContent);
+        const compositeContent = this.content as CompositeContent;
+        compositeContent.content = this.childBlocks;
+        contentStore.setBlock(compositeContent);
 
-		this.requestUpdate();
-	}
+        this.requestUpdate();
+
+        return newChildBlock.id;
+    }
 
 	protected removeChildBlock(keyOrIndex: T extends 'keyed' ? string : number) {
 		const childId = this.getChildBlockId(keyOrIndex);

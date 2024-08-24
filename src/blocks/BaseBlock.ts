@@ -101,7 +101,7 @@ export abstract class BaseBlock extends LitElement {
 			this.contentId as ContentId,
 			(content) => {
 				this.content = content;
-				this.requestUpdate();
+//				this.requestUpdate();
 			}
 		);
 	}

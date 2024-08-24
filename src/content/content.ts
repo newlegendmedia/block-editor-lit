@@ -1,6 +1,7 @@
 import { ModelType, Model } from '../model/model';
 
 export type ContentId = string;
+export type DocumentId = string;
 
 export type ModelInfo = {
     type: ModelType;

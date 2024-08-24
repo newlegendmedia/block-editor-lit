@@ -14,7 +14,7 @@
     "taskModel": {
       "type": "object",
       "key": "taskModel",
-      "inlineChildren": true,
+      "inlineChildren": false,
       "name": "Task",
       "properties": [
         { "type": "element", "key": "title", "name": "Task Title", "base": "text" },
