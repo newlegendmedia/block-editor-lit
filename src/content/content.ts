@@ -40,12 +40,15 @@ export type GroupContent = CompositeContent & {
     content: IndexedCompositeContent;
 };
 
-export type Document = {
-    id: string;
+export interface Document {
+    id: DocumentId;
     title: string;
     rootBlock: ContentId;
-};
-
+    createdAt: string;
+    updatedAt: string;
+    // Add any other relevant fields for your document
+}
+  
 export function isCompositeContent(content: Content): content is CompositeContent {
     return Array.isArray((content as CompositeContent).children);
 }

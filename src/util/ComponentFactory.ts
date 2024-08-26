@@ -1,79 +1,150 @@
 import { html, TemplateResult } from 'lit';
-import { contentStore } from '../content/ContentStore.ts';
-import type { ModelLibrary } from '../model/libraryStore.ts';
-import type { Model } from '../model/model.ts';
+import { contentStore } from '../store/ContentStore';
+import { ModelLibrary } from '../model/libraryStore';
+import { Model } from '../model/model';
+import { Content, ContentId } from '../content/content';
 
-import '../blocks/BaseBlock.ts';
-import '../blocks/ObjectBlock.ts';
-import '../blocks/ArrayBlock.ts';
-import '../blocks/ElementBlock.ts';
-import '../blocks/GroupBlock.ts';
-import '../blocks/MirrorBlock.ts';
-import '../components/DocumentComponent.ts';
+// Import your block components
+import '../blocks/ObjectBlock';
+import '../blocks/ArrayBlock';
+import '../blocks/ElementBlock';
+import '../blocks/GroupBlock';
+import '../blocks/MirrorBlock';
 
 export class ComponentFactory {
-  static createComponent(
+  static async createComponent(
     contentId: string,
     library: ModelLibrary,
     path: string,
     inlineModel?: Model
-  ): TemplateResult {
+  ): Promise<TemplateResult> {
+    // Handle inline elements
     if (contentId.startsWith('inline:')) {
-      return html`<element-block
+      return this.createInlineElement(contentId, library, path, inlineModel);
+    }
+
+    // Handle mirror blocks
+    if (contentId.startsWith('mirror:')) {
+      return this.createMirrorBlock(contentId, library, path);
+    }
+
+    // Fetch content for regular blocks
+    let content: Content | undefined;
+    try {
+      content = await contentStore.getContent(contentId);
+    } catch (error) {
+      console.error(`Error fetching content for ID ${contentId}:`, error);
+      return html`<div>Error: Failed to load content</div>`;
+    }
+
+    if (!content) {
+      return html`<div>Error: Content not found</div>`;
+    }
+
+    const fullPath = path || content.modelInfo.key;
+
+    // Create the appropriate block based on content type
+    switch (content.modelInfo.type) {
+      case 'object':
+        return this.createObjectBlock(contentId, library, fullPath);
+      case 'array':
+        return this.createArrayBlock(contentId, library, fullPath);
+      case 'element':
+        return this.createElementBlock(contentId, library, fullPath);
+      case 'group':
+        return this.createGroupBlock(contentId, library, fullPath);
+      default:
+        console.warn(`Unknown content type: ${content.modelInfo.type}`);
+        return html`<div>Unknown content type: ${content.modelInfo.type}</div>`;
+    }
+  }
+
+  private static createInlineElement(
+    contentId: string,
+    library: ModelLibrary,
+    path: string,
+    inlineModel?: Model
+  ): Promise<TemplateResult> {
+    return Promise.resolve(html`
+      <element-block
         .contentId=${contentId}
         .library=${library}
         .path=${path}
         .inlineModel=${inlineModel}
         .isInline=${true}
-      ></element-block>`;
-    }
+      ></element-block>
+    `);
+  }
 
-    // Check if it's a mirror block
-    if (contentId.startsWith('mirror:')) {
-      const originalId = contentId.split(':')[1];
-      return html`<mirror-block
+  private static createMirrorBlock(
+    contentId: string,
+    library: ModelLibrary,
+    path: string
+  ): Promise<TemplateResult> {
+    const originalId = contentId.split(':')[1];
+    return Promise.resolve(html`
+      <mirror-block
         .contentId=${contentId}
         .referencedContentId=${originalId}
         .library=${library}
         .path=${path}
-      ></mirror-block>`;
-    }
+      ></mirror-block>
+    `);
+  }
 
-    const block = contentStore.getBlock(contentId);
-    if (!block) {
-      return html`<div>Error: Block not found</div>`;
-    }
+  private static createObjectBlock(
+    contentId: ContentId,
+    library: ModelLibrary,
+    path: string
+  ): Promise<TemplateResult> {
+    return Promise.resolve(html`
+      <object-block
+        .contentId=${contentId}
+        .library=${library}
+        .path=${path}
+      ></object-block>
+    `);
+  }
 
-    const fullPath = path || block.modelInfo.key;
+  private static createArrayBlock(
+    contentId: ContentId,
+    library: ModelLibrary,
+    path: string
+  ): Promise<TemplateResult> {
+    return Promise.resolve(html`
+      <array-block
+        .contentId=${contentId}
+        .library=${library}
+        .path=${path}
+      ></array-block>
+    `);
+  }
 
-    switch (block.modelInfo.type) {
-      case 'object':
-        return html`<object-block
-          .contentId=${contentId}
-          .library=${library}
-          .path=${fullPath}
-        ></object-block>`;
-      case 'element':
-        return html`<element-block
-          .contentId=${contentId}
-          .library=${library}
-          .path=${fullPath}
-        ></element-block>`;
-      case 'array':
-        return html`<array-block
-          .contentId=${contentId}
-          .library=${library}
-          .path=${fullPath}
-        ></array-block>`;
-      case 'group':
-        return html`<group-block
-          .contentId=${contentId}
-          .library=${library}
-          .path=${fullPath}
-        ></group-block>`;
-      default:
-        console.warn(`Unknown block type: ${block.modelInfo.type}`);
-        return html`<div>Unknown block type: ${block.modelInfo.type}</div>`;
-    }
+  private static createElementBlock(
+    contentId: ContentId,
+    library: ModelLibrary,
+    path: string
+  ): Promise<TemplateResult> {
+    return Promise.resolve(html`
+      <element-block
+        .contentId=${contentId}
+        .library=${library}
+        .path=${path}
+      ></element-block>
+    `);
+  }
+
+  private static createGroupBlock(
+    contentId: ContentId,
+    library: ModelLibrary,
+    path: string
+  ): Promise<TemplateResult> {
+    return Promise.resolve(html`
+      <group-block
+        .contentId=${contentId}
+        .library=${library}
+        .path=${path}
+      ></group-block>
+    `);
   }
 }

@@ -35,15 +35,6 @@ export class ContentStore {
 		}
 	}
 
-	updateBlockObjectProperty(id: ContentId, key: string, value: any): void {
-		const block = this.blocks.get(id) as CompositeContent | undefined;
-		if (block) {
-			(block.content as Record<string, any>)[key] = value;
-//			this.blocks.set(id, block);
-			this.notifySubscribers(id);
-		}
-	}
-
 	deleteBlock(id: ContentId): void {
 		this.blocks.delete(id);
 		this.notifySubscribers(id);

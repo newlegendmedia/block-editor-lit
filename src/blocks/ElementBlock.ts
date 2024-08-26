@@ -25,8 +25,8 @@ export class ElementBlock extends BaseBlock {
     `,
   ];
 
-  connectedCallback() {
-    super.connectedCallback();
+  protected async initializeContent() {
+    await super.initializeContent();
     if (this.isInline) {
       this.initializeInlineElement();
     }
@@ -58,12 +58,12 @@ export class ElementBlock extends BaseBlock {
   }
 
   protected renderContent(): TemplateResult {
-    if (!this.isInline && !this.content) {
+    if (!this.content) {
       return html`<div>Loading...</div>`;
     }
 
     const elementModel = this.model as ElementModel;
-    const content = this.isInline ? undefined : this.content?.content;
+    const content = this.content.content;
     const isReadonly = false;
 
     return html`
@@ -93,53 +93,45 @@ export class ElementBlock extends BaseBlock {
     }
   }
 
+  private renderTextElement(content: string, isReadonly: boolean): TemplateResult {
+    return html`
+      ${isReadonly
+        ? html`<span>${content || ''}</span>`
+        : html`<input type="text" .value=${content || ''} @input=${this.handleInput} />`}
+    `;
+  }
 
-    private renderTextElement(content: string, isReadonly: boolean): TemplateResult {
-        return html`
-            ${isReadonly
-                ? html`<span>${content || ''}</span>`
-                : html`<input type="text" .value=${content || ''} @input=${this.handleInput} />`}
-        `;
-    }
+  private renderNumberElement(content: number, isReadonly: boolean): TemplateResult {
+    return html`
+      ${isReadonly
+        ? html`<span>${content || ''}</span>`
+        : html`<input type="number" .value=${content || ''} @input=${this.handleInput} />`}
+    `;
+  }
 
-    private renderNumberElement(content: number, isReadonly: boolean): TemplateResult {
-        return html`
-            ${isReadonly
-                ? html`<span>${content || ''}</span>`
-                : html`<input type="number" .value=${content || ''} @input=${this.handleInput} />`}
-        `;
-    }
+  private renderBooleanElement(content: boolean, isReadonly: boolean): TemplateResult {
+    return html`
+      ${isReadonly
+        ? html`<span>${content ? 'Yes' : 'No'}</span>`
+        : html`<input type="checkbox" .checked=${content || false} @change=${this.handleInput} />`}
+    `;
+  }
 
-    private renderBooleanElement(content: boolean, isReadonly: boolean): TemplateResult {
-        return html`
-            ${isReadonly
-                ? html`<span>${content ? 'Yes' : 'No'}</span>`
-                : html`<input type="checkbox" .checked=${content || false} @change=${this.handleInput} />`}
-        `;
-    }
+  private renderDatetimeElement(content: string, isReadonly: boolean): TemplateResult {
+    return html`
+      ${isReadonly
+        ? html`<span>${content || ''}</span>`
+        : html`<input type="datetime-local" .value=${content || ''} @input=${this.handleInput} />`}
+    `;
+  }
 
-    private renderDatetimeElement(content: string, isReadonly: boolean): TemplateResult {
-        return html`
-            ${isReadonly
-                ? html`<span>${content || ''}</span>`
-                : html`<input type="datetime-local" .value=${content || ''} @input=${this.handleInput} />`}
-        `;
-    }
-
-    private handleInput(e: Event) {
-        const target = e.target as HTMLInputElement;
-        const value = target.type === 'checkbox' ? target.checked : target.value;
-        
-        if (this.isInline) {
-          this.dispatchEvent(new CustomEvent('element-updated', {
-            detail: { id: this.contentId, value },
-            bubbles: true,
-            composed: true
-          }));
-        } else {
-          this.updateBlockContent(value);
-        }
-      }
-
+  private handleInput(e: Event) {
+    const target = e.target as HTMLInputElement;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
     
+    this.updateContent(content => ({
+      ...content,
+      content: value
+    }));
+  }
 }

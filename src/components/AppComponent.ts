@@ -1,148 +1,122 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, TemplateResult } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { libraryStore, ModelLibrary } from '../model/libraryStore';
-import { contentStore } from '../content/ContentStore';
-import { Document } from '../content/content';
-
+import { contentStore } from '../store/ContentStore';
+import { Document, DocumentId } from '../content/content';
 import './DocumentComponent';
-import '../util/DebugToggle';
-import './PathRenderer';
-import './Breadcrumbs';
-import '../util/ThemeSwitcher';
 import './SidebarComponent';
 
 @customElement('app-component')
 export class AppComponent extends LitElement {
-	@state() private libraryReady: boolean = false;
-	@state() private openDocuments: string[] = [];
-	@state() private library: ModelLibrary | null = null;
-	@state() private currentPath: string = '';
+  @state() private documents: Document[] = [];
+  @state() private activeDocumentId: DocumentId | null = null;
+  @state() private isSidebarOpen: boolean = true;
+  @state() private isDarkMode: boolean = false;
 
-	private unsubscribeLibrary: (() => void) | null = null;
+  static styles = css`
+    :host {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      color: var(--text-color);
+      background-color: var(--background-color);
+    }
+    .sidebar {
+      width: 250px;
+      overflow-y: auto;
+      background-color: var(--sidebar-bg-color);
+      transition: transform 0.3s ease-in-out;
+    }
+    .sidebar.closed {
+      transform: translateX(-250px);
+    }
+    .main-content {
+      flex-grow: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    .toggle-sidebar {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+    }
+  `;
 
-	static styles = css`
-		:host {
-			display: flex;
-			height: 100vh;
-		}
-		sidebar-component {
-			width: 380px;
-			height: 100%;
-		}
-		.main-content {
-			flex-grow: 1;
-			display: flex;
-			flex-direction: column;
-			overflow: hidden;
-		}
-		.app-header {
-			padding: 20px;
-			background-color: var(--background-color);
-			border-bottom: 1px solid var(--border-color);
-		}
-		.app-view {
-			flex-grow: 1;
-			overflow-y: auto;
-			padding: 20px;
-		}
-		.header-controls {
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			margin-bottom: 15px;
-		}
-	`;
+  constructor() {
+    super();
+    this.addEventListener('toggle-sidebar', this.toggleSidebar as EventListener);
+    this.addEventListener('toggle-theme', this.toggleTheme as EventListener);
+  }
 
-	connectedCallback() {
-		super.connectedCallback();
-		this.unsubscribeLibrary = libraryStore.subscribe((library, ready) => {
-			this.library = library;
-			this.libraryReady = ready;
-			if (this.libraryReady && this.openDocuments.length === 0) {
-				this.openNewDocument();
-			}
-			this.requestUpdate();
-		});
+  async connectedCallback() {
+    super.connectedCallback();
+    await this.loadDocuments();
+    this.applyTheme();
+  }
 
-		this.addEventListener('path-clicked', this.handlePathClicked as EventListener);
-		this.addEventListener('breadcrumb-clicked', this.handleBreadcrumbClicked as EventListener);
-	}
+  private async loadDocuments() {
+    try {
+      this.documents = await contentStore.getAllDocuments();
+    } catch (error) {
+      console.error('Failed to load documents:', error);
+    }
+  }
 
-	disconnectedCallback() {
-		super.disconnectedCallback();
-		if (this.unsubscribeLibrary) {
-			this.unsubscribeLibrary();
-		}
-		this.removeEventListener('path-clicked', this.handlePathClicked as EventListener);
-		this.removeEventListener('breadcrumb-clicked', this.handleBreadcrumbClicked as EventListener);
-	}
+  private async createNewDocument() {
+    try {
+      const newDocument = await contentStore.createDocument('New Document');
+      this.documents = [...this.documents, newDocument];
+      this.activeDocumentId = newDocument.id;
+    } catch (error) {
+      console.error('Failed to create new document:', error);
+    }
+  }
 
-	private handlePathClicked(e: CustomEvent) {
-		const clickedPath = e.detail.path;
-		this.currentPath = clickedPath;
-		this.requestUpdate();
-	}
+  private setActiveDocument(id: DocumentId) {
+    this.activeDocumentId = id;
+  }
 
-	private handleBreadcrumbClicked(e: CustomEvent) {
-		const clickedPath = e.detail.path;
-		this.currentPath = clickedPath;
-		this.requestUpdate();
-	}
+  private toggleSidebar() {
+    this.isSidebarOpen = !this.isSidebarOpen;
+  }
 
-	private openNewDocument() {
-		const newDocId = this.initializeDocument();
-		this.openDocuments = [...this.openDocuments, newDocId];
-		this.currentPath = newDocId;
-	}
+  private toggleTheme() {
+    this.isDarkMode = !this.isDarkMode;
+    this.applyTheme();
+  }
 
-	private initializeDocument(): string {
-		if (!this.library) {
-			console.error('Library not initialized');
-			return '';
-		}
+  private applyTheme() {
+    document.body.classList.toggle('dark-theme', this.isDarkMode);
+  }
 
-		const notionModel = this.library.getDefinition('notion', 'object');
-
-		if (!notionModel) {
-			console.error('Notion definition not found');
-			return '';
-		}
-
-		const rootBlock = contentStore.createBlockFromModel(notionModel);
-
-		const theDocument: Document = {
-			id: 'notionDoc' + Date.now(),
-			title: 'New Notion++ Document',
-			rootBlock: rootBlock.id,
-		};
-
-		contentStore.setDocument(theDocument);
-		return theDocument.id;
-	}
-
-	render() {
-		if (!this.libraryReady) {
-			return html`<div>Loading library...</div>`;
-		}
-
-		return html`
-			<sidebar-component
-				.openDocuments=${this.openDocuments}
-				@select-document=${this.openNewDocument}
-				@create-document=${this.openNewDocument}
-			></sidebar-component>
-			<div class="main-content">
-				<div class="app-header">
-					<div class="header-controls">
-						<theme-switcher></theme-switcher>
-						<debug-toggle></debug-toggle>
-					</div>
-					<h-breadcrumbs .path=${this.currentPath}></h-breadcrumbs>
-				</div>
-				<div class="app-view">
-					<path-renderer .path=${this.currentPath}></path-renderer>
-				</div>
-			</div>
-		`;
-	}
+  render(): TemplateResult {
+    return html`
+      <button class="toggle-sidebar" @click=${this.toggleSidebar}>
+        ${this.isSidebarOpen ? '←' : '→'}
+      </button>
+      <button class="theme-toggle" @click=${this.toggleTheme}>
+        ${this.isDarkMode ? '☀️' : '🌙'}
+      </button>
+      <div class="sidebar ${this.isSidebarOpen ? '' : 'closed'}">
+        <sidebar-component
+          .documents=${this.documents}
+          .activeDocumentId=${this.activeDocumentId}
+          @document-selected=${(e: CustomEvent) => this.setActiveDocument(e.detail.documentId)}
+          @new-document=${this.createNewDocument}
+        ></sidebar-component>
+      </div>
+      <div class="main-content">
+        ${this.activeDocumentId 
+          ? html`<document-component .documentId=${this.activeDocumentId}></document-component>`
+          : html`<p>Select or create a document to begin.</p>`
+        }
+      </div>
+    `;
+  }
 }

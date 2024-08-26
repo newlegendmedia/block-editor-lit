@@ -1,85 +1,61 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, TemplateResult } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-
-import './BlockStoreViewer';
+import { Document, DocumentId } from '../content/content';
 
 @customElement('sidebar-component')
 export class SidebarComponent extends LitElement {
-  @property({ type: Array }) openDocuments: string[] = [];
+  @property({ type: Array }) documents: Document[] = [];
+  @property({ type: String }) activeDocumentId: DocumentId | null = null;
 
   static styles = css`
     :host {
-      display: flex;
-      flex-direction: column;
-      background-color: var(--sidebar-bg-color, #f0f0f0);
-      color: var(--sidebar-text-color, #333);
-      padding: 20px;
-      height: 100%;
-      box-sizing: border-box;
-    }
-    .sidebar-content {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-    }
-    .sidebar-docs {
-      background-color: var(--sidebar-docs-bg-color, #ffffff);
-      color: var(--sidebar-docs-text-color, #333);
+      display: block;
       padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 4px;
     }
     ul {
       list-style-type: none;
       padding: 0;
     }
     li {
-      margin-bottom: 10px;
       cursor: pointer;
+      padding: 5px 0;
+    }
+    li.active {
+      font-weight: bold;
     }
     button {
-      margin-top: 20px;
-      background-color: var(--button-bg-color, #007bff);
-      color: var(--button-text-color, #ffffff);
-      border: none;
-      padding: 8px 16px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: var(--button-hover-bg-color, #0056b3);
-    }
-    block-store-viewer {
-      flex-grow: 1;
-      overflow: hidden;
-    }
-    h2 {
-      margin: 0 0 15px 0;
+      margin-top: 10px;
     }
   `;
 
-  render() {
+  render(): TemplateResult {
     return html`
-      <div class="sidebar-content">
-        <div class="sidebar-docs">
-          <h2>Documents</h2>
-          <ul>
-            ${this.openDocuments.map(
-              (docId) => html`<li @click=${() => this.selectDocument(docId)}>${docId}</li>`
-            )}
-          </ul>
-          <button @click=${this.createNewDocument}>New Document</button>
-        </div>
-        <block-store-viewer></block-store-viewer>
-      </div>
+      <ul>
+        ${this.documents.map(doc => html`
+          <li
+            class=${doc.id === this.activeDocumentId ? 'active' : ''}
+            @click=${() => this.selectDocument(doc.id)}
+          >
+            ${doc.title}
+          </li>
+        `)}
+      </ul>
+      <button @click=${this.createNewDocument}>New Document</button>
     `;
   }
 
-  private selectDocument(docId: string) {
-    this.dispatchEvent(new CustomEvent('select-document', { detail: docId, bubbles: true, composed: true }));
+  private selectDocument(id: DocumentId) {
+    this.dispatchEvent(new CustomEvent('document-selected', {
+      detail: { documentId: id },
+      bubbles: true,
+      composed: true
+    }));
   }
 
   private createNewDocument() {
-    this.dispatchEvent(new CustomEvent('create-document', { bubbles: true, composed: true }));
+    this.dispatchEvent(new CustomEvent('new-document', {
+      bubbles: true,
+      composed: true
+    }));
   }
 }

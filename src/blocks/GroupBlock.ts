@@ -4,177 +4,201 @@ import { repeat } from 'lit/directives/repeat.js';
 import { CompositeBlock } from './CompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
 import { GroupModel, Model, isModelReference } from '../model/model';
+import { ContentId } from '../content/content';
+import { until } from 'lit/directives/until.js';
 
 @customElement('group-block')
 export class GroupBlock extends CompositeBlock<'indexed'> {
-	@state() private showSlashMenu: boolean = false;
-	@property({ type: Array }) mirroredBlocks: string[] = [];
-	
-	// Add this line to create a feature toggle
-	private enableMirroring: boolean = false; // Set to false to disable mirroring
+  @state() private showSlashMenu: boolean = false;
+  @property({ type: Array }) mirroredBlocks: string[] = [];
+  @state() private childComponentPromises: Promise<TemplateResult>[] = [];
+  
+  private enableMirroring: boolean = false; // Feature toggle for mirroring
 
-	static styles = [
-		CompositeBlock.styles,
-		css`
-			.group-content {
-				display: flex;
-				flex-direction: column;
-				gap: var(--spacing-medium);
-			}
-			.group-item {
-				display: flex;
-				align-items: flex-start;
-				gap: var(--spacing-medium);
-			}
-			.item-container {
-				flex: 1;
-			}
-			.mirror-container {
-				flex: 1;
-				border-left: 2px dashed var(--border-color);
-				padding-left: var(--spacing-medium);
-			}
-			.remove-button {
-				margin-left: var(--spacing-small);
-			}
-			.slash-menu {
-				margin-top: var(--spacing-small);
-			}
-		`,
-	];
+  static styles = [
+    CompositeBlock.styles,
+    css`
+      .group-content {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-medium);
+      }
+      .group-item {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--spacing-medium);
+      }
+      .item-container {
+        flex: 1;
+      }
+      .mirror-container {
+        flex: 1;
+        border-left: 2px dashed var(--border-color);
+        padding-left: var(--spacing-medium);
+      }
+      .remove-button {
+        margin-left: var(--spacing-small);
+      }
+      .slash-menu {
+        margin-top: var(--spacing-small);
+      }
+    `,
+  ];
 
-	connectedCallback() {
-		super.connectedCallback();
-		this.initializeChildren();
-	}
+  async connectedCallback() {
+    await super.connectedCallback();
+    await this.initializeChildBlocks();
+    await this.initializeChildComponents();
+  }
 
-	private initializeChildren() {
-		if (!this.model) {
-			return;
-		}
-	
-		// if not editable, add all itemTypes as children
-		if (!(this.model as GroupModel).editable) {
-			const groupModel = this.model as GroupModel;
-			const itemTypes = this.getItemTypes(groupModel);
+  protected async initializeChildBlocks() {
+    await super.initializeChildBlocks();
+    if (!(this.model as GroupModel).editable && Array.isArray(this.childBlocks) && this.childBlocks.length === 0) {
+      const groupModel = this.model as GroupModel;
+      const itemTypes = this.getItemTypes(groupModel);
 
-			if (this.childBlocks.length === 0) {
-				itemTypes.forEach((itemType) => this.addChildBlock(itemType, this.childBlocks.length));
-			} else {
-				console.warn('GroupBlock: Child blocks already initialized');
-			}
-		}
-	}
+      for (const itemType of itemTypes) {
+        await this.addChildBlock(itemType);
+      }
+    }
+  }
 
-	renderContent(): TemplateResult {
-		if (!this.content || !this.library || !this.model) {
-			return html`<div>Group Loading...</div>`;
-		}
+  private async initializeChildComponents() {
+    if (!Array.isArray(this.childBlocks)) {
+      console.error('ChildBlocks is not an array:', this.childBlocks);
+      return;
+    }
 
-		const groupModel = this.model as GroupModel;
+    this.childComponentPromises = this.childBlocks.map((childId, index) => 
+      this.createChildComponent(childId, index)
+    );
 
-		return html`
-			<div>
-				<h3>${groupModel.name || 'Group'}</h3>
-				<div class="group-content">
-					${repeat(
-						this.childBlocks as string[],
-						(childId, _index) => childId,
-						(childId, index) => html`
-							<div class="group-item">
-								<div class="item-container">
-									${ComponentFactory.createComponent(
-										childId,
-										this.library!,
-										this.getChildPath(index)
-									)}
-								</div>
-								${this.enableMirroring && this.mirroredBlocks[index] ? html`
-									<div class="mirror-container">
-										${ComponentFactory.createComponent(
-											`mirror:${childId}`,
-											this.library!,
-											`${this.getChildPath(index)}.mirror`
-										)}
-									</div>
-								` : ''}
-								${groupModel.editable
-									? html`<button class="remove-button" @click=${() => this.removeChildBlock(index)}>
-											Remove
-									  </button>`
-									: ''}
-							</div>
-						`
-					)}
-				</div>
-				${groupModel.editable ? this.renderAddButton() : ''}
-				${this.showSlashMenu ? this.renderSlashMenu() : ''}
-			</div>
-		`;
-	}
+    this.requestUpdate();
+  }
 
-	private renderAddButton(): TemplateResult {
-		return html`<button @click=${this.toggleSlashMenu}>Add Item</button>`;
-	}
+  private async createChildComponent(childId: ContentId, index: number): Promise<TemplateResult> {
+    return ComponentFactory.createComponent(
+      childId,
+      this.library!,
+      this.getChildPath(index)
+    );
+  }
 
-	private renderSlashMenu(): TemplateResult {
-		const groupModel = this.model as GroupModel;
-		const itemTypes = this.getItemTypes(groupModel);
+  protected renderContent(): TemplateResult {
+    if (!this.content || !this.library || !this.model) {
+      return html`<div>Group Loading...</div>`;
+    }
 
-		return html`
-			<div class="slash-menu">
-				${repeat(
-					itemTypes,
-					(itemType) => itemType.key,
-					(itemType) => html`
-						<button @click=${() => this.addItem(itemType)}>${itemType.name || itemType.key}</button>
-					`
-				)}
-			</div>
-		`;
-	}
+    const groupModel = this.model as GroupModel;
 
-	private getItemTypes(groupModel: GroupModel): Model[] {
-		if (Array.isArray(groupModel.itemTypes)) {
-			return groupModel.itemTypes;
-		} else if (isModelReference(groupModel.itemTypes)) {
-			const resolved = this.library!.getDefinition(
-				groupModel.itemTypes.ref,
-				groupModel.itemTypes.type
-			);
-			if (resolved && 'itemTypes' in resolved) {
-				return this.getItemTypes(resolved as GroupModel);
-			}
-		}
-		console.warn(`Invalid itemTypes: ${JSON.stringify(groupModel.itemTypes)}`);
-		return [];
-	}
+    return html`
+      <div>
+        <h3>${groupModel.name || 'Group'}</h3>
+        <div class="group-content">
+          ${repeat(
+            this.childComponentPromises,
+            (_, index) => index,
+            (childPromise, index) => html`
+              <div class="group-item">
+                <div class="item-container">
+                  ${until(
+                    childPromise,
+                    html`<span>Loading child component...</span>`,
+                    html`<span>Error loading component</span>`
+                  )}
+                </div>
+                ${this.enableMirroring && this.mirroredBlocks[index] ? html`
+                  <div class="mirror-container">
+                    ${ComponentFactory.createComponent(
+                      `mirror:${this.childBlocks[index]}`,
+                      this.library!,
+                      `${this.getChildPath(index)}.mirror`
+                    )}
+                  </div>
+                ` : ''}
+                ${groupModel.editable
+                  ? html`<button class="remove-button" @click=${() => this.removeChildBlock(index)}>
+                      Remove
+                    </button>`
+                  : ''}
+              </div>
+            `
+          )}
+        </div>
+        ${groupModel.editable ? this.renderAddButton() : ''}
+        ${this.showSlashMenu ? this.renderSlashMenu() : ''}
+      </div>
+    `;
+  }
 
-	private toggleSlashMenu() {
-		this.showSlashMenu = !this.showSlashMenu;
-	}
+  private renderAddButton(): TemplateResult {
+    return html`<button @click=${this.toggleSlashMenu}>Add Item</button>`;
+  }
 
-	private addItem(itemType: Model) {
-		const newIndex = this.childBlocks.length;
-		const newChildId = this.addChildBlock(itemType, newIndex);
-		
-		// Only add a mirrored block if mirroring is enabled
-		if (this.enableMirroring) {
-			this.mirroredBlocks = [...this.mirroredBlocks, newChildId];
-		}
-		
-		this.showSlashMenu = false;
-		this.requestUpdate();
-	}
+  private renderSlashMenu(): TemplateResult {
+    const groupModel = this.model as GroupModel;
+    const itemTypes = this.getItemTypes(groupModel);
 
-	protected removeChildBlock(index: number) {
-		super.removeChildBlock(index);
-		
-		// Only remove the mirrored block if mirroring is enabled
-		if (this.enableMirroring) {
-			this.mirroredBlocks = this.mirroredBlocks.filter((_, i) => i !== index);
-		}
-		
-		this.requestUpdate();
-	}
+    return html`
+      <div class="slash-menu">
+        ${repeat(
+          itemTypes,
+          (itemType) => itemType.key,
+          (itemType) => html`
+            <button @click=${() => this.addItem(itemType)}>${itemType.name || itemType.key}</button>
+          `
+        )}
+      </div>
+    `;
+  }
+
+  private getItemTypes(groupModel: GroupModel): Model[] {
+    if (Array.isArray(groupModel.itemTypes)) {
+      return groupModel.itemTypes;
+    } else if (isModelReference(groupModel.itemTypes)) {
+      const resolved = this.library!.getDefinition(
+        groupModel.itemTypes.ref,
+        groupModel.itemTypes.type
+      );
+      if (resolved && 'itemTypes' in resolved) {
+        return this.getItemTypes(resolved as GroupModel);
+      }
+    }
+    console.warn(`Invalid itemTypes: ${JSON.stringify(groupModel.itemTypes)}`);
+    return [];
+  }
+
+  private toggleSlashMenu() {
+    this.showSlashMenu = !this.showSlashMenu;
+  }
+
+  private async addItem(itemType: Model) {
+    const newChildId = await this.addChildBlock(itemType);
+    
+    if (this.enableMirroring) {
+      this.mirroredBlocks = [...this.mirroredBlocks, newChildId];
+    }
+    
+    // Add the new child component promise
+    this.childComponentPromises = [
+      ...this.childComponentPromises,
+      this.createChildComponent(newChildId, this.childComponentPromises.length)
+    ];
+    
+    this.showSlashMenu = false;
+    this.requestUpdate();
+  }
+
+  protected async removeChildBlock(index: number) {
+    await super.removeChildBlock(index);
+    
+    if (this.enableMirroring) {
+      this.mirroredBlocks = this.mirroredBlocks.filter((_, i) => i !== index);
+    }
+    
+    // Remove the child component promise
+    this.childComponentPromises = this.childComponentPromises.filter((_, i) => i !== index);
+    
+    this.requestUpdate();
+  }
 }
