@@ -1,19 +1,20 @@
 import { LitElement, html, css, PropertyValues, TemplateResult, CSSResultGroup } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { Content, ContentId, ModelInfo } from '../content/content';
+import { Content, ContentId } from '../content/content';
 import { Model } from '../model/model';
 import { contentStore } from '../store/ContentStore';
 import { ModelLibrary, libraryStore } from '../model/libraryStore';
 import { DebugController } from '../util/DebugController';
 
 export abstract class BaseBlock extends LitElement {
-  @property({ type: String }) contentId: ContentId = '';
-  @property({ type: String }) path: string = '';
-  @property({ type: Object }) inlineModel?: Model;
-  @state() protected model?: Model;
-  @state() protected content?: Content;
-  @state() protected error: string | null = null;
-  @state() protected library: ModelLibrary;
+    @property({ type: String }) contentId: ContentId = '';
+    @property({ type: String }) path: string = '';
+    @property({ type: Object }) inlineModel?: Model;
+    @state() protected content!: Content | undefined; // Note the non-null assertion
+    @state() protected model?: Model;
+    @state() protected error: string | null = null;
+    @state() protected library: ModelLibrary;
+
 
   private unsubscribe: (() => void) | null = null;
   protected debugController: DebugController;
@@ -71,7 +72,6 @@ export abstract class BaseBlock extends LitElement {
 
   async connectedCallback() {
     super.connectedCallback();
-//    await this.initializeContent();
     this.subscribeToContent();
     this.model = this.getModel();
   }
@@ -85,10 +85,9 @@ export abstract class BaseBlock extends LitElement {
 
   protected async initializeContent() {
     if (!this.contentId) {
-      console.error('ContentId is not set');
-      return;
+      throw new Error('ContentId is not set');
     }
-
+  
     try {
       this.content = await contentStore.getContent(this.contentId);
       if (!this.content) {
@@ -97,17 +96,12 @@ export abstract class BaseBlock extends LitElement {
         if (!model) {
           throw new Error('Model not found for content creation');
         }
-        const modelInfo: ModelInfo = {
-          type: model.type,
-          key: model.key,
-          ref: 'ref' in model ? model.ref : undefined
-        };
         this.content = await contentStore.createContent(model);
         this.contentId = this.content.id;
       }
     } catch (error) {
       console.error('Failed to initialize content:', error);
-      this.error = 'Failed to initialize content';
+      throw error; // Re-throw the error to be caught by error boundaries
     }
   }
 

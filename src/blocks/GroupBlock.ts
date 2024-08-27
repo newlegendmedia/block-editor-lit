@@ -1,22 +1,22 @@
 import { html, css, TemplateResult } from 'lit';
 import { customElement, state, property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
-import { CompositeBlock } from './CompositeBlock';
+import { until } from 'lit/directives/until.js';
+import { IndexedCompositeBlock } from './IndexedCompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
 import { GroupModel, Model, isModelReference } from '../model/model';
 import { ContentId } from '../content/content';
-import { until } from 'lit/directives/until.js';
 
 @customElement('group-block')
-export class GroupBlock extends CompositeBlock<'indexed'> {
+export class GroupBlock extends IndexedCompositeBlock {
   @state() private showSlashMenu: boolean = false;
   @property({ type: Array }) mirroredBlocks: string[] = [];
   @state() private childComponentPromises: Promise<TemplateResult>[] = [];
-  
+
   private enableMirroring: boolean = false; // Feature toggle for mirroring
 
   static styles = [
-    CompositeBlock.styles,
+    IndexedCompositeBlock.styles,
     css`
       .group-content {
         display: flex;
@@ -51,18 +51,6 @@ export class GroupBlock extends CompositeBlock<'indexed'> {
     await this.initializeChildComponents();
   }
 
-  protected async initializeChildBlocks() {
-    await super.initializeChildBlocks();
-    if (!(this.model as GroupModel).editable && Array.isArray(this.childBlocks) && this.childBlocks.length === 0) {
-      const groupModel = this.model as GroupModel;
-      const itemTypes = this.getItemTypes(groupModel);
-
-      for (const itemType of itemTypes) {
-        await this.addChildBlock(itemType);
-      }
-    }
-  }
-
   private async initializeChildComponents() {
     if (!Array.isArray(this.childBlocks)) {
       console.error('ChildBlocks is not an array:', this.childBlocks);
@@ -76,7 +64,7 @@ export class GroupBlock extends CompositeBlock<'indexed'> {
     this.requestUpdate();
   }
 
-  private async createChildComponent(childId: ContentId, index: number): Promise<TemplateResult> {
+  private createChildComponent(childId: ContentId, index: number): Promise<TemplateResult> {
     return ComponentFactory.createComponent(
       childId,
       this.library!,
@@ -109,10 +97,14 @@ export class GroupBlock extends CompositeBlock<'indexed'> {
                 </div>
                 ${this.enableMirroring && this.mirroredBlocks[index] ? html`
                   <div class="mirror-container">
-                    ${ComponentFactory.createComponent(
-                      `mirror:${this.childBlocks[index]}`,
-                      this.library!,
-                      `${this.getChildPath(index)}.mirror`
+                    ${until(
+                      ComponentFactory.createComponent(
+                        `mirror:${this.childBlocks[index]}`,
+                        this.library!,
+                        `${this.getChildPath(index)}.mirror`
+                      ),
+                      html`<span>Loading mirrored component...</span>`,
+                      html`<span>Error loading mirrored component</span>`
                     )}
                   </div>
                 ` : ''}
@@ -174,31 +166,31 @@ export class GroupBlock extends CompositeBlock<'indexed'> {
 
   private async addItem(itemType: Model) {
     const newChildId = await this.addChildBlock(itemType);
-    
+
     if (this.enableMirroring) {
       this.mirroredBlocks = [...this.mirroredBlocks, newChildId];
     }
-    
+
     // Add the new child component promise
     this.childComponentPromises = [
       ...this.childComponentPromises,
       this.createChildComponent(newChildId, this.childComponentPromises.length)
     ];
-    
+
     this.showSlashMenu = false;
     this.requestUpdate();
   }
 
   protected async removeChildBlock(index: number) {
     await super.removeChildBlock(index);
-    
+
     if (this.enableMirroring) {
       this.mirroredBlocks = this.mirroredBlocks.filter((_, i) => i !== index);
     }
-    
+
     // Remove the child component promise
     this.childComponentPromises = this.childComponentPromises.filter((_, i) => i !== index);
-    
+
     this.requestUpdate();
   }
 }

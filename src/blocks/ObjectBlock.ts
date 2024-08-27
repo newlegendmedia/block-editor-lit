@@ -2,17 +2,17 @@ import { html, css, TemplateResult } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { until } from 'lit/directives/until.js';
-import { CompositeBlock } from './CompositeBlock';
+import { KeyedCompositeBlock } from './KeyedCompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
-import { isElement, isObject, Model } from '../model/model';
-import { Content } from '../content/content';
+import { isObject, Model, isElement } from '../model/model';
+//import { Content } from '../content/content';
 
 @customElement('object-block')
-export class ObjectBlock extends CompositeBlock<'keyed'> {
+export class ObjectBlock extends KeyedCompositeBlock {
   @state() private childComponentPromises: Record<string, Promise<TemplateResult>> = {};
 
   static styles = [
-    CompositeBlock.styles,
+    KeyedCompositeBlock.styles,
     css`
       .object-content {
         display: flex;
@@ -23,21 +23,21 @@ export class ObjectBlock extends CompositeBlock<'keyed'> {
   ];
 
   async connectedCallback() {
-    super.connectedCallback();
+    await super.connectedCallback();
     await this.initializeChildBlocks();
     await this.initializeChildComponents();
   }
 
   private async initializeChildComponents() {
     if (!this.model || !isObject(this.model)) return;
-
+  
     const componentPromises: Record<string, Promise<TemplateResult>> = {};
     for (const prop of this.model.properties) {
       if (prop.key) {
         componentPromises[prop.key] = this.createChildComponent(prop);
       }
     }
-
+  
     this.childComponentPromises = componentPromises;
     this.requestUpdate();
   }
@@ -67,8 +67,9 @@ export class ObjectBlock extends CompositeBlock<'keyed'> {
     return ComponentFactory.createComponent(childContentId, this.library!, childPath);
   }
 
-  renderContent(): TemplateResult {
+  protected renderContent(): TemplateResult {
     if (!this.content || !this.library || !this.model || !isObject(this.model)) {
+      ;
       return html`<div>Object Loading...</div>`;
     }
 
@@ -110,22 +111,22 @@ export class ObjectBlock extends CompositeBlock<'keyed'> {
     `;
   }
 
-  private async handleInlineElementUpdate(event: CustomEvent) {
-    const { id, value } = event.detail;
-    if (id.startsWith('inline:')) {
-      const [, parentId, childKey] = id.split(':');
-      if (parentId === this.contentId && this.content) {
-        await this.updateContent(content => {
-          const updatedContent = {
-            ...content,
-            content: {
-              ...(content.content as Record<string, unknown>),
-              [childKey]: value,
-            },
-          };
-          return updatedContent as Content;
-        });
-      }
-    }
-  }
+  // private async handleInlineElementUpdate(event: CustomEvent) {
+  //   const { id, value } = event.detail;
+  //   if (id.startsWith('inline:')) {
+  //     const [, parentId, childKey] = id.split(':');
+  //     if (parentId === this.contentId && this.content) {
+  //       await this.updateContent(content => {
+  //         const updatedContent = {
+  //           ...content,
+  //           content: {
+  //             ...(content.content as Record<string, unknown>),
+  //             [childKey]: value,
+  //           },
+  //         };
+  //         return updatedContent as Content;
+  //       });
+  //     }
+  //   }
+  // }
 }

@@ -1,15 +1,15 @@
 import { html, css, TemplateResult } from 'lit';
 import { customElement } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
-import { CompositeBlock } from './CompositeBlock';
+import { IndexedCompositeBlock } from './IndexedCompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
 import { ArrayModel } from '../model/model';
 import { ContentId } from '../content/content';
 
 @customElement('array-block')
-export class ArrayBlock extends CompositeBlock<'indexed'> {
+export class ArrayBlock extends IndexedCompositeBlock {
   static styles = [
-    CompositeBlock.styles,
+    IndexedCompositeBlock.styles,
     css`
       .array-content {
         display: flex;

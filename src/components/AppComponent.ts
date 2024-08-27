@@ -1,16 +1,23 @@
 import { LitElement, html, css, TemplateResult } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { contentStore } from '../store/ContentStore';
+import { documentManager } from '../store/DocumentManager';
 import { Document, DocumentId } from '../content/content';
 import './DocumentComponent';
 import './SidebarComponent';
+import './PathRenderer';
+import './Breadcrumbs';
 
 @customElement('app-component')
 export class AppComponent extends LitElement {
-  @state() private documents: Document[] = [];
+  @state() private allDocuments: Document[] = [];
+  @state() private activeDocuments: Document[] = [];
   @state() private activeDocumentId: DocumentId | null = null;
   @state() private isSidebarOpen: boolean = true;
   @state() private isDarkMode: boolean = false;
+  @state() private currentPath: string | null = null;
+  @state() private pathRenderError: string | null = null;
+  @state() private isLoading: boolean = false;
 
   static styles = css`
     :host {
@@ -21,7 +28,7 @@ export class AppComponent extends LitElement {
       background-color: var(--background-color);
     }
     .sidebar {
-      width: 250px;
+      width: 350px;
       overflow-y: auto;
       background-color: var(--sidebar-bg-color);
       transition: transform 0.3s ease-in-out;
@@ -47,11 +54,14 @@ export class AppComponent extends LitElement {
       z-index: 1000;
     }
   `;
-
+	
   constructor() {
     super();
     this.addEventListener('toggle-sidebar', this.toggleSidebar as EventListener);
     this.addEventListener('toggle-theme', this.toggleTheme as EventListener);
+	  this.addEventListener('path-clicked', this.handlePathClick as EventListener);
+	  this.addEventListener('breadcrumb-clicked', this.handleBreadcrumbClick as EventListener);
+	  
   }
 
   async connectedCallback() {
@@ -60,9 +70,16 @@ export class AppComponent extends LitElement {
     this.applyTheme();
   }
 
+  private handleBreadcrumbClick(event: CustomEvent) {
+    this.currentPath = event.detail.path;
+    this.pathRenderError = null;
+    this.requestUpdate();
+  }	
+	
   private async loadDocuments() {
     try {
-      this.documents = await contentStore.getAllDocuments();
+      this.allDocuments = await documentManager.getAllDocuments();
+      this.activeDocuments = contentStore.getActiveDocuments();
     } catch (error) {
       console.error('Failed to load documents:', error);
     }
@@ -70,17 +87,47 @@ export class AppComponent extends LitElement {
 
   private async createNewDocument() {
     try {
-      const newDocument = await contentStore.createDocument('New Document');
-      this.documents = [...this.documents, newDocument];
-      this.activeDocumentId = newDocument.id;
+      this.isLoading = true;
+      const newDocument = await documentManager.createDocument('New Document');
+      this.allDocuments = [...this.allDocuments, newDocument];
+      await this.openDocument(newDocument.id);
     } catch (error) {
       console.error('Failed to create new document:', error);
+    } finally {
+      this.isLoading = false;
     }
   }
 
-  private setActiveDocument(id: DocumentId) {
-    this.activeDocumentId = id;
+  private async openDocument(id: DocumentId) {
+    try {
+      this.isLoading = true;
+      const theDocument = await documentManager.getDocument(id);
+      if (theDocument) {
+        await contentStore.openDocument(theDocument);
+        this.activeDocuments = contentStore.getActiveDocuments();
+        this.activeDocumentId = id;
+        
+        // Update the current path to the document's root block ID
+        this.currentPath = theDocument.rootBlock;
+      }
+    } catch (error) {
+      console.error('Failed to open document:', error);
+    } finally {
+      this.isLoading = false;
+    }
   }
+	
+  private async closeDocument(id: DocumentId) {
+    await contentStore.closeDocument(id);
+    this.activeDocuments = contentStore.getActiveDocuments();
+    if (this.activeDocumentId === id) {
+      this.activeDocumentId = this.activeDocuments.length > 0 ? this.activeDocuments[0].id : null;
+    }
+  }
+
+//   private setActiveDocument(id: DocumentId) {
+//     this.activeDocumentId = id;
+//   }
 
   private toggleSidebar() {
     this.isSidebarOpen = !this.isSidebarOpen;
@@ -94,8 +141,17 @@ export class AppComponent extends LitElement {
   private applyTheme() {
     document.body.classList.toggle('dark-theme', this.isDarkMode);
   }
-
+	
+  private handlePathClick(event: CustomEvent) {
+    ;
+    this.currentPath = event.detail.path;
+    this.pathRenderError = null;
+    ;
+    this.requestUpdate();
+  }
+	
   render(): TemplateResult {
+    ;
     return html`
       <button class="toggle-sidebar" @click=${this.toggleSidebar}>
         ${this.isSidebarOpen ? '←' : '→'}
@@ -105,18 +161,35 @@ export class AppComponent extends LitElement {
       </button>
       <div class="sidebar ${this.isSidebarOpen ? '' : 'closed'}">
         <sidebar-component
-          .documents=${this.documents}
+          .allDocuments=${this.allDocuments}
+          .activeDocuments=${this.activeDocuments}
           .activeDocumentId=${this.activeDocumentId}
-          @document-selected=${(e: CustomEvent) => this.setActiveDocument(e.detail.documentId)}
+          @document-selected=${(e: CustomEvent) => this.openDocument(e.detail.documentId)}
+          @document-closed=${(e: CustomEvent) => this.closeDocument(e.detail.documentId)}
           @new-document=${this.createNewDocument}
         ></sidebar-component>
       </div>
-      <div class="main-content">
-        ${this.activeDocumentId 
-          ? html`<document-component .documentId=${this.activeDocumentId}></document-component>`
-          : html`<p>Select or create a document to begin.</p>`
+     <div class="main-content">
+        ${this.isLoading
+          ? html`<div>Loading...</div>`
+          : this.currentPath
+            ? html`
+                <h-breadcrumbs .path=${this.currentPath}></h-breadcrumbs>
+                <path-renderer 
+                  .path=${this.currentPath}
+                  @render-error=${(e: CustomEvent) => {
+                    this.pathRenderError = e.detail.error;
+                  }}
+                ></path-renderer>
+                ${this.pathRenderError 
+                  ? html`<div class="error">Error rendering path: ${this.pathRenderError}</div>` 
+                  : ''}
+              `
+            : this.activeDocumentId 
+              ? html`<document-component .documentId=${this.activeDocumentId}></document-component>`
+              : html`<p>Select or create a document to begin.</p>`
         }
       </div>
-    `;
+      </div>    `;
   }
 }

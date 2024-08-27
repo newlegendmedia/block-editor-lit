@@ -2,7 +2,7 @@ import { html, TemplateResult } from 'lit';
 import { contentStore } from '../store/ContentStore';
 import { ModelLibrary } from '../model/libraryStore';
 import { Model } from '../model/model';
-import { Content, ContentId } from '../content/content';
+import { ContentId } from '../content/content';
 
 // Import your block components
 import '../blocks/ObjectBlock';
@@ -18,44 +18,44 @@ export class ComponentFactory {
     path: string,
     inlineModel?: Model
   ): Promise<TemplateResult> {
-    // Handle inline elements
-    if (contentId.startsWith('inline:')) {
-      return this.createInlineElement(contentId, library, path, inlineModel);
-    }
-
-    // Handle mirror blocks
-    if (contentId.startsWith('mirror:')) {
-      return this.createMirrorBlock(contentId, library, path);
-    }
-
-    // Fetch content for regular blocks
-    let content: Content | undefined;
     try {
-      content = await contentStore.getContent(contentId);
+      // Handle inline elements
+      if (contentId.startsWith('inline:')) {
+        return this.createInlineElement(contentId, library, path, inlineModel);
+      }
+
+      // Handle mirror blocks
+      if (contentId.startsWith('mirror:')) {
+        return this.createMirrorBlock(contentId, library, path);
+      }
+
+      // Fetch content for regular blocks
+      const content = await contentStore.getContent(contentId);
+
+      if (!content) {
+        console.error(`ComponentFactory: Content not found for ID ${contentId}`);
+        return html`<div>Error: Content not found</div>`;
+      }
+
+      const fullPath = path || content.modelInfo.key;
+
+      // Create the appropriate block based on content type
+      switch (content.modelInfo.type) {
+        case 'object':
+          return this.createObjectBlock(contentId, library, fullPath);
+        case 'array':
+          return this.createArrayBlock(contentId, library, fullPath);
+        case 'element':
+          return this.createElementBlock(contentId, library, fullPath);
+        case 'group':
+          return this.createGroupBlock(contentId, library, fullPath);
+        default:
+          console.warn(`ComponentFactory: Unknown content type: ${content.modelInfo.type}`);
+          return html`<div>Unknown content type: ${content.modelInfo.type}</div>`;
+      }
     } catch (error) {
-      console.error(`Error fetching content for ID ${contentId}:`, error);
-      return html`<div>Error: Failed to load content</div>`;
-    }
-
-    if (!content) {
-      return html`<div>Error: Content not found</div>`;
-    }
-
-    const fullPath = path || content.modelInfo.key;
-
-    // Create the appropriate block based on content type
-    switch (content.modelInfo.type) {
-      case 'object':
-        return this.createObjectBlock(contentId, library, fullPath);
-      case 'array':
-        return this.createArrayBlock(contentId, library, fullPath);
-      case 'element':
-        return this.createElementBlock(contentId, library, fullPath);
-      case 'group':
-        return this.createGroupBlock(contentId, library, fullPath);
-      default:
-        console.warn(`Unknown content type: ${content.modelInfo.type}`);
-        return html`<div>Unknown content type: ${content.modelInfo.type}</div>`;
+      console.error(`ComponentFactory: Error creating component for ID ${contentId}:`, error);
+      return html`<div>Error: Failed to create component</div>`;
     }
   }
 

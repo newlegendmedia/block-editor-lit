@@ -1,12 +1,13 @@
 import { html, css, TemplateResult } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
 import { BaseBlock } from './BaseBlock';
-import { contentStore } from '../content/ContentStore';
+import { contentStore } from '../store/ContentStore';
 import { Content } from '../content/content';
 
 @customElement('mirror-block')
 export class MirrorBlock extends BaseBlock {
   @property({ type: String }) referencedContentId: string = '';
+  @state() private mirroredContent: Content | null = null;
 
   static styles = [
     BaseBlock.styles,
@@ -19,9 +20,9 @@ export class MirrorBlock extends BaseBlock {
     `
   ];
 
-  connectedCallback() {
+  async connectedCallback() {
     super.connectedCallback();
-    this.initializeContent();
+    await this.initializeContent();
     this.subscribeToReferencedContent();
   }
 
@@ -32,22 +33,32 @@ export class MirrorBlock extends BaseBlock {
 
   private unsubscribeReferencedContent: (() => void) | null = null;
 
-  private initializeContent() {
-    const referencedContent = contentStore.getBlock(this.referencedContentId);
-    if (referencedContent) {
-      this.content = { ...referencedContent, id: `mirror:${referencedContent.id}` };
-      this.model = this.getModel();
-    } else {
-      console.error(`MirrorBlock: Referenced content not found for ID ${this.referencedContentId}`);
+  async initializeContent() {
+    try {
+      const referencedContent = await contentStore.getContent(this.referencedContentId);
+      if (referencedContent) {
+        this.mirroredContent = { ...referencedContent, id: `mirror:${referencedContent.id}` };
+        this.content = this.mirroredContent; // Set the content property of BaseBlock
+        this.model = this.getModel(); // This should now work correctly
+        this.requestUpdate();
+      } else {
+        console.error(`MirrorBlock: Referenced content not found for ID ${this.referencedContentId}`);
+      }
+    } catch (error) {
+      console.error(`MirrorBlock: Error initializing content:`, error);
     }
   }
 
   private subscribeToReferencedContent() {
-    this.unsubscribeReferencedContent = contentStore.subscribeToBlock(
+    this.unsubscribeReferencedContent = contentStore.observe(
       this.referencedContentId,
-      (content: Content) => {
-        this.content = { ...content, id: `mirror:${content.id}` };
-        this.requestUpdate();
+      (content: Content | undefined) => {
+        if (content) {
+          this.mirroredContent = { ...content, id: `mirror:${content.id}` };
+          this.content = this.mirroredContent; // Update the content property of BaseBlock
+          this.model = this.getModel(); // Update the model
+          this.requestUpdate();
+        }
       }
     );
   }
@@ -59,7 +70,7 @@ export class MirrorBlock extends BaseBlock {
   }
 
   protected renderContent(): TemplateResult {
-    if (!this.content) {
+    if (!this.mirroredContent) {
       return html`<div>Error: Mirrored content not found</div>`;
     }
 
@@ -67,14 +78,25 @@ export class MirrorBlock extends BaseBlock {
       <div>
         <h3>Mirrored Content (Original ID: ${this.referencedContentId})</h3>
         <div class="mirror-content">
-          <pre>${JSON.stringify(this.content, null, 2)}</pre>
+          ${this.renderMirroredContent()}
         </div>
       </div>
     `;
   }
 
+  private renderMirroredContent(): TemplateResult {
+    if (!this.mirroredContent) {
+      return html`<div>Error: Mirrored content not available</div>`;
+    }
+
+    // You can customize this part to render the mirrored content as needed
+    return html`
+      <pre>${JSON.stringify(this.mirroredContent, null, 2)}</pre>
+    `;
+  }
+
   protected getModel() {
-    if (this.content) {
+    if (this.mirroredContent) {
       return super.getModel();
     }
     return undefined;

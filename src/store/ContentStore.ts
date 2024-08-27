@@ -1,14 +1,18 @@
+// ContentStore.ts
 import { Content, ContentId, ModelInfo, CompositeContent, isCompositeContent, Document, DocumentId } from '../content/content';
 import { Model, isElement, isArray, isGroup, isObject, AtomType } from '../model/model';
 import { ContentItemMap } from './ContentItemMap';
 import { ContentDependencyMap } from './ContentDependencyMap';
 import { ContentStorageAdapter, LocalStorageAdapter } from './ContentStorageAdapter';
 
+type ContentChangeCallback = (change: { type: 'add' | 'update' | 'delete', id: ContentId, content?: Content }) => void;
+
 export class ContentStore {
   private itemMap: ContentItemMap;
   private dependencyMap: ContentDependencyMap;
   private storageAdapter: ContentStorageAdapter;
-  private documentCache: Map<DocumentId, Document> = new Map();
+  private activeDocuments: Map<DocumentId, Document> = new Map();
+  private globalChangeSubscribers: Set<ContentChangeCallback> = new Set();
 
   constructor(
     itemMap: ContentItemMap,
@@ -20,6 +24,37 @@ export class ContentStore {
     this.storageAdapter = storageAdapter;
   }
 
+  subscribeToAllChanges(callback: ContentChangeCallback): () => void {
+    this.globalChangeSubscribers.add(callback);
+    return () => this.globalChangeSubscribers.delete(callback);
+  }
+
+  private notifyGlobalSubscribers(change: { type: 'add' | 'update' | 'delete', id: ContentId, content?: Content }) {
+    this.globalChangeSubscribers.forEach(callback => callback(change));
+  }
+
+  async getAllActiveContents(): Promise<Map<ContentId, Content>> {
+    const allContents = new Map<ContentId, Content>();
+    
+    for (const document of this.activeDocuments.values()) {
+      await this.collectContentRecursive(document.rootBlock, allContents);
+    }
+
+    return allContents;
+  }
+
+  private async collectContentRecursive(contentId: ContentId, collection: Map<ContentId, Content>): Promise<void> {
+    const content = await this.getContent(contentId);
+    if (content) {
+      collection.set(contentId, content);
+      if (isCompositeContent(content)) {
+        for (const childId of content.children) {
+          await this.collectContentRecursive(childId, collection);
+        }
+      }
+    }
+  }  
+
   async getContent<T>(id: ContentId): Promise<Content<T> | undefined> {
     let content = this.itemMap.get<T>(id);
     if (!content) {
@@ -29,6 +64,7 @@ export class ContentStore {
         if (isCompositeContent(content)) {
           this.dependencyMap.updateDependencies(id, content.children);
         }
+        this.notifyGlobalSubscribers({ type: 'add', id, content });
       }
     }
     return content;
@@ -43,6 +79,7 @@ export class ContentStore {
         this.dependencyMap.updateDependencies(id, updatedContent.children);
       }
       await this.storageAdapter.saveContent(updatedContent);
+      this.notifyGlobalSubscribers({ type: 'update', id, content: updatedContent });
     } else {
       throw new Error(`Content with id ${id} not found`);
     }
@@ -53,6 +90,7 @@ export class ContentStore {
       this.itemMap.delete(id);
       this.dependencyMap.removeDependencies(id);
       await this.storageAdapter.deleteContent(id);
+      this.notifyGlobalSubscribers({ type: 'delete', id });
     } else {
       throw new Error(`Cannot delete content ${id} as it has dependencies`);
     }
@@ -82,6 +120,7 @@ export class ContentStore {
 
     await this.storageAdapter.saveContent(content);
     this.itemMap.set(id, content);
+    this.notifyGlobalSubscribers({ type: 'add', id, content });
     return content;
   }
 
@@ -126,96 +165,81 @@ export class ContentStore {
 		}
   }
   
-  async getAllDocuments(): Promise<Document[]> {
-    return this.storageAdapter.getAllDocuments();
+  async openDocument(document: Document): Promise<void> {
+    this.activeDocuments.set(document.id, document);
+    await this.loadDocumentContent(document);
   }
 
-  async getDocument(id: DocumentId): Promise<Document | undefined> {
-    // First, check if the document is in the in-memory cache
-    let document = this.documentCache.get(id);
-    if (!document) {
-      // If not in cache, load from storage
-      document = await this.storageAdapter.loadDocument(id);
-      if (document) {
-        // Add to in-memory cache if found
-        this.documentCache.set(id, document);
+  private async loadDocumentContent(document: Document): Promise<void> {
+    // Load the root block
+    let rootBlock = await this.getContent(document.rootBlock);
+    
+    if (!rootBlock) {
+      // If the root block doesn't exist, create it
+      rootBlock = {
+        id: document.rootBlock,
+        modelInfo: {
+          type: 'object',
+          key: 'rootBlock',
+          ref: "notion"
+        },
+        content: [],
+      };
+      await this.storageAdapter.saveContent(rootBlock);
+    }
+
+    // Add the root block to the itemMap
+    this.itemMap.set(document.rootBlock, rootBlock);
+
+    // Load children recursively
+    if (isCompositeContent(rootBlock)) {
+      for (const childId of rootBlock.children) {
+        await this.loadContentRecursive(childId);
       }
     }
-    return document;
   }
 
-  async createDocument(title: string): Promise<Document> {
-    const id = this.generateUniqueId();
-    const rootBlockId = this.generateUniqueId();
-    const now = new Date().toISOString();
-
-    // Create the root block for the document
-    const rootBlock: CompositeContent = {
-      id: rootBlockId,
-      modelInfo: {
-        type: 'object',
-        key: 'rootBlock',
-        ref: "notion"
-      },
-      content: [],
-      children: [],
-    };
-
-    // Create the document
-    const document: Document = {
-      id,
-      title,
-      rootBlock: rootBlockId,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    // Save the root block and the document
-    await this.storageAdapter.saveContent(rootBlock);
-    await this.storageAdapter.saveDocument(document);
-
-    // Add to in-memory caches
-    this.itemMap.set(rootBlockId, rootBlock);
-    this.documentCache.set(id, document);
-
-    return document;
+  async closeDocument(documentId: DocumentId): Promise<void> {
+    this.activeDocuments.delete(documentId);
+    // Unload the document's content from memory
+    await this.unloadDocumentContent(documentId);
   }
 
-  async updateDocument(id: DocumentId, updater: (doc: Document) => Document): Promise<void> {
-    const currentDocument = await this.getDocument(id);
-    if (currentDocument) {
-      const updatedDocument = updater(currentDocument);
-      await this.storageAdapter.saveDocument(updatedDocument);
-      this.documentCache.set(id, updatedDocument);
-    } else {
-      throw new Error(`Document with id ${id} not found`);
-    }
+  getActiveDocuments(): Document[] {
+    return Array.from(this.activeDocuments.values());
   }
 
-  async deleteDocument(id: DocumentId): Promise<void> {
-    const document = await this.getDocument(id);
+  isDocumentActive(documentId: DocumentId): boolean {
+    return this.activeDocuments.has(documentId);
+  }
+
+  private async unloadDocumentContent(documentId: DocumentId): Promise<void> {
+    const document = this.activeDocuments.get(documentId);
     if (document) {
-      // Delete the root block and all its children recursively
-      await this.deleteContentRecursive(document.rootBlock);
-
-      // Delete the document itself
-      await this.storageAdapter.deleteDocument(id);
-      this.documentCache.delete(id);
-    } else {
-      throw new Error(`Document with id ${id} not found`);
+      await this.unloadContentRecursive(document.rootBlock);
     }
   }
 
-  private async deleteContentRecursive(contentId: ContentId): Promise<void> {
+  private async loadContentRecursive(contentId: ContentId): Promise<void> {
     const content = await this.getContent(contentId);
     if (content && isCompositeContent(content)) {
-      // Recursively delete all children
       for (const childId of content.children) {
-        await this.deleteContentRecursive(childId);
+        await this.loadContentRecursive(childId);
       }
     }
-    // Delete the content itself
-    await this.deleteContent(contentId);
+  }
+
+  private async unloadContentRecursive(contentId: ContentId): Promise<void> {
+    const content = this.itemMap.get(contentId);
+    if (content) {
+      if (isCompositeContent(content)) {
+        for (const childId of content.children) {
+          await this.unloadContentRecursive(childId);
+        }
+      }
+      this.itemMap.delete(contentId);
+      this.dependencyMap.removeDependencies(contentId);
+    }
   }
 }
 

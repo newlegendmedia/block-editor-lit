@@ -52,7 +52,7 @@ export class HatchButton extends LitElement {
     `;
   }
 
-  _handleClick(e: Event) {
+  _handleClick(_e: Event) {
     if (!this.editMode) {
       this.dispatchEvent(new CustomEvent('button-click', {
         bubbles: true,

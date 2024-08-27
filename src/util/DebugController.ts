@@ -61,7 +61,7 @@ export class DebugController implements ReactiveController {
 
     private sanitizeObject(obj: any): any {
         const seen = new WeakSet();
-        return JSON.parse(JSON.stringify(obj, (key, value) => {
+        return JSON.parse(JSON.stringify(obj, (_key, value) => {
             if (typeof value === "object" && value !== null) {
                 // if (seen.has(value)) {
                 //     return "[Circular]";
