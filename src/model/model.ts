@@ -21,6 +21,11 @@ export interface BaseModel {
   required?: boolean;
 }
 
+export interface BaseCompositeModel extends BaseModel {
+  inlineChildren?: boolean;
+};
+
+
 export interface ElementModel extends BaseModel {
   type: 'element';
   base: AtomType;
@@ -28,19 +33,18 @@ export interface ElementModel extends BaseModel {
 
 export type CompositeType = 'keyed' | 'indexed';
 
-export interface ObjectModel extends BaseModel {
+export interface ObjectModel extends BaseCompositeModel {
   type: 'object';
   properties: Model[];
-  inlineChildren?: boolean;
 }
 
-export interface ArrayModel extends BaseModel {
+export interface ArrayModel extends BaseCompositeModel {
   type: 'array';
   itemType: Model | ModelReference;
   repeatable?: boolean;
 }
 
-export interface GroupModel extends BaseModel {
+export interface GroupModel extends BaseCompositeModel {
   type: 'group';
   itemTypes: (Model | ModelReference)[] | ModelReference;
   editable?: boolean;

@@ -4,8 +4,8 @@ import { repeat } from 'lit/directives/repeat.js';
 import { until } from 'lit/directives/until.js';
 import { KeyedCompositeBlock } from './KeyedCompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
-import { isObject, Model, isElement } from '../model/model';
-//import { Content } from '../content/content';
+import { isObject, Model, isElement, ElementModel, AtomType, ObjectModel, CompositeModel } from '../model/model';
+import { KeyedCompositeContent, Content, ContentId } from '../content/content';
 
 @customElement('object-block')
 export class ObjectBlock extends KeyedCompositeBlock {
@@ -24,20 +24,53 @@ export class ObjectBlock extends KeyedCompositeBlock {
 
   async connectedCallback() {
     await super.connectedCallback();
-    await this.initializeChildBlocks();
+    this.inlineChildren = (this.model as ObjectModel)?.inlineChildren || false;
     await this.initializeChildComponents();
+    this.addEventListener('element-updated', this.handleElementUpdate);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.removeEventListener('element-updated', this.handleElementUpdate);
+  }
+
+  protected useInlineChildren(): boolean {
+    return (this.model as ObjectModel)?.inlineChildren || false;
+  }
+
+  protected getModelProperties(): Model[] {
+    return this.model && isObject(this.model) ? this.model.properties : [];
+  }
+
+  protected getDefaultValue(prop: ElementModel): any {
+    switch (prop.base) {
+      case AtomType.Boolean:
+        return false;
+      case AtomType.Number:
+        return 0;
+      case AtomType.Datetime:
+        return new Date().toISOString();
+      case AtomType.Text:
+      case AtomType.Enum:
+      case AtomType.File:
+      case AtomType.Reference:
+        return '';
+      default:
+        console.warn(`Unknown element base type: ${prop.base}`);
+        return null;
+    }
   }
 
   private async initializeChildComponents() {
     if (!this.model || !isObject(this.model)) return;
-  
+
     const componentPromises: Record<string, Promise<TemplateResult>> = {};
     for (const prop of this.model.properties) {
       if (prop.key) {
         componentPromises[prop.key] = this.createChildComponent(prop);
       }
     }
-  
+
     this.childComponentPromises = componentPromises;
     this.requestUpdate();
   }
@@ -48,19 +81,22 @@ export class ObjectBlock extends KeyedCompositeBlock {
     }
 
     const childKey = property.key;
-    const childPath = `${this.path}.${childKey}`;
+    const childPath = this.getChildPath(childKey);
 
     if (this.inlineChildren && isElement(property)) {
+      const value = (this.content?.content as KeyedCompositeContent)?.[childKey] ?? null;
       return ComponentFactory.createComponent(
         `inline:${this.contentId}:${childKey}`,
         this.library!,
         childPath,
-        property
+        property,
+        value
       );
     }
 
     const childContentId = this.getChildBlockId(childKey);
     if (!childContentId) {
+      console.warn(`No content found for child key: ${childKey}`);
       return html`<div>No content for ${childKey}</div>`;
     }
 
@@ -69,7 +105,6 @@ export class ObjectBlock extends KeyedCompositeBlock {
 
   protected renderContent(): TemplateResult {
     if (!this.content || !this.library || !this.model || !isObject(this.model)) {
-      ;
       return html`<div>Object Loading...</div>`;
     }
 
@@ -111,22 +146,21 @@ export class ObjectBlock extends KeyedCompositeBlock {
     `;
   }
 
-  // private async handleInlineElementUpdate(event: CustomEvent) {
-  //   const { id, value } = event.detail;
-  //   if (id.startsWith('inline:')) {
-  //     const [, parentId, childKey] = id.split(':');
-  //     if (parentId === this.contentId && this.content) {
-  //       await this.updateContent(content => {
-  //         const updatedContent = {
-  //           ...content,
-  //           content: {
-  //             ...(content.content as Record<string, unknown>),
-  //             [childKey]: value,
-  //           },
-  //         };
-  //         return updatedContent as Content;
-  //       });
-  //     }
-  //   }
-  // }
+  private handleElementUpdate = async (event: Event) => {
+    const customEvent = event as CustomEvent;
+    const { id, value } = customEvent.detail;
+    if (id.startsWith('inline:')) {
+      const [, parentId, childKey] = id.split(':');
+      if (parentId === this.contentId && this.content) {
+        await this.updateContent(content => ({
+          ...content,
+          content: {
+            ...(content.content as Record<string, unknown>),
+            [childKey]: value,
+          },
+        }));
+        this.requestUpdate();
+      }
+    }
+  }
 }

@@ -16,12 +16,13 @@ export class ComponentFactory {
     contentId: string,
     library: ModelLibrary,
     path: string,
-    inlineModel?: Model
+    inlineModel?: Model,
+    inlineValue?: any
   ): Promise<TemplateResult> {
     try {
       // Handle inline elements
       if (contentId.startsWith('inline:')) {
-        return this.createInlineElement(contentId, library, path, inlineModel);
+        return this.createInlineElement(contentId, library, path, inlineModel, inlineValue);
       }
 
       // Handle mirror blocks
@@ -63,88 +64,90 @@ export class ComponentFactory {
     contentId: string,
     library: ModelLibrary,
     path: string,
-    inlineModel?: Model
-  ): Promise<TemplateResult> {
-    return Promise.resolve(html`
+    inlineModel?: Model,
+    inlineValue?: any
+  ): TemplateResult {
+    return html`
       <element-block
         .contentId=${contentId}
         .library=${library}
         .path=${path}
         .inlineModel=${inlineModel}
+        .inlineValue=${inlineValue}
         .isInline=${true}
       ></element-block>
-    `);
+    `;
   }
 
   private static createMirrorBlock(
     contentId: string,
     library: ModelLibrary,
     path: string
-  ): Promise<TemplateResult> {
+  ): TemplateResult {
     const originalId = contentId.split(':')[1];
-    return Promise.resolve(html`
+    return html`
       <mirror-block
         .contentId=${contentId}
         .referencedContentId=${originalId}
         .library=${library}
         .path=${path}
       ></mirror-block>
-    `);
+    `;
   }
 
   private static createObjectBlock(
     contentId: ContentId,
     library: ModelLibrary,
     path: string
-  ): Promise<TemplateResult> {
-    return Promise.resolve(html`
+  ): TemplateResult {
+    return html`
       <object-block
         .contentId=${contentId}
         .library=${library}
         .path=${path}
       ></object-block>
-    `);
+    `;
   }
 
   private static createArrayBlock(
     contentId: ContentId,
     library: ModelLibrary,
     path: string
-  ): Promise<TemplateResult> {
-    return Promise.resolve(html`
+  ): TemplateResult {
+    return html`
       <array-block
         .contentId=${contentId}
         .library=${library}
         .path=${path}
       ></array-block>
-    `);
+    `;
   }
 
   private static createElementBlock(
     contentId: ContentId,
     library: ModelLibrary,
     path: string
-  ): Promise<TemplateResult> {
-    return Promise.resolve(html`
+  ): TemplateResult {
+    return html`
       <element-block
         .contentId=${contentId}
         .library=${library}
         .path=${path}
       ></element-block>
-    `);
+    `;
   }
 
   private static createGroupBlock(
     contentId: ContentId,
     library: ModelLibrary,
     path: string
-  ): Promise<TemplateResult> {
-    return Promise.resolve(html`
+  ): TemplateResult {
+    return html`
       <group-block
         .contentId=${contentId}
         .library=${library}
         .path=${path}
       ></group-block>
-    `);
+    `;
   }
 }

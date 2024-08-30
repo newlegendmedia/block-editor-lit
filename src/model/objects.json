@@ -2,6 +2,7 @@
     "notion": {
       "type": "object",
       "key": "notion",
+      "inlineChildren": false,
       "name": "Notion++",
       "properties": [
         { "type": "element", "key": "titleElement1", "name": "Title", "ref": "textInput" },
@@ -14,7 +15,7 @@
     "taskModel": {
       "type": "object",
       "key": "taskModel",
-      "inlineChildren": false,
+      "inlineChildren": true,
       "name": "Task",
       "properties": [
         { "type": "element", "key": "title", "name": "Task Title", "base": "text" },
