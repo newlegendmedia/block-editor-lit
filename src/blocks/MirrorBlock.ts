@@ -1,13 +1,15 @@
+// MirrorBlock.ts
+
 import { html, css, TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { BaseBlock } from './BaseBlock';
-import { contentStore } from '../store/ContentStore';
+import { contentStore } from '../store';
 import { Content } from '../content/content';
 
 @customElement('mirror-block')
 export class MirrorBlock extends BaseBlock {
   @property({ type: String }) referencedContentId: string = '';
-  @state() private mirroredContent: Content | null = null;
+  @state() private mirroredContent: Content | undefined = undefined;
 
   static styles = [
     BaseBlock.styles,
@@ -38,8 +40,8 @@ export class MirrorBlock extends BaseBlock {
       const referencedContent = await contentStore.getContent(this.referencedContentId);
       if (referencedContent) {
         this.mirroredContent = { ...referencedContent, id: `mirror:${referencedContent.id}` };
-        this.content = this.mirroredContent; // Set the content property of BaseBlock
-        this.model = this.getModel(); // This should now work correctly
+        this.content = this.mirroredContent;
+        this.model = this.getModel();
         this.requestUpdate();
       } else {
         console.error(`MirrorBlock: Referenced content not found for ID ${this.referencedContentId}`);
@@ -50,13 +52,18 @@ export class MirrorBlock extends BaseBlock {
   }
 
   private subscribeToReferencedContent() {
-    this.unsubscribeReferencedContent = contentStore.observe(
+    this.unsubscribeReferencedContent = contentStore.subscribeToContent(
       this.referencedContentId,
       (content: Content | undefined) => {
         if (content) {
           this.mirroredContent = { ...content, id: `mirror:${content.id}` };
-          this.content = this.mirroredContent; // Update the content property of BaseBlock
-          this.model = this.getModel(); // Update the model
+          this.content = this.mirroredContent;
+          this.model = this.getModel();
+          this.requestUpdate();
+        } else {
+          this.mirroredContent = undefined;
+          this.content = undefined;
+          this.model = undefined;
           this.requestUpdate();
         }
       }

@@ -1,7 +1,6 @@
 import { LitElement, html, css, TemplateResult } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { contentStore } from '../store/ContentStore';
-import { documentManager } from '../store/DocumentManager';
+import { documentManager, storageAdapter } from '../store';
 import { Document, DocumentId } from '../content/content';
 import './DocumentComponent';
 import './SidebarComponent';
@@ -54,14 +53,14 @@ export class AppComponent extends LitElement {
       z-index: 1000;
     }
   `;
-	
+
   constructor() {
     super();
     this.addEventListener('toggle-sidebar', this.toggleSidebar as EventListener);
     this.addEventListener('toggle-theme', this.toggleTheme as EventListener);
-	  this.addEventListener('path-clicked', this.handlePathClick as EventListener);
-	  this.addEventListener('breadcrumb-clicked', this.handleBreadcrumbClick as EventListener);
-	  
+    this.addEventListener('path-clicked', this.handlePathClick as EventListener);
+    this.addEventListener('breadcrumb-clicked', this.handleBreadcrumbClick as EventListener);
+    storageAdapter.clearAllData();
   }
 
   async connectedCallback() {
@@ -75,11 +74,11 @@ export class AppComponent extends LitElement {
     this.pathRenderError = null;
     this.requestUpdate();
   }	
-	
+
   private async loadDocuments() {
     try {
       this.allDocuments = await documentManager.getAllDocuments();
-      this.activeDocuments = contentStore.getActiveDocuments();
+      this.activeDocuments = this.allDocuments.filter(doc => doc.isActive);
     } catch (error) {
       console.error('Failed to load documents:', error);
     }
@@ -88,7 +87,7 @@ export class AppComponent extends LitElement {
   private async createNewDocument() {
     try {
       this.isLoading = true;
-      const newDocument = await documentManager.createDocument('New Document');
+      const newDocument = await documentManager.createDocument('New Document', 'notion');
       this.allDocuments = [...this.allDocuments, newDocument];
       await this.openDocument(newDocument.id);
     } catch (error) {
@@ -103,12 +102,13 @@ export class AppComponent extends LitElement {
       this.isLoading = true;
       const theDocument = await documentManager.getDocument(id);
       if (theDocument) {
-        await contentStore.openDocument(theDocument);
-        this.activeDocuments = contentStore.getActiveDocuments();
+        await documentManager.activateDocument(id);
+        this.activeDocuments = this.allDocuments.filter(doc => doc.isActive);
         this.activeDocumentId = id;
-        
-        // Update the current path to the document's root block ID
-        this.currentPath = theDocument.rootBlock;
+
+        // Update the current path to the document's root content ID
+        this.currentPath = theDocument.rootContent;
+        console.log('Opening document: currentPath', this.currentPath);
       }
     } catch (error) {
       console.error('Failed to open document:', error);
@@ -116,18 +116,14 @@ export class AppComponent extends LitElement {
       this.isLoading = false;
     }
   }
-	
+
   private async closeDocument(id: DocumentId) {
-    await contentStore.closeDocument(id);
-    this.activeDocuments = contentStore.getActiveDocuments();
+    await documentManager.deactivateDocument(id);
+    this.activeDocuments = this.allDocuments.filter(doc => doc.isActive);
     if (this.activeDocumentId === id) {
       this.activeDocumentId = this.activeDocuments.length > 0 ? this.activeDocuments[0].id : null;
     }
   }
-
-//   private setActiveDocument(id: DocumentId) {
-//     this.activeDocumentId = id;
-//   }
 
   private toggleSidebar() {
     this.isSidebarOpen = !this.isSidebarOpen;
@@ -141,17 +137,14 @@ export class AppComponent extends LitElement {
   private applyTheme() {
     document.body.classList.toggle('dark-theme', this.isDarkMode);
   }
-	
+
   private handlePathClick(event: CustomEvent) {
-    ;
     this.currentPath = event.detail.path;
     this.pathRenderError = null;
-    ;
     this.requestUpdate();
   }
-	
+
   render(): TemplateResult {
-    ;
     return html`
       <button class="toggle-sidebar" @click=${this.toggleSidebar}>
         ${this.isSidebarOpen ? '←' : '→'}
@@ -169,7 +162,7 @@ export class AppComponent extends LitElement {
           @new-document=${this.createNewDocument}
         ></sidebar-component>
       </div>
-     <div class="main-content">
+      <div class="main-content">
         ${this.isLoading
           ? html`<div>Loading...</div>`
           : this.currentPath
@@ -190,6 +183,6 @@ export class AppComponent extends LitElement {
               : html`<p>Select or create a document to begin.</p>`
         }
       </div>
-      </div>    `;
+    `;
   }
 }

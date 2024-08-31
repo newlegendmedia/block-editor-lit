@@ -1,7 +1,8 @@
 import { CompositeBlock, IndexedChildren } from './CompositeBlock';
 import { ContentId, CompositeContent } from '../content/content';
 import { isCompositeModel, Model } from '../model/model';
-import { contentStore } from '../store/ContentStore';
+import { contentStore } from '../store';
+import { ContentFactory } from '../store/ContentFactory';
 
 export abstract class IndexedCompositeBlock extends CompositeBlock<'indexed'> {
 	protected syncChildrenWithContent(): void {
@@ -28,7 +29,9 @@ export abstract class IndexedCompositeBlock extends CompositeBlock<'indexed'> {
   }
   
   protected async addChildBlock(itemType: Model): Promise<ContentId> {
-    const newChildContent = await contentStore.createContent(itemType);
+
+    const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(itemType);
+    const newChildContent = await contentStore.createContent(modelInfo, modelDefinition, content);
     const newChildId = newChildContent.id;
 
     if (!this.content) {
@@ -63,11 +66,19 @@ export abstract class IndexedCompositeBlock extends CompositeBlock<'indexed'> {
 		}
   }
 
-  protected getChildPath(childKey: string | number): string {
-      return `${this.path}[${childKey}]`;
+  protected getChildPath(index: number, type?: string): string {
+    return type ? `${this.path}.${index}:${type}` : `${this.path}.${index}`;
+  }
+
+  protected parseChildPath(path: string): { index: number, type?: string } {
+    const parts = path.split('.');
+    const lastPart = parts[parts.length - 1];
+    const [indexStr, type] = lastPart.split(':');
+    return { index: parseInt(indexStr, 10), type };
   }
 
   protected getChildBlockId(childKey: number): string | undefined {
     return this.childBlocks[childKey];
   }
+
 }

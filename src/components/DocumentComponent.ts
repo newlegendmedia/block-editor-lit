@@ -1,8 +1,10 @@
+// DocumentComponent.ts
+
 import { LitElement, html, TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { ComponentFactory } from '../util/ComponentFactory';
-import { contentStore } from '../store/ContentStore';
-import { documentManager } from '../store/DocumentManager';
+import { contentStore } from '../store';
+import { documentManager } from '../store';
 import { libraryStore } from '../model/libraryStore';
 import { Document, Content } from '../content/content';
 
@@ -20,21 +22,9 @@ export class DocumentComponent extends LitElement {
 
   async loadDocument() {
     try {
-      // First, check if the document is already active in the ContentStore
-      if (!contentStore.isDocumentActive(this.documentId)) {
-        // If not active, load it from the DocumentManager and open it in the ContentStore
-        const document = await documentManager.getDocument(this.documentId);
-        if (document) {
-          await contentStore.openDocument(document);
-        } else {
-          throw new Error('Document not found');
-        }
-      }
-
-      // Now the document should be active, so we can retrieve it and its content
-      this.document = contentStore.getActiveDocuments().find(doc => doc.id === this.documentId);
+      this.document = await documentManager.getDocument(this.documentId);
       if (this.document) {
-        this.rootContent = await contentStore.getContent(this.document.rootBlock);
+        this.rootContent = await contentStore.getContent(this.document.rootContent);
         if (this.rootContent) {
           this.rootComponent = await ComponentFactory.createComponent(
             this.rootContent.id,
@@ -53,7 +43,7 @@ export class DocumentComponent extends LitElement {
     super.disconnectedCallback();
     // Close the document when the component is removed from the DOM
     if (this.documentId) {
-      contentStore.closeDocument(this.documentId);
+      documentManager.deactivateDocument(this.documentId);
     }
   }
 

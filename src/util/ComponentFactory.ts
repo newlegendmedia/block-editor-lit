@@ -1,5 +1,5 @@
 import { html, TemplateResult } from 'lit';
-import { contentStore } from '../store/ContentStore';
+import { contentStore } from '../store';
 import { ModelLibrary } from '../model/libraryStore';
 import { Model } from '../model/model';
 import { ContentId } from '../content/content';

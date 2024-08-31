@@ -1,6 +1,6 @@
 import { BaseBlock } from './BaseBlock';
 import { Content, ContentId, CompositeContent } from '../content/content';
-import { contentStore } from '../store/ContentStore';
+import { contentStore } from '../store';
 import { Model, CompositeModel } from '../model/model';
 
 export type KeyedChildren = Record<string, ContentId>;

@@ -1,4 +1,4 @@
-export type ModelType = 'element' | 'object' | 'array' | 'group';
+export type ModelType = 'element' | 'object' | 'array' | 'group' | 'root';
 
 export const AtomType = {
   Boolean: 'boolean',

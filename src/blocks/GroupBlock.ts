@@ -1,17 +1,19 @@
-import { html, css, TemplateResult } from 'lit';
+import { LitElement, html, css, TemplateResult } from 'lit';
 import { customElement, state, property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { until } from 'lit/directives/until.js';
 import { IndexedCompositeBlock } from './IndexedCompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
 import { GroupModel, Model, isModelReference } from '../model/model';
-import { ContentId } from '../content/content';
+import { ContentId, Content } from '../content/content';
+import { contentStore } from '../store';
 
 @customElement('group-block')
 export class GroupBlock extends IndexedCompositeBlock {
   @state() private showSlashMenu: boolean = false;
   @property({ type: Array }) mirroredBlocks: string[] = [];
   @state() private childComponentPromises: Promise<TemplateResult>[] = [];
+  @state() private childTypes: Map<ContentId, string> = new Map();
 
   private enableMirroring: boolean = false; // Feature toggle for mirroring
 
@@ -48,7 +50,18 @@ export class GroupBlock extends IndexedCompositeBlock {
   async connectedCallback() {
     await super.connectedCallback();
     await this.initializeChildBlocks();
+    await this.updateChildTypes();
     await this.initializeChildComponents();
+  }
+
+  private async updateChildTypes() {
+    const childTypePromises = (this.childBlocks as ContentId[]).map(async (childId) => {
+      const childContent = await contentStore.getContent(childId);
+      return [childId, childContent?.modelInfo.key || 'unknown'] as [ContentId, string];
+    });
+    const childTypes = await Promise.all(childTypePromises);
+    this.childTypes = new Map(childTypes);
+    this.requestUpdate();
   }
 
   private async initializeChildComponents() {
@@ -68,7 +81,7 @@ export class GroupBlock extends IndexedCompositeBlock {
     return ComponentFactory.createComponent(
       childId,
       this.library!,
-      this.getChildPath(index)
+      this.getChildPath(index, this.childTypes.get(childId))
     );
   }
 
@@ -101,7 +114,7 @@ export class GroupBlock extends IndexedCompositeBlock {
                       ComponentFactory.createComponent(
                         `mirror:${this.childBlocks[index]}`,
                         this.library!,
-                        `${this.getChildPath(index)}.mirror`
+                        `${this.getChildPath(index, this.childTypes.get(this.childBlocks[index]))}.mirror`
                       ),
                       html`<span>Loading mirrored component...</span>`,
                       html`<span>Error loading mirrored component</span>`
@@ -166,6 +179,7 @@ export class GroupBlock extends IndexedCompositeBlock {
 
   private async addItem(itemType: Model) {
     const newChildId = await this.addChildBlock(itemType);
+    await this.updateChildTypes();
 
     if (this.enableMirroring) {
       this.mirroredBlocks = [...this.mirroredBlocks, newChildId];
@@ -183,6 +197,7 @@ export class GroupBlock extends IndexedCompositeBlock {
 
   protected async removeChildBlock(index: number) {
     await super.removeChildBlock(index);
+    await this.updateChildTypes();
 
     if (this.enableMirroring) {
       this.mirroredBlocks = this.mirroredBlocks.filter((_, i) => i !== index);

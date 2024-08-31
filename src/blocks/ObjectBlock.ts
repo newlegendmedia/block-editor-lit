@@ -4,8 +4,8 @@ import { repeat } from 'lit/directives/repeat.js';
 import { until } from 'lit/directives/until.js';
 import { KeyedCompositeBlock } from './KeyedCompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
-import { isObject, Model, isElement, ElementModel, AtomType, ObjectModel, CompositeModel } from '../model/model';
-import { KeyedCompositeContent, Content, ContentId } from '../content/content';
+import { isObject, Model, isElement, ElementModel, AtomType, ObjectModel } from '../model/model';
+import { KeyedCompositeContent } from '../content/content';
 
 @customElement('object-block')
 export class ObjectBlock extends KeyedCompositeBlock {

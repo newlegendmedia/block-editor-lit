@@ -12,6 +12,19 @@
         { "type": "group", "key": "page", "name": "content", "editable": true, "ref": "page" }
       ]
     },
+    "documentRoot": {
+      "type": "object",
+      "key": "documentRoot",
+      "inlineChildren": false,
+      "name": "Notion++",
+      "properties": [
+        { "type": "element", "key": "titleElement1", "name": "Title", "ref": "textInput" },
+        { "type": "element", "key": "dateElement1", "name": "Created On", "ref": "dateElement" },
+        { "type": "element", "key": "dateElement2", "name": "Last Updated", "ref": "dateElement" },
+        { "type": "element", "key": "textInput1", "name": "Tags", "base": "text" },
+        { "type": "group", "key": "page", "name": "content", "editable": true, "ref": "page" }
+      ]
+    },
     "taskModel": {
       "type": "object",
       "key": "taskModel",

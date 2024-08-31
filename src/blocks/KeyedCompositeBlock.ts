@@ -1,7 +1,8 @@
 import { CompositeBlock, KeyedChildren } from './CompositeBlock';
-import { ContentId, CompositeContent, KeyedCompositeContent } from '../content/content';
+import { Content, ContentId, CompositeContent, KeyedCompositeContent } from '../content/content';
 import { CompositeModel, isCompositeModel, isElement, Model } from '../model/model';
-import { contentStore } from '../store/ContentStore';
+import { contentStore } from '../store';
+import { ContentFactory } from '../store/ContentFactory';
 
 export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
   protected inlineChildren: boolean = false;
@@ -13,9 +14,18 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
     this.requestUpdate();
   }
 
+
   protected syncChildrenWithContent(): void {
     const compositeContent = this.content as CompositeContent;
-	compositeContent.content = this.childBlocks;
+    
+    // Convert childBlocks to a KeyedCompositeContent object
+    const keyedContent: KeyedCompositeContent = {};
+    for (const [key, value] of Object.entries(this.childBlocks)) {
+      keyedContent[key] = value;
+    }
+
+    compositeContent.content = this.childBlocks;
+
     if (this.inlineChildren) {
       compositeContent.children = [];
     } else {
@@ -38,9 +48,9 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
   }
 
   protected initializeIndexedChildren(): void {
-	throw new Error('Keyed composites do not support indexed children');
+    throw new Error('Keyed composites do not support indexed children');
   }
-	
+
   protected abstract useInlineChildren(): boolean;
 
   private async initializeInlineChildren(): Promise<void> {
@@ -63,6 +73,7 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
     await this.updateContent(content => ({
       ...content,
       content: initialContent,
+      children: [],  // Ensure children array is initialized
     }));
 
     this.childBlocks = initialContent;
@@ -79,41 +90,64 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
         return existingContent as CompositeContent;
       }
     }
-    return await contentStore.createContent(prop) as CompositeContent;
+    const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(prop);
+    return await contentStore.createContent(modelInfo, modelDefinition, content) as CompositeContent;
   }
 
   protected async initializeKeyedChildren(
     compositeBlock: CompositeContent,
-    model: CompositeModel
+    _model: CompositeModel
   ): Promise<void> {
     const childProperties = this.getModelProperties();
     this.childBlocks = {} as KeyedChildren;
 
+    // Ensure children array is initialized
+    if (!Array.isArray(compositeBlock.children)) {
+      compositeBlock.children = [];
+    }
+
+    let updatedContent: KeyedCompositeContent = {};
+    
+    // Parse the string content into an object
+    if (typeof compositeBlock.content === 'string') {
+      try {
+        updatedContent = JSON.parse(compositeBlock.content);
+      } catch (e) {
+        console.error('Failed to parse composite content:', e);
+      }
+    }
+
     for (const prop of childProperties) {
       if (prop.key) {
-        let childContentId: string | undefined;
+        let childContentId = updatedContent[prop.key];
 
-        // Find existing child content
-        if (Array.isArray(compositeBlock.children)) {
-          for (const childId of compositeBlock.children) {
-            const childBlock = await contentStore.getContent(childId);
-            if (childBlock && childBlock.modelInfo.key === prop.key) {
-              childContentId = childId;
-              break;
-            }
-          }
-        }
-
-        // If child content doesn't exist, create it
         if (!childContentId) {
-          const childBlock = await contentStore.createContent(prop);
+          // If child content doesn't exist, create it
+          const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(prop);
+          const childBlock = await contentStore.createContent(modelInfo, modelDefinition, content);
           childContentId = childBlock.id;
           compositeBlock.children.push(childContentId);
         }
 
         (this.childBlocks as KeyedChildren)[prop.key] = childContentId;
+        updatedContent[prop.key] = childContentId;
       }
     }
+
+    // Update the content only once, after all children have been processed
+    await this.updateContent((currentContent: Content): CompositeContent => {
+      const updatedCompositeContent: CompositeContent = {
+        id: currentContent.id,
+        modelInfo: currentContent.modelInfo,
+        modelDefinition: currentContent.modelDefinition,
+        content: updatedContent,
+        children: compositeBlock.children
+      };
+
+      console.log('Updated content:', updatedCompositeContent);
+
+      return updatedCompositeContent;
+    });
   }
 
   protected async addChildBlock(itemType: Model, key: string): Promise<ContentId> {
@@ -123,7 +157,8 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
       return 'inline:' + this.contentId + ':' + key;
     }
 
-    const newChildContent = await contentStore.createContent(itemType);
+    const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(itemType);
+    const newChildContent = await contentStore.createContent(modelInfo, modelDefinition, content);
     const newChildId = newChildContent.id;
 
     if (!this.content) {
@@ -168,7 +203,7 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
   protected getChildPath(childKey: string): string {
     return `${this.path}.${childKey}`;
   }
-	
+
   protected getChildBlockId(childKey: string): string | undefined {
     if (this.inlineChildren) {
       const childContent = (this.content?.content as KeyedCompositeContent)?.[childKey];
@@ -177,4 +212,3 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
     return this.childBlocks[childKey as string]
   }
 }
-

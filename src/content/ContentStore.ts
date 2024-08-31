@@ -1,7 +1,7 @@
 
 import { AtomType, Model } from '../model/model';
-import { ContentId, DocumentId, Content, Document, ModelInfo, CompositeContent } from './content';
-import { isArray, isElement, isGroup, isObject, isCompositeModel } from '../model/model';
+import { ContentId, DocumentId, Content, Document } from './content';
+import { isArray, isElement, isGroup, isObject } from '../model/model';
 
 export class ContentStore {
 	private blocks: Map<ContentId, Content> = new Map();
@@ -109,9 +109,9 @@ export class ContentStore {
 		this.allBlocksSubscribers.forEach(callback => callback());
 	  }
 	
-	private generateUniqueId(): string {
-		return 'id_' + Math.random().toString(36).slice(2, 11);
-	}
+	// private generateUniqueId(): string {
+	// 	return 'id_' + Math.random().toString(36).slice(2, 11);
+	// }
 
 	getDefaultContent(property: Model): any {
 		if (isElement(property)) {
@@ -146,36 +146,36 @@ export class ContentStore {
 		}
 	}
 
-	createBlockFromModel<T>(model: Model, content?: T): Content<T> {
-		const id = this.generateUniqueId();
-		const modelInfo: ModelInfo = {
-		  key: model.key || '',
-		  ref: 'ref' in model ? model.ref : undefined,
-		  type: model.type,
-		};
+	// createBlockFromModel<T>(model: Model, content?: T): Content<T> {
+	// 	const id = this.generateUniqueId();
+	// 	const modelInfo: ModelInfo = {
+	// 	  key: model.key || '',
+	// 	  ref: 'ref' in model ? model.ref : undefined,
+	// 	  type: model.type,
+	// 	};
 		
-		let block: Content<T>;
+	// 	let block: Content<T>;
 		
-		if (isCompositeModel(model)) {
-		  block = {
-			id,
-			modelInfo,
-			modelDefinition: 'ref' in model ? undefined : model,
-			content: content ?? (this.getDefaultContent(model) as T),
-			children: [],
-		  } as CompositeContent;
-		} else {
-		  block = {
-			id,
-			modelInfo,
-			modelDefinition: 'ref' in model ? undefined : model,
-			content: content ?? (this.getDefaultContent(model) as T),
-		  };
-		}
+	// 	if (isCompositeModel(model)) {
+	// 	  block = {
+	// 		id,
+	// 		modelInfo,
+	// 		modelDefinition: 'ref' in model ? undefined : model,
+	// 		content: content ?? (this.getDefaultContent(model) as T),
+	// 		children: [],
+	// 	  } as CompositeContent;
+	// 	} else {
+	// 	  block = {
+	// 		id,
+	// 		modelInfo,
+	// 		modelDefinition: 'ref' in model ? undefined : model,
+	// 		content: content ?? (this.getDefaultContent(model) as T),
+	// 	  };
+	// 	}
 		
-		this.setBlock(block);
-		return block;
-	  }
+	// 	this.setBlock(block);
+	// 	return block;
+	//   }
 }
 
 // Create a singleton instance of the ContentStore

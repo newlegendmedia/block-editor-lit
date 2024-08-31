@@ -1,251 +1,156 @@
-// ContentStore.ts
-import { Content, ContentId, ModelInfo, CompositeContent, isCompositeContent, Document, DocumentId } from '../content/content';
-import { Model, isElement, isArray, isGroup, isObject, AtomType } from '../model/model';
-import { ContentItemMap } from './ContentItemMap';
-import { ContentDependencyMap } from './ContentDependencyMap';
-import { ContentStorageAdapter, LocalStorageAdapter } from './ContentStorageAdapter';
+import { Content, ContentId, ModelInfo } from '../content/content';
+import { StorageAdapter } from './StorageAdapter';
+import { Model } from '../model/model';
+import { SubscriptionManager } from './SubscriptionManager';
+import { ContentTree } from './ContentTree';
 
-type ContentChangeCallback = (change: { type: 'add' | 'update' | 'delete', id: ContentId, content?: Content }) => void;
+// class ContentError extends Error {
+//   constructor(message: string) {
+//     super(message);
+//     this.name = 'ContentError';
+//   }
+// }
+
+// export interface ContentStore {
+//   getContent<T = unknown>(id: ContentId): Promise<Content<T>>;
+//   createContent<T = unknown>(modelInfo: ModelInfo, modelDefinition: Model | undefined, content: T): Promise<Content<T>>;
+//   updateContent<T = unknown>(id: ContentId, updater: (content: Content<T>) => Content<T>): Promise<Content<T>>;
+//   deleteContent(id: ContentId): Promise<void>;
+//   subscribeToContent(id: ContentId, callback: (content: Content | null) => void): () => void;
+//   subscribeToAllContent(callback: () => void): () => void;
+// }
 
 export class ContentStore {
-  private itemMap: ContentItemMap;
-  private dependencyMap: ContentDependencyMap;
-  private storageAdapter: ContentStorageAdapter;
-  private activeDocuments: Map<DocumentId, Document> = new Map();
-  private globalChangeSubscribers: Set<ContentChangeCallback> = new Set();
+  private contentTree: ContentTree;
+  private storageAdapter: StorageAdapter;
+  private subscriptionManager: SubscriptionManager;
 
-  constructor(
-    itemMap: ContentItemMap,
-    dependencyMap: ContentDependencyMap,
-    storageAdapter: ContentStorageAdapter
-  ) {
-    this.itemMap = itemMap;
-    this.dependencyMap = dependencyMap;
+  constructor(storageAdapter: StorageAdapter) {
+    this.contentTree = new ContentTree();
     this.storageAdapter = storageAdapter;
+    this.subscriptionManager = new SubscriptionManager();
   }
 
-  subscribeToAllChanges(callback: ContentChangeCallback): () => void {
-    this.globalChangeSubscribers.add(callback);
-    return () => this.globalChangeSubscribers.delete(callback);
-  }
-
-  private notifyGlobalSubscribers(change: { type: 'add' | 'update' | 'delete', id: ContentId, content?: Content }) {
-    this.globalChangeSubscribers.forEach(callback => callback(change));
-  }
-
-  async getAllActiveContents(): Promise<Map<ContentId, Content>> {
-    const allContents = new Map<ContentId, Content>();
-    
-    for (const document of this.activeDocuments.values()) {
-      await this.collectContentRecursive(document.rootBlock, allContents);
-    }
-
-    return allContents;
-  }
-
-  private async collectContentRecursive(contentId: ContentId, collection: Map<ContentId, Content>): Promise<void> {
-    const content = await this.getContent(contentId);
-    if (content) {
-      collection.set(contentId, content);
-      if (isCompositeContent(content)) {
-        for (const childId of content.children) {
-          await this.collectContentRecursive(childId, collection);
-        }
-      }
-    }
-  }  
-
-  async getContent<T>(id: ContentId): Promise<Content<T> | undefined> {
-    let content = this.itemMap.get<T>(id);
+  async getContent<T = unknown>(id: ContentId): Promise<Content<T> | undefined> {
+    let content = this.contentTree.getContentById(id) as Content<T> | undefined;
     if (!content) {
-      content = await this.storageAdapter.loadContent<T>(id);
+      content = await this.storageAdapter.loadContent(id) as Content<T> | undefined;
       if (content) {
-        this.itemMap.set(id, content);
-        if (isCompositeContent(content)) {
-          this.dependencyMap.updateDependencies(id, content.children);
-        }
-        this.notifyGlobalSubscribers({ type: 'add', id, content });
+        this.contentTree.addContent(content);
       }
     }
     return content;
   }
 
-  async updateContent<T>(id: ContentId, updater: (content: Content<T>) => Content<T>): Promise<void> {
-    const currentContent = await this.getContent<T>(id);
-    if (currentContent) {
-      const updatedContent = updater(currentContent);
-      this.itemMap.set(id, updatedContent);
-      if (isCompositeContent(updatedContent)) {
-        this.dependencyMap.updateDependencies(id, updatedContent.children);
-      }
-      await this.storageAdapter.saveContent(updatedContent);
-      this.notifyGlobalSubscribers({ type: 'update', id, content: updatedContent });
-    } else {
-      throw new Error(`Content with id ${id} not found`);
-    }
-  }
-
-  async deleteContent(id: ContentId): Promise<void> {
-    if (this.dependencyMap.canDelete(id)) {
-      this.itemMap.delete(id);
-      this.dependencyMap.removeDependencies(id);
-      await this.storageAdapter.deleteContent(id);
-      this.notifyGlobalSubscribers({ type: 'delete', id });
-    } else {
-      throw new Error(`Cannot delete content ${id} as it has dependencies`);
-    }
-  }
-
-  observe<T = unknown>(id: ContentId, observer: (content: Content<T> | undefined) => void): () => void {
-    return this.itemMap.observe(id, observer);
-  }
-
-  async createContent<T = unknown>(model: Model, initialContent?: T): Promise<Content<T>> {
+  async createContent<T = unknown>(modelInfo: ModelInfo, modelDefinition: Model | undefined, content: T): Promise<Content<T>> {
     const id = this.generateUniqueId();
-    const modelInfo: ModelInfo = {
-      type: model.type,
-      key: model.key,
-      ref: 'ref' in model ? model.ref : undefined
-    };
-    const content: Content<T> = {
+    const newContent: Content<T> = {
       id,
       modelInfo,
-      modelDefinition: 'ref' in model ? undefined : model,
-      content: initialContent ?? this.getDefaultContent(model) as T,
+      modelDefinition,
+      content
     };
 
-    if (isCompositeContent(content)) {
-      (content as CompositeContent).children = [];
+    const existingContent = await this.getContent(id);
+    if (existingContent) {
+      console.warn(`Content with id ${id} already exists. Updating instead of creating.`);
+      return this.updateContent(id, () => newContent);
     }
 
-    await this.storageAdapter.saveContent(content);
-    this.itemMap.set(id, content);
-    this.notifyGlobalSubscribers({ type: 'add', id, content });
-    return content;
+    try {
+      await this.storageAdapter.saveContent(newContent);
+    } catch (error) {
+      console.error('Error saving content:', error);
+      throw error;
+    }
+
+    this.contentTree.addContent(newContent);
+    this.subscriptionManager.notifyContentChange(id, newContent);
+
+    return newContent;
   }
 
-  updateDependencies(parentId: ContentId, childIds: ContentId[]): void {
-    this.dependencyMap.updateDependencies(parentId, childIds);
+  async updateContent<T = unknown>(id: ContentId, updater: (content: Content<T>) => Content<T>): Promise<Content<T>> {
+    const existingContent = await this.getContent<T>(id);
+    if (!existingContent) {
+      throw new Error(`Content with id ${id} not found`);
+    }
+  
+    const updatedContent = updater(existingContent);
+    
+    await this.storageAdapter.saveContent(updatedContent);
+    this.contentTree.updateContent(updatedContent);
+    this.subscriptionManager.notifyContentChange(id, updatedContent);
+  
+    return updatedContent;
   }
 
-  private generateUniqueId(): string {
+  async deleteContent(_id: ContentId): Promise<void> {
+//    const content = await this.getContent(id);
+//    this.contentTree.removeContent(id);
+
+    // if (!this.contentTree.isContentShared(id)) {
+    //   if (isCompositeContent(content as CompositeContent)) {
+    //     await this.deleteCompositeContent(content as CompositeContent);
+    //   }
+    //   await this.storageAdapter.deleteContent(id);
+    //   this.subscriptionManager.notifyContentChange(id, undefined);
+    // }
+  }
+  subscribeToContent(id: ContentId, callback: (content: Content | undefined) => void): () => void {
+    return this.subscriptionManager.subscribeToContent(id, callback);
+  }
+
+  subscribeToAllContent(callback: () => void): () => void {
+    return this.subscriptionManager.subscribeToAllContent(callback);
+  }
+
+  // private async deleteCompositeContent(content: CompositeContent): Promise<void> {
+  //   for (const childId of content.children) {
+  //     await this.deleteContent(childId);
+  //   }
+  // }
+
+  async getAllContent(): Promise<Content[]> {
+    return this.contentTree.getAll();
+  }
+  
+
+  async getAllDocuments(): Promise<Document[]> {
+    // This would return all documents, possibly from a separate DocumentStore
+    // For now, we'll return an empty array
+    return [];
+  }
+  
+  private generateUniqueId(): ContentId {
     return 'id_' + Math.random().toString(36).substr(2, 9);
   }
 
-	private getDefaultContent(property: Model): any {
-		if (isElement(property)) {
-			switch (property.base) {
-				case AtomType.Boolean:
-					return false;
-				case AtomType.Number:
-					return 0;
-				case AtomType.Datetime:
-					return new Date().toISOString();
-				case AtomType.Text:
-				case AtomType.Enum:
-				case AtomType.File:
-				case AtomType.Reference:
-					return '';
-				default:
-					console.warn(`Unknown element base type: ${property.base}`);
-					return null;
-			}
-		} else if (isObject(property)) {
-			return property.properties.reduce((acc, prop) => {
-				acc[prop.key!] = this.getDefaultContent(prop);
-				return acc;
-			}, {} as Record<string, any>);
-		} else if (isArray(property)) {
-			return [];
-		} else if (isGroup(property)) {
-			return [];
-		} else {
-			console.warn(`Unknown property type: ${property.type}`);
-			return null;
-		}
-  }
-  
-  async openDocument(document: Document): Promise<void> {
-    this.activeDocuments.set(document.id, document);
-    await this.loadDocumentContent(document);
-  }
+  // private validateContent(modelDefinition: Model | undefined, content: unknown): void {
+  //   if (!modelDefinition) {
+  //     throw new ContentError('Model definition is required');
+  //   }
 
-  private async loadDocumentContent(document: Document): Promise<void> {
-    // Load the root block
-    let rootBlock = await this.getContent(document.rootBlock);
-    
-    if (!rootBlock) {
-      // If the root block doesn't exist, create it
-      rootBlock = {
-        id: document.rootBlock,
-        modelInfo: {
-          type: 'object',
-          key: 'rootBlock',
-          ref: "notion"
-        },
-        content: [],
-      };
-      await this.storageAdapter.saveContent(rootBlock);
-    }
-
-    // Add the root block to the itemMap
-    this.itemMap.set(document.rootBlock, rootBlock);
-
-    // Load children recursively
-    if (isCompositeContent(rootBlock)) {
-      for (const childId of rootBlock.children) {
-        await this.loadContentRecursive(childId);
-      }
-    }
-  }
-
-  async closeDocument(documentId: DocumentId): Promise<void> {
-    this.activeDocuments.delete(documentId);
-    // Unload the document's content from memory
-    await this.unloadDocumentContent(documentId);
-  }
-
-  getActiveDocuments(): Document[] {
-    return Array.from(this.activeDocuments.values());
-  }
-
-  isDocumentActive(documentId: DocumentId): boolean {
-    return this.activeDocuments.has(documentId);
-  }
-
-  private async unloadDocumentContent(documentId: DocumentId): Promise<void> {
-    const document = this.activeDocuments.get(documentId);
-    if (document) {
-      await this.unloadContentRecursive(document.rootBlock);
-    }
-  }
-
-  private async loadContentRecursive(contentId: ContentId): Promise<void> {
-    const content = await this.getContent(contentId);
-    if (content && isCompositeContent(content)) {
-      for (const childId of content.children) {
-        await this.loadContentRecursive(childId);
-      }
-    }
-  }
-
-  private async unloadContentRecursive(contentId: ContentId): Promise<void> {
-    const content = this.itemMap.get(contentId);
-    if (content) {
-      if (isCompositeContent(content)) {
-        for (const childId of content.children) {
-          await this.unloadContentRecursive(childId);
-        }
-      }
-      this.itemMap.delete(contentId);
-      this.dependencyMap.removeDependencies(contentId);
-    }
-  }
+  //   if (isCompositeModel(modelDefinition)) {
+  //     // if (!isCompositeContent(content)) {
+  //     //   console.log('Content not composite:', content, modelDefinition);
+  //     //   throw new ContentError('Content does not match the composite model structure');
+  //     // }
+      
+  //     // Validate that the content has the correct structure
+  //     // if (!Array.isArray(content.children)) {
+  //     //   throw new ContentError('Composite content must have a children array');
+  //     // }
+      
+  //     // if (typeof content.content !== 'object' || content.content === null) {
+  //     //   throw new ContentError('Composite content must have a content object');
+  //     // }
+      
+  //     // You can add more specific validation for composite models here
+  //   } else {
+  //     // Add validation for non-composite models
+  //     // This depends on your specific requirements for different model types
+  //   }
+  //   // Add more validation logic based on the model type and structure
+  // }
 }
-
-// Create and export a singleton instance
-export const contentStore = new ContentStore(
-  new ContentItemMap(),
-  new ContentDependencyMap(),
-  new LocalStorageAdapter()
-);
