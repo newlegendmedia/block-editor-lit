@@ -52,14 +52,15 @@ export abstract class BaseBlock extends LitElement {
     }
 
     try {
+      console.log('[BaseBlock] getContent for Initializing content:', this.contentId);
       this.content = await contentStore.getContent(this.contentId);
       if (!this.content) {
         // If content doesn't exist, create it
-        const model = this.getModel();
-        if (!model) {
+        this.model = this.getModel();
+        if (!this.model) {
           throw new Error('Model not found for content creation');
         }
-        const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(model);
+        const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(this.model);
         this.content = await contentStore.createContent(modelInfo, modelDefinition, content);
         this.contentId = this.content.id;
       }
@@ -70,6 +71,10 @@ export abstract class BaseBlock extends LitElement {
   }
 
   private async initializeModel() {
+    if (this.model || !this.content) {
+      console.log('[BaseBlock] initializeModel optimization - already have model', this.model, this.content);
+      return;
+    }
     this.model = this.getModel();
     if (!this.model) {
       throw new Error('Failed to initialize model');
@@ -102,6 +107,14 @@ export abstract class BaseBlock extends LitElement {
   }
 
   protected getModel(): Model | undefined {
+
+    if (this.model) {
+      console.log('[BaseBlock] getModel optimization - already have model', this.model);
+      return this.model;
+    } else {
+      console.log('[BaseBlock] getModel - no model for content:', this.content);
+    }
+
     if (this.inlineModel) {
       return this.inlineModel;
     }
