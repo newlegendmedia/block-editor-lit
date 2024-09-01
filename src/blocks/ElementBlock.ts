@@ -5,23 +5,16 @@ import { ElementModel, AtomType } from '../model/model';
 
 @customElement('element-block')
 export class ElementBlock extends BaseBlock {
-  @property({ type: Boolean }) isInline: boolean = false;
-  @property({ type: Object }) inlineModel?: ElementModel;
   @property({ type: Object }) inlineValue: any = null;
 
   @state() private localValue: any = null;
-  @state() private isLoading: boolean = true;
 
   static styles = [
-    BaseBlock.styles,
     css`
       input {
         width: 100%;
         padding: 5px;
         margin: 5px 0;
-        border: 1px solid var(--border-color);
-        border-radius: var(--border-radius);
-        padding: var(--spacing-small);
         border: 1px solid var(--border-color);
         border-radius: var(--border-radius);
         background-color: var(--background-color);
@@ -32,31 +25,19 @@ export class ElementBlock extends BaseBlock {
 
   async connectedCallback() {
     await super.connectedCallback();
-    await this.initializeContent();
-    this.isLoading = false;
+    await this.initializeLocalValue();
     this.requestUpdate();
   }
 
-  protected async initializeContent() {
-    console.log('[ElementBlock] initializeContent', { contentId: this.contentId });
+  protected async initializeLocalValue() {
     if (this.isInline) {
       this.localValue = this.inlineValue ?? null;
-      // For inline elements, we use the inlineModel directly
-      this.model = this.inlineModel;
     } else {
-      await super.initializeContent();
       this.localValue = this.content?.content ?? null;
-      // For non-inline elements, we get the model from the BaseBlock
-      this.model = this.getModel();
-      console.log('[ElementBlock] initializeContent got model', { model: this.model, contentId: this.contentId });
     }
   }
 
   protected renderContent(): TemplateResult {
-    if (this.isLoading) {
-      return html`<div>Loading...</div>`;
-    }
-
     if (!this.model) {
       console.warn('ElementBlock: Model not found', { isInline: this.isInline, contentId: this.contentId });
       return html`<div>Error: Model not found</div>`;
@@ -72,10 +53,7 @@ export class ElementBlock extends BaseBlock {
     `;
   }
 
-  private renderInputElement(
-    model: ElementModel,
-    content: any
-  ): TemplateResult {
+  private renderInputElement(model: ElementModel, content: any): TemplateResult {
     switch (model.base) {
       case AtomType.Text:
         return this.renderTextElement(content);
@@ -114,7 +92,7 @@ export class ElementBlock extends BaseBlock {
 
     if (this.isInline) {
       this.dispatchEvent(new CustomEvent('element-updated', {
-        detail: { id: this.contentId, value },
+        detail: { id: this.contentId, value: value },
         bubbles: true,
         composed: true
       }));

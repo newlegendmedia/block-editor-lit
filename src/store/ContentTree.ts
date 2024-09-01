@@ -16,7 +16,6 @@ export class ContentTree extends Tree<ContentId, Content> {
       if (existingNode) {
         existingNode.item = content;
       } else {
-//        const newNode = new ContentTreeNode(content.id, content);
         this.add(content, parentId, content.id);
       }
     }

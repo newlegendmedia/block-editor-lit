@@ -1,11 +1,12 @@
-import { LitElement, html, css, TemplateResult } from 'lit';
+// GroupBlock.ts
+import { html, css, TemplateResult } from 'lit';
 import { customElement, state, property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { until } from 'lit/directives/until.js';
 import { IndexedCompositeBlock } from './IndexedCompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
 import { GroupModel, Model, isModelReference } from '../model/model';
-import { ContentId, Content } from '../content/content';
+import { ContentId } from '../content/content';
 import { contentStore } from '../store';
 
 @customElement('group-block')
@@ -18,7 +19,6 @@ export class GroupBlock extends IndexedCompositeBlock {
   private enableMirroring: boolean = false; // Feature toggle for mirroring
 
   static styles = [
-    IndexedCompositeBlock.styles,
     css`
       .group-content {
         display: flex;
@@ -47,16 +47,14 @@ export class GroupBlock extends IndexedCompositeBlock {
     `,
   ];
 
-  async connectedCallback() {
-    await super.connectedCallback();
-    await this.initializeChildBlocks();
+  protected async initializeBlock() {
+    await super.initializeBlock();
     await this.updateChildTypes();
     await this.initializeChildComponents();
   }
 
   private async updateChildTypes() {
     const childTypePromises = (this.childBlocks as ContentId[]).map(async (childId) => {
-      console.log('[GroupBlock] getContent for childBlocks childId:', childId);
       const childContent = await contentStore.getContent(childId);
       return [childId, childContent?.modelInfo.key || 'unknown'] as [ContentId, string];
     });

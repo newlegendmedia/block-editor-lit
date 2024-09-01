@@ -13,6 +13,7 @@ class PathController implements ReactiveController {
   private _path: string = '';
   private _targetContentId: string | null = null;
   private _error: string | null = null;
+  private _targetContent: Content | null = null;
 
   constructor(host: ReactiveControllerHost) {
     this.host = host;
@@ -38,6 +39,10 @@ class PathController implements ReactiveController {
     return this._error;
   }
 
+  get targetContent(): Content | null {
+    return this._targetContent;
+  }
+
   hostConnected() {
     // Initialize if needed
   }
@@ -45,6 +50,7 @@ class PathController implements ReactiveController {
   private async findTargetContent() {
     this._error = null;
     this._targetContentId = null;
+    this._targetContent = null;
   
     const pathParts = this._path.split('.');
   
@@ -72,6 +78,7 @@ class PathController implements ReactiveController {
 
         if (childId.startsWith('inline:')) {
           this._targetContentId = childId;
+          this._targetContent = currentContent;
           this.host.requestUpdate();
           return;
         }
@@ -84,6 +91,7 @@ class PathController implements ReactiveController {
       }
   
       this._targetContentId = currentContent.id;
+      this._targetContent = currentContent;
     } catch (error) {
       console.error('Error in findTargetContent:', error);
       this._error = error instanceof Error ? error.message : String(error);
@@ -168,13 +176,12 @@ export class PathRenderer extends LitElement {
       return html`<div>Path not supported for inline content</div>`;
     }
 
-    console.log('[PathRenderer] renderTargetContent - getContent', this.pathController.targetContentId);
-    const content = await contentStore.getContent(this.pathController.targetContentId);
+    const content = this.pathController.targetContent;
     if (!content) return html`<div>Content not found</div>`;
 
     // Render the entire content
     return ComponentFactory.createComponent(
-      content?.id || this.pathController.targetContentId,
+      content.id || this.pathController.targetContentId,
       libraryStore.value,
       this.path
     );

@@ -1,3 +1,4 @@
+// ArrayBlock.ts
 import { html, css, TemplateResult } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -12,7 +13,6 @@ export class ArrayBlock extends IndexedCompositeBlock {
   @state() private childTypes: Map<ContentId, string> = new Map();
 
   static styles = [
-    IndexedCompositeBlock.styles,
     css`
       .array-content {
         display: flex;
@@ -29,8 +29,8 @@ export class ArrayBlock extends IndexedCompositeBlock {
     `,
   ];
 
-  async connectedCallback() {
-    super.connectedCallback();
+  protected async initializeBlock() {
+    await super.initializeBlock();
     await this.updateChildTypes();
   }
 
@@ -44,7 +44,7 @@ export class ArrayBlock extends IndexedCompositeBlock {
     this.requestUpdate();
   }
 
-  renderContent(): TemplateResult {
+  protected renderContent(): TemplateResult {
     if (!this.content || !this.library || !this.model) {
       return html`<div>Loading...</div>`;
     }
@@ -91,5 +91,4 @@ export class ArrayBlock extends IndexedCompositeBlock {
     await super.removeChildBlock(index);
     await this.updateChildTypes();
   }
-
 }

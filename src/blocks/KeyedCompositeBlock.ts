@@ -1,3 +1,4 @@
+// KeyedCompositeBlock.ts
 import { CompositeBlock, KeyedChildren } from './CompositeBlock';
 import { Content, ContentId, CompositeContent, KeyedCompositeContent } from '../content/content';
 import { CompositeModel, isCompositeModel, isElement, Model } from '../model/model';
@@ -7,29 +8,18 @@ import { ContentFactory } from '../store/ContentFactory';
 export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
   protected inlineChildren: boolean = false;
 
-  async connectedCallback() {
-    await super.connectedCallback();
-    await this.initializeChildBlocks();
-    this.requestUpdate();
-  }
-
-
   protected syncChildrenWithContent(): void {
-    const compositeContent = this.content as CompositeContent;
+    if (!this.content) return;
     
-    // Convert childBlocks to a KeyedCompositeContent object
+    const compositeContent = this.content as CompositeContent;
     const keyedContent: KeyedCompositeContent = {};
+    
     for (const [key, value] of Object.entries(this.childBlocks)) {
       keyedContent[key] = value;
     }
 
-    compositeContent.content = this.childBlocks;
-
-    if (this.inlineChildren) {
-      compositeContent.children = [];
-    } else {
-      compositeContent.children = Object.values(this.childBlocks as KeyedChildren);
-    }
+    compositeContent.content = keyedContent;
+    compositeContent.children = this.inlineChildren ? [] : Object.values(this.childBlocks as KeyedChildren);
   }
 
   protected async initializeChildBlocks(): Promise<void> {
@@ -72,7 +62,7 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
     await this.updateContent(content => ({
       ...content,
       content: initialContent,
-      children: [],  // Ensure children array is initialized
+      children: [],
     }));
 
     this.childBlocks = initialContent;
@@ -84,7 +74,6 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
   private async initializeNonElementChild(prop: Model): Promise<CompositeContent> {
     const existingChildId = (this.content?.content as KeyedCompositeContent)?.[prop.key!];
     if (existingChildId) {
-      console.log('[KeyedCompositeBlock] getContent for non element child:', existingChildId);
       const existingContent = await contentStore.getContent(existingChildId);
       if (existingContent) {
         return existingContent as CompositeContent;
@@ -95,38 +84,30 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
   }
 
   protected async initializeKeyedChildren(
-    compositeBlock: CompositeContent,
+    compositeContent: CompositeContent,
     _model: CompositeModel
   ): Promise<void> {
     const childProperties = this.getModelProperties();
     this.childBlocks = {} as KeyedChildren;
 
-    // Ensure children array is initialized
-    if (!Array.isArray(compositeBlock.children)) {
-      compositeBlock.children = [];
+    if (!Array.isArray(compositeContent.children)) {
+      compositeContent.children = [];
     }
 
-    let updatedContent: KeyedCompositeContent = {};
-    
-    // Parse the string content into an object
-    if (typeof compositeBlock.content === 'string') {
-      try {
-        updatedContent = JSON.parse(compositeBlock.content);
-      } catch (e) {
-        console.error('Failed to parse composite content:', e);
-      }
-    }
+    let updatedContent: KeyedCompositeContent = 
+      typeof compositeContent.content === 'string' ? 
+        JSON.parse(compositeContent.content) : 
+        compositeContent.content as KeyedCompositeContent;
 
     for (const prop of childProperties) {
       if (prop.key) {
         let childContentId = updatedContent[prop.key];
 
         if (!childContentId) {
-          // If child content doesn't exist, create it
           const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(prop);
           const childBlock = await contentStore.createContent(modelInfo, modelDefinition, content);
           childContentId = childBlock.id;
-          compositeBlock.children.push(childContentId);
+          compositeContent.children.push(childContentId);
         }
 
         (this.childBlocks as KeyedChildren)[prop.key] = childContentId;
@@ -134,20 +115,11 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
       }
     }
 
-    // Update the content only once, after all children have been processed
-    await this.updateContent((currentContent: Content): CompositeContent => {
-      const updatedCompositeContent: CompositeContent = {
-        id: currentContent.id,
-        modelInfo: currentContent.modelInfo,
-        modelDefinition: currentContent.modelDefinition,
-        content: updatedContent,
-        children: compositeBlock.children
-      };
-
-      console.log('Updated content:', updatedCompositeContent);
-
-      return updatedCompositeContent;
-    });
+    await this.updateContent((currentContent: Content): CompositeContent => ({
+      ...currentContent,
+      content: updatedContent,
+      children: compositeContent.children
+    }));
   }
 
   protected async addChildBlock(itemType: Model, key: string): Promise<ContentId> {
@@ -162,11 +134,9 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
     const newChildId = newChildContent.id;
 
     if (!this.content) {
-      console.error('Content is not initialized');
-      return newChildId;
+      throw new Error('Content is not initialized');
     }
 
-    // Initialize the new child content properly
     if (isCompositeModel(itemType)) {
       (newChildContent as CompositeContent).children = [];
       newChildContent.content = {};
@@ -189,12 +159,9 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
       return;
     }
 
-    let childId: ContentId | undefined;
-
-    childId = (this.childBlocks as KeyedChildren)[key];
-    delete (this.childBlocks as KeyedChildren)[key];
-
+    const childId = (this.childBlocks as KeyedChildren)[key];
     if (childId) {
+      delete (this.childBlocks as KeyedChildren)[key];
       await this.updateChildStructure();
       await contentStore.deleteContent(childId);
     }
@@ -209,6 +176,6 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
       const childContent = (this.content?.content as KeyedCompositeContent)?.[childKey];
       return typeof childContent === 'string' ? childContent : undefined;
     }
-    return this.childBlocks[childKey as string]
+    return this.childBlocks[childKey as string];
   }
 }
