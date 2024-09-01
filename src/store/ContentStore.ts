@@ -4,160 +4,106 @@ import { Model } from '../model/model';
 import { SubscriptionManager } from './SubscriptionManager';
 import { ContentTree } from './ContentTree';
 
-// class ContentError extends Error {
-//   constructor(message: string) {
-//     super(message);
-//     this.name = 'ContentError';
-//   }
-// }
-
-// export interface ContentStore {
-//   getContent<T = unknown>(id: ContentId): Promise<Content<T>>;
-//   createContent<T = unknown>(modelInfo: ModelInfo, modelDefinition: Model | undefined, content: T): Promise<Content<T>>;
-//   updateContent<T = unknown>(id: ContentId, updater: (content: Content<T>) => Content<T>): Promise<Content<T>>;
-//   deleteContent(id: ContentId): Promise<void>;
-//   subscribeToContent(id: ContentId, callback: (content: Content | null) => void): () => void;
-//   subscribeToAllContent(callback: () => void): () => void;
-// }
-
 export class ContentStore {
-  private contentTree: ContentTree;
-  private storageAdapter: StorageAdapter;
-  private subscriptionManager: SubscriptionManager;
+	private contentTree: ContentTree;
+	private storageAdapter: StorageAdapter;
+	private subscriptionManager: SubscriptionManager;
 
-  constructor(storageAdapter: StorageAdapter) {
-    this.contentTree = new ContentTree();
-    this.storageAdapter = storageAdapter;
-    this.subscriptionManager = new SubscriptionManager();
-  }
+	constructor(storageAdapter: StorageAdapter) {
+		this.contentTree = new ContentTree();
+		this.storageAdapter = storageAdapter;
+		this.subscriptionManager = new SubscriptionManager();
+	}
 
-  async getContent<T = unknown>(id: ContentId): Promise<Content<T> | undefined> {
-    console.log(`[ContentStore] Getting content for id: ${id}`);
-    let content = this.contentTree.getContentById(id) as Content<T> | undefined;
-    if (!content) {
-      console.log(`[ContentStore] No Content Exists for id: ${id} - Load from Storage`,);
-      content = await this.storageAdapter.loadContent(id) as Content<T> | undefined;
-      if (content) {
-        console.log(`[ContentStore] Retrieved content from Storage:`, content);
-        this.contentTree.addContent(content);
-      }
-    } else {
-      console.log(`[ContentStore] Retrieved content from Tree:`, content);
-    }
-    return content;
-  }
+	async getContent<T extends Content>(id: ContentId): Promise<T | undefined> {
+		let content = this.contentTree.getContentById(id) as T | undefined;
+		if (!content) {
+			content = (await this.storageAdapter.loadContent(id)) as T | undefined;
+			if (content) {
+				this.contentTree.addContent(content);
+			}
+		}
+		return content;
+	}
 
-  async createContent<T = unknown>(modelInfo: ModelInfo, modelDefinition: Model | undefined, content: T): Promise<Content<T>> {
-    const id = this.generateUniqueId();
-    const newContent: Content<T> = {
-      id,
-      modelInfo,
-      modelDefinition,
-      content
-    };
-    console.log(`[ContentStore] Creating content for model: ${modelInfo.key}`, newContent);
+	async createContent<T extends Content>(
+		modelInfo: ModelInfo,
+		modelDefinition: Model | undefined,
+		content: T['content']
+	): Promise<T> {
+		const id = this.generateUniqueId();
+		const newContent: T = {
+			id,
+			modelInfo,
+			modelDefinition,
+			content,
+		} as T;
 
-    const existingContent = await this.getContent(id);
-    if (existingContent) {
-      console.warn(`Content with id ${id} already exists. Updating instead of creating.`);
-      return this.updateContent(id, () => newContent);
-    }
+		const existingContent = await this.getContent<T>(id);
+		if (existingContent) {
+			console.warn(`Content with id ${id} already exists. Updating instead of creating.`);
+			return this.updateContent<T>(id, () => newContent);
+		}
 
-    try {
-      await this.storageAdapter.saveContent(newContent);
-    } catch (error) {
-      console.error('Error saving content:', error);
-      throw error;
-    }
+		try {
+			await this.storageAdapter.saveContent(newContent);
+		} catch (error) {
+			console.error('Error saving content:', error);
+			throw error;
+		}
 
-    this.contentTree.addContent(newContent);
-    console.log(`[ContentStore] Added content to tree:`, newContent, this.contentTree);
-    this.subscriptionManager.notifyContentChange(id, newContent);
+		this.contentTree.addContent(newContent);
+		this.subscriptionManager.notifyContentChange(id, newContent);
 
-    return newContent;
-  }
+		return newContent;
+	}
 
-  async updateContent<T = unknown>(id: ContentId, updater: (content: Content<T>) => Content<T>): Promise<Content<T>> {
-    const existingContent = await this.getContent<T>(id);
-    if (!existingContent) {
-      throw new Error(`Content with id ${id} not found`);
-    }
-  
-    const updatedContent = updater(existingContent);
-    
-    await this.storageAdapter.saveContent(updatedContent);
-    this.contentTree.updateContent(updatedContent);
-    this.subscriptionManager.notifyContentChange(id, updatedContent);
-  
-    return updatedContent;
-  }
+	async updateContent<T extends Content>(id: ContentId, updater: (content: T) => T): Promise<T> {
+		const existingContent = await this.getContent<T>(id);
+		if (!existingContent) {
+			throw new Error(`Content with id ${id} not found`);
+		}
 
-  async deleteContent(_id: ContentId): Promise<void> {
-//    const content = await this.getContent(id);
-//    this.contentTree.removeContent(id);
+		const updatedContent = updater(existingContent);
 
-    // if (!this.contentTree.isContentShared(id)) {
-    //   if (isCompositeContent(content as CompositeContent)) {
-    //     await this.deleteCompositeContent(content as CompositeContent);
-    //   }
-    //   await this.storageAdapter.deleteContent(id);
-    //   this.subscriptionManager.notifyContentChange(id, undefined);
-    // }
-  }
-  subscribeToContent(id: ContentId, callback: (content: Content | undefined) => void): () => void {
-    return this.subscriptionManager.subscribeToContent(id, callback);
-  }
+		await this.storageAdapter.saveContent(updatedContent);
+		this.contentTree.updateContent(updatedContent);
+		this.subscriptionManager.notifyContentChange(id, updatedContent);
 
-  subscribeToAllContent(callback: () => void): () => void {
-    return this.subscriptionManager.subscribeToAllContent(callback);
-  }
+		return updatedContent;
+	}
 
-  // private async deleteCompositeContent(content: CompositeContent): Promise<void> {
-  //   for (const childId of content.children) {
-  //     await this.deleteContent(childId);
-  //   }
-  // }
+	async deleteContent(_id: ContentId): Promise<void> {
+		//    const content = await this.getContent(id);
+		//    this.contentTree.removeContent(id);
+		// if (!this.contentTree.isContentShared(id)) {
+		//   if (isCompositeContent(content as CompositeContent)) {
+		//     await this.deleteCompositeContent(content as CompositeContent);
+		//   }
+		//   await this.storageAdapter.deleteContent(id);
+		//   this.subscriptionManager.notifyContentChange(id, undefined);
+		// }
+	}
 
-  async getAllContent(): Promise<Content[]> {
-    return this.contentTree.getAll();
-  }
-  
+	// private async deleteCompositeContent(content: CompositeContent): Promise<void> {
+	//   for (const childId of content.children) {
+	//     await this.deleteContent(childId);
+	//   }
+	// }
 
-  async getAllDocuments(): Promise<Document[]> {
-    // This would return all documents, possibly from a separate DocumentStore
-    // For now, we'll return an empty array
-    return [];
-  }
-  
-  private generateUniqueId(): ContentId {
-    return 'id_' + Math.random().toString(36).substr(2, 9);
-  }
+	subscribeToContent(id: ContentId, callback: (content: Content | undefined) => void): () => void {
+		return this.subscriptionManager.subscribeToContent(id, callback);
+	}
 
-  // private validateContent(modelDefinition: Model | undefined, content: unknown): void {
-  //   if (!modelDefinition) {
-  //     throw new ContentError('Model definition is required');
-  //   }
+	subscribeToAllContent(callback: () => void): () => void {
+		return this.subscriptionManager.subscribeToAllContent(callback);
+	}
 
-  //   if (isCompositeModel(modelDefinition)) {
-  //     // if (!isCompositeContent(content)) {
-  //     //   console.log('Content not composite:', content, modelDefinition);
-  //     //   throw new ContentError('Content does not match the composite model structure');
-  //     // }
-      
-  //     // Validate that the content has the correct structure
-  //     // if (!Array.isArray(content.children)) {
-  //     //   throw new ContentError('Composite content must have a children array');
-  //     // }
-      
-  //     // if (typeof content.content !== 'object' || content.content === null) {
-  //     //   throw new ContentError('Composite content must have a content object');
-  //     // }
-      
-  //     // You can add more specific validation for composite models here
-  //   } else {
-  //     // Add validation for non-composite models
-  //     // This depends on your specific requirements for different model types
-  //   }
-  //   // Add more validation logic based on the model type and structure
-  // }
+	async getAllContent(): Promise<Content[]> {
+		return this.contentTree.getAll();
+	}
+
+	private generateUniqueId(): ContentId {
+		return 'id_' + Math.random().toString(36).substr(2, 9);
+	}
 }

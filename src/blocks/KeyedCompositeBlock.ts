@@ -80,7 +80,7 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
       }
     }
     const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(prop);
-    return await contentStore.createContent(modelInfo, modelDefinition, content) as CompositeContent;
+    return await contentStore.createContent(modelInfo, modelDefinition, content as KeyedCompositeContent) as CompositeContent;
   }
 
   protected async initializeKeyedChildren(
