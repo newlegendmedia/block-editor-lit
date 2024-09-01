@@ -31,13 +31,14 @@ export class ElementBlock extends BaseBlock {
   ];
 
   async connectedCallback() {
-    super.connectedCallback();
+    await super.connectedCallback();
     await this.initializeContent();
     this.isLoading = false;
     this.requestUpdate();
   }
 
   protected async initializeContent() {
+    console.log('[ElementBlock] initializeContent', { contentId: this.contentId });
     if (this.isInline) {
       this.localValue = this.inlineValue ?? null;
       // For inline elements, we use the inlineModel directly
@@ -47,6 +48,7 @@ export class ElementBlock extends BaseBlock {
       this.localValue = this.content?.content ?? null;
       // For non-inline elements, we get the model from the BaseBlock
       this.model = this.getModel();
+      console.log('[ElementBlock] initializeContent got model', { model: this.model, contentId: this.contentId });
     }
   }
 

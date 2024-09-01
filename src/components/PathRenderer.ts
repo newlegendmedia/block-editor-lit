@@ -1,42 +1,63 @@
 import { LitElement, html, TemplateResult } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
+import { customElement, property } from 'lit/decorators.js';
 import { until } from 'lit/directives/until.js';
-import { Content, ContentId, isCompositeContent, isKeyedCompositeContent, KeyedCompositeContent } from '../content/content';
+import { Content, ContentId, isIndexedCompositeContent, isKeyedCompositeContent } from '../content/content';
 import { contentStore } from '../store';
+import { isIndexedComposite, isKeyedComposite, isElement, isObject, Model } from '../model/model';
 import { ComponentFactory } from '../util/ComponentFactory';
 import { libraryStore } from '../model/libraryStore';
-import { Model, isObject } from '../model/model';
+import { ReactiveController, ReactiveControllerHost } from 'lit';
 
-@customElement('path-renderer')
-export class PathRenderer extends LitElement {
-  @state() private targetContentId: string | null = null;
-  @state() private targetProperty: string | null = null;
-  @state() private error: string | null = null;
+class PathController implements ReactiveController {
+  private host: ReactiveControllerHost;
+  private _path: string = '';
+  private _targetContentId: string | null = null;
+  private _error: string | null = null;
 
-  @property({ type: String })
-  path: string = '';
+  constructor(host: ReactiveControllerHost) {
+    this.host = host;
+    this.host.addController(this);
+  }
 
-  updated(changedProperties: Map<string, any>) {
-    if (changedProperties.has('path')) {
+  set path(newPath: string) {
+    if (this._path !== newPath) {
+      this._path = newPath;
       this.findTargetContent();
     }
   }
 
+  get path(): string {
+    return this._path;
+  }
+
+  get targetContentId(): string | null {
+    return this._targetContentId;
+  }
+
+  get error(): string | null {
+    return this._error;
+  }
+
+  hostConnected() {
+    // Initialize if needed
+  }
+
   private async findTargetContent() {
-    this.error = null;
-    this.targetContentId = null;
-    this.targetProperty = null;
+    this._error = null;
+    this._targetContentId = null;
   
-    const pathParts = this.path.split('.');
+    const pathParts = this._path.split('.');
   
     if (pathParts.length === 0) {
-      this.error = "Invalid path";
+      this._error = "Invalid path";
+      this.host.requestUpdate();
       return;
     }
   
     try {
+      // Find the root content
+      console.log('[PathRenderer] getContent for root:', pathParts[0]);
       let currentContent: Content | undefined = await contentStore.getContent(pathParts[0]);
-  
       if (!currentContent) {
         throw new Error(`Content not found for root: ${pathParts[0]}`);
       }
@@ -46,61 +67,87 @@ export class PathRenderer extends LitElement {
         const childId = this.getChildId(currentContent, part);
   
         if (!childId) {
-          // If we're at the last part and didn't find a child, it's a property
-          if (i === pathParts.length - 1) {
-            this.targetContentId = currentContent.id;
-            this.targetProperty = part;
-            return;
-          }
           throw new Error(`Child content not found for key: ${part}`);
         }
+
+        if (childId.startsWith('inline:')) {
+          this._targetContentId = childId;
+          this.host.requestUpdate();
+          return;
+        }
   
+        console.log('[PathRenderer] getContent for path part:', i, pathParts[i]);
         currentContent = await contentStore.getContent(childId);
         if (!currentContent) {
           throw new Error(`Content not found for id: ${childId}`);
         }
       }
   
-      this.targetContentId = currentContent.id;
+      this._targetContentId = currentContent.id;
     } catch (error) {
       console.error('Error in findTargetContent:', error);
-      this.error = error instanceof Error ? error.message : String(error);
+      this._error = error instanceof Error ? error.message : String(error);
     }
   
-    this.requestUpdate();
+    this.host.requestUpdate();
+  }
+
+  private getModelForBlock(block: Content): Model | undefined {
+    return block.modelDefinition || libraryStore.value.getDefinition(block.modelInfo.ref!, block.modelInfo.type);
   }
 
   private getChildId(content: Content, pathPart: string): ContentId | undefined {
-    if (isCompositeContent(content)) {
-      if (isKeyedCompositeContent(content)) {
-        // Handle keyed composite (object)
-        return (content.content as KeyedCompositeContent)[pathPart];
-      } else if (Array.isArray(content.children)) {
-        // Handle indexed composite (array or group)
-        const { index } = this.parsePathPart(pathPart);
+    const model = this.getModelForBlock(content);
+    if (!model) {
+        console.error(`Model not found for block: ${content.id}`);
+        return undefined;
+    }
+    const childKey = pathPart;
+    if (isIndexedComposite(model)) {
+      const index = parseInt(childKey, 10);
+      if (isIndexedCompositeContent(content)) {
         if (!isNaN(index) && index >= 0 && index < content.children.length) {
           return content.children[index];
         }
       }
+    } else if (isKeyedComposite(model)) {
+      if (isKeyedCompositeContent(content)) {
+        // Handle keyed composite (object)
+        if (isObject(model) && model.inlineChildren) {
+          const childProperty = model.properties.find(prop => prop.key === childKey);
+          if (childProperty && isElement(childProperty)) {
+            const childContentId = `inline:${content.id}:${childKey}`;
+            return childContentId;
+          }
+        }
+        return content.content[pathPart];
+      }
     }
     return undefined;
+  } 
+}
+
+@customElement('path-renderer')
+export class PathRenderer extends LitElement {
+  private pathController = new PathController(this);
+
+  @property({ type: String })
+  set path(newPath: string) {
+    this.pathController.path = newPath;
   }
 
-  private parsePathPart(pathPart: string): { index: number, type?: string } {
-    const parts = pathPart.split(':');
-    return {
-      index: parseInt(parts[0], 10),
-      type: parts[1] // This will be undefined if there's no type
-    };
+  get path(): string {
+    return this.pathController.path;
   }
 
   render() {
+    console.log('Rendering PathRenderer', this.path, this.pathController.targetContentId, this.pathController.error);
     return html`
       <div>
         <p>PathRenderer is active. Current path: ${this.path}</p>
-        ${this.error
-          ? html`<div class="error">Error: ${this.error}</div>`
-          : this.targetContentId
+        ${this.pathController.error
+          ? html`<div class="error">Error: ${this.pathController.error}</div>`
+          : this.pathController.targetContentId
             ? html`<div>
                 ${until(
                   this.renderTargetContent(),
@@ -115,42 +162,21 @@ export class PathRenderer extends LitElement {
   }
     
   private async renderTargetContent(): Promise<TemplateResult> {
-    if (!this.targetContentId) return html`<div>No target content found</div>`;
-  
-    const content = await contentStore.getContent(this.targetContentId);
-    if (!content) return html`<div>Content not found</div>`;
-  
-    if (this.targetProperty) {
-      // Render only the specific property
-      let propertyModel: Model | undefined;
-      if (content.modelDefinition && isObject(content.modelDefinition)) {
-        propertyModel = content.modelDefinition.properties.find(p => p.key === this.targetProperty);
-      }
-  
-      const propertyValue = content.content && typeof content.content === 'object' 
-        ? (content.content as Record<string, any>)[this.targetProperty]
-        : undefined;
-  
-      // Always use ComponentFactory to render the property
-      return html`
-        <div>
-          ${await ComponentFactory.createComponent(
-            `inline:${this.targetContentId}:${this.targetProperty}`,
-            libraryStore.value,
-            this.path,
-            propertyModel,
-            propertyValue
-          )}
-        </div>
-      `;
-    } else {
-      // Render the entire content
-      return ComponentFactory.createComponent(
-        this.targetContentId,
-        libraryStore.value,
-        this.path
-      );
+    if (!this.pathController.targetContentId) return html`<div>No target content found</div>`;
+
+    if (this.pathController.targetContentId.startsWith('inline:')) {
+      return html`<div>Path not supported for inline content</div>`;
     }
-  }
-  
+
+    console.log('[PathRenderer] renderTargetContent - getContent', this.pathController.targetContentId);
+    const content = await contentStore.getContent(this.pathController.targetContentId);
+    if (!content) return html`<div>Content not found</div>`;
+
+    // Render the entire content
+    return ComponentFactory.createComponent(
+      content?.id || this.pathController.targetContentId,
+      libraryStore.value,
+      this.path
+    );
+  }  
 }

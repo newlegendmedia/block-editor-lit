@@ -16,6 +16,7 @@ export class DocumentManager {
   async createDocument(title: string, rootModelKey: string = 'documentRoot'): Promise<Document> {
     const documentId = this.generateUniqueId();
     const now = new Date().toISOString();
+    console.log(`[DocumentManager] Creating document with title: ${title}, rootModelKey: ${rootModelKey} and ID: ${documentId}`);
 
     // Get the root model from the ModelLibrary
     let rootModel = this.modelLibrary.getDefinition(rootModelKey, 'object');
@@ -25,9 +26,11 @@ export class DocumentManager {
 
     // Use ContentFactory to create the content
     const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel<CompositeContent>(rootModel as ObjectModel);
+    console.log(`[DocumentManager] Created initial content:`, content);
 
     // Create and save the root content using ContentStore
     const rootContent = await contentStore.createContent(modelInfo, modelDefinition, content);
+    console.log(`[DocumentManager] Saved root content:`, rootContent);
 
     // Create the document using the ID of the newly created content
     const document: Document = {
@@ -42,6 +45,7 @@ export class DocumentManager {
     // Save the document in the DocumentManager
     this.documents.set(document.id, document);
 
+    console.log(`[DocumentManager] Created document:`, document);
     return document;
   }
 

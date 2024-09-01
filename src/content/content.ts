@@ -80,6 +80,9 @@ export function isKeyedCompositeContent(content: Content): content is ObjectCont
     return isCompositeContent(content) && typeof content.content === 'object' && !Array.isArray(content.content);
 }
 
+export function isIndexedCompositeContent(content: Content): content is ArrayContent {
+    return isCompositeContent(content) && Array.isArray(content.content);
+}
 
 export function isArrayContent(content: Content): content is ArrayContent {
     return isCompositeContent(content) && Array.isArray(content.content);

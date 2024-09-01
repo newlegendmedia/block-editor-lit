@@ -9,7 +9,6 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
 
   async connectedCallback() {
     await super.connectedCallback();
-    await this.initializeContent();
     await this.initializeChildBlocks();
     this.requestUpdate();
   }
@@ -85,6 +84,7 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
   private async initializeNonElementChild(prop: Model): Promise<CompositeContent> {
     const existingChildId = (this.content?.content as KeyedCompositeContent)?.[prop.key!];
     if (existingChildId) {
+      console.log('[KeyedCompositeBlock] getContent for non element child:', existingChildId);
       const existingContent = await contentStore.getContent(existingChildId);
       if (existingContent) {
         return existingContent as CompositeContent;

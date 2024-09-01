@@ -56,6 +56,7 @@ export class GroupBlock extends IndexedCompositeBlock {
 
   private async updateChildTypes() {
     const childTypePromises = (this.childBlocks as ContentId[]).map(async (childId) => {
+      console.log('[GroupBlock] getContent for childBlocks childId:', childId);
       const childContent = await contentStore.getContent(childId);
       return [childId, childContent?.modelInfo.key || 'unknown'] as [ContentId, string];
     });

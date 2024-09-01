@@ -22,6 +22,7 @@ export class ComponentFactory {
     try {
       // Handle inline elements
       if (contentId.startsWith('inline:')) {
+        console.log('Creating inline element', { contentId, library, path, inlineModel, inlineValue });
         return this.createInlineElement(contentId, library, path, inlineModel, inlineValue);
       }
 

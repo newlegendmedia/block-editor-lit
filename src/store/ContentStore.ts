@@ -32,12 +32,17 @@ export class ContentStore {
   }
 
   async getContent<T = unknown>(id: ContentId): Promise<Content<T> | undefined> {
+    console.log(`[ContentStore] Getting content for id: ${id}`);
     let content = this.contentTree.getContentById(id) as Content<T> | undefined;
     if (!content) {
+      console.log(`[ContentStore] No Content Exists for id: ${id} - Load from Storage`,);
       content = await this.storageAdapter.loadContent(id) as Content<T> | undefined;
       if (content) {
+        console.log(`[ContentStore] Retrieved content from Storage:`, content);
         this.contentTree.addContent(content);
       }
+    } else {
+      console.log(`[ContentStore] Retrieved content from Tree:`, content);
     }
     return content;
   }
@@ -50,6 +55,7 @@ export class ContentStore {
       modelDefinition,
       content
     };
+    console.log(`[ContentStore] Creating content for model: ${modelInfo.key}`, newContent);
 
     const existingContent = await this.getContent(id);
     if (existingContent) {
@@ -65,6 +71,7 @@ export class ContentStore {
     }
 
     this.contentTree.addContent(newContent);
+    console.log(`[ContentStore] Added content to tree:`, newContent, this.contentTree);
     this.subscriptionManager.notifyContentChange(id, newContent);
 
     return newContent;
