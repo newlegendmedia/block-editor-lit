@@ -1,7 +1,7 @@
 
 let counter = 0;
 
-export function generateId(): string {
+export function generateId(prefix='ID'): string {
     counter += 1;
-    return `${Date.now()}-${counter}`;
+    return `${prefix}-${Date.now()}-${counter}`;
 }

@@ -1,78 +1,111 @@
-import { ModelInfo, CompositeContent } from '../content/content';
-import { Model, ModelType, isCompositeModel, CompositeModel, isObject, AtomType, isElement, isArray, isGroup } from '../model/model';
+import {
+	ModelInfo,
+	Content,
+	ElementContent,
+	CompositeContent,
+} from '../content/content';
+import {
+	AtomType,
+	ObjectModel,
+	ArrayModel,
+	GroupModel,
+	ElementModel,
+	isElement,
+	isObject,
+	isArray,
+	isGroup,
+	Model,
+} from '../model/model';
 
 export class ContentFactory {
-  static createContentFromModel<T = unknown>(model: Model, initialContent?: T): {
-    modelInfo: ModelInfo,
-    modelDefinition: Model,
-    content: T extends CompositeContent ? CompositeContent : T
-  } {
-    const modelInfo: ModelInfo = {
-      type: model.type as ModelType,
-      key: model.key,
-      ref: 'ref' in model ? model.ref : undefined
-    };
+	static createContentFromModel(model: Model): Omit<Content, 'id'> {
+		const modelInfo: ModelInfo = {
+			type: model.type,
+			key: model.key,
+			ref: 'ref' in model ? model.ref : undefined,
+		};
 
-    let content: any;
+		if (isElement(model)) {
+			return createElementContent(model, modelInfo);
+		} else if (isObject(model)) {
+			return createObjectContent(model, modelInfo);
+		} else if (isArray(model)) {
+			return createArrayContent(model, modelInfo);
+		} else if (isGroup(model)) {
+			return createGroupContent(model, modelInfo);
+		}
+		throw new Error(`Unsupported model type: ${model.type}`);
 
-    if (isCompositeModel(model)) {
-      const compositeContent = initialContent || this.createCompositeContent(model);
-      content = {
-        children: [],
-        content: compositeContent,
-      };
-    } else {
-      content = initialContent || this.getDefaultContent(model);
-    }
+		function createElementContent(
+			model: ElementModel,
+			modelInfo: Content['modelInfo']
+		): Omit<ElementContent, 'id'> {
+			let defaultValue: any;
 
-    return {
-      modelInfo,
-      modelDefinition: model,
-      content: content as T extends CompositeContent ? CompositeContent : T
-    };
-  }
+			switch (model.base) {
+				case AtomType.Boolean:
+					defaultValue = false;
+					break;
+				case AtomType.Number:
+					defaultValue = 0;
+					break;
+				case AtomType.Text:
+				case AtomType.Enum:
+				case AtomType.File:
+				case AtomType.Reference:
+					defaultValue = 'Hello World';
+					break;
+				case AtomType.Datetime:
+					defaultValue = new Date().toISOString();
+					break;
+				default:
+					defaultValue = null;
+			}
 
-  private static createCompositeContent(model: CompositeModel): any {
-    if (isObject(model)) {
-      return model.properties.reduce((acc, prop) => {
-        acc[prop.key] = this.getDefaultContent(prop);
-        return acc;
-      }, {} as Record<string, any>);
-    } else if (isArray(model)) {
-      return [];
-    } else if (isGroup(model)) {
-      return {};
-    }
-    return {};
-  }
+			return {
+				modelInfo,
+				modelDefinition: model,
+				content: defaultValue,
+			};
+		}
 
-  private static getDefaultContent(model: Model): any {
-    if (isElement(model)) {
-      switch (model.base) {
-        case AtomType.Boolean:
-          return false;
-        case AtomType.Number:
-          return 0;
-        case AtomType.Datetime:
-          return new Date().toISOString();
-        case AtomType.Text:
-        case AtomType.Enum:
-        case AtomType.File:
-        case AtomType.Reference:
-          return '';
-        default:
-          console.warn(`Unknown element base type: ${model.base}`);
-          return null;
-      }
-    } else if (isObject(model)) {
-      return this.createCompositeContent(model);
-    } else if (isArray(model)) {
-      return [];
-    } else if (isGroup(model)) {
-      return {};
-    } else {
-      console.warn(`Unknown model type: ${model.type}`);
-      return null;
-    }
-  }
+		function createObjectContent(
+			model: ObjectModel,
+			modelInfo: Content['modelInfo']
+		): Omit<CompositeContent, 'id'> {
+			const childContent: Record<string, string> = {};
+			const children: string[] = [];
+
+			return {
+				modelInfo,
+				modelDefinition: model,
+				content: childContent,
+				children,
+			};
+		}
+
+		function createArrayContent(
+			model: ArrayModel,
+			modelInfo: Content['modelInfo']
+		): Omit<CompositeContent, 'id'> {
+			return {
+				modelInfo,
+				modelDefinition: model,
+				content: [],
+				children: [],
+			};
+		}
+
+		function createGroupContent(
+			model: GroupModel,
+			modelInfo: Content['modelInfo']
+		): Omit<CompositeContent, 'id'> {
+			return {
+				modelInfo,
+				modelDefinition: model,
+				content: [],
+				children: [],
+			};
+		}
+	}
 }

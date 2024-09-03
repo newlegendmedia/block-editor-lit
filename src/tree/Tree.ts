@@ -2,21 +2,21 @@ import { TreeNode } from './TreeNode';
 import { generateId } from '../util/generateId';
 
 export class Tree<K, Item> {
-    private nodes: Map<K, TreeNode<K, Item>>;
-    private root: TreeNode<K, Item>;
+	private nodes: Map<K, TreeNode<K, Item>>;
+	private root: TreeNode<K, Item>;
 
-    constructor(rootId: K, rootItem?: Item) {
+	constructor(rootId: K, rootItem?: Item) {
 		this.nodes = new Map();
-		if(!rootItem) rootItem = {} as Item;
-        this.root = new TreeNode(rootId, rootItem, null, undefined, this);
-        this.nodes.set(rootId, this.root);
-    }
+		if (!rootItem) rootItem = {} as Item;
+		this.root = new TreeNode(rootId, rootItem, null, undefined, this);
+		this.nodes.set(rootId, this.root);
+	}
 
-    get(id: K): TreeNode<K, Item> | undefined {
-        if (id === this.root.id) return this.root;
-        return this.nodes.get(id);
-	}	
-	
+	get(id: K): TreeNode<K, Item> | undefined {
+		if (id === this.root.id) return this.root;
+		return this.nodes.get(id);
+	}
+
 	getAll(): Item[] {
 		const items: Item[] = [];
 		const collectItems = (node: TreeNode<K, Item>) => {
@@ -35,22 +35,22 @@ export class Tree<K, Item> {
 		return this.root.id;
 	}
 
-    add(item: Item, parentId?: K, id?: K): TreeNode<K, Item> | undefined {
-        const nodeId = id || generateId() as K;
-        const node = new TreeNode(nodeId, item, parentId || null, undefined, this);
-        if (!parentId) return this.root.addChild(node);
-        return this.nodes.get(parentId)?.addChild(node);
-    }
+	add(item: Item, parentId?: K, id?: K): TreeNode<K, Item> | undefined {
+		const nodeId = id || (generateId() as K);
+		const node = new TreeNode(nodeId, item, parentId || null, undefined, this);
+		if (!parentId) return this.root.addChild(node);
+		return this.nodes.get(parentId)?.addChild(node);
+	}
 
-    insert(item: Item, afterNodeId: K, id?: K): TreeNode<K, Item> | undefined {
-        const parentNode = this.parent(afterNodeId);
-        if (!parentNode) {
-            console.error('Parent node not found.', afterNodeId);
-            return undefined;
-        }
-        const nodeId = id || generateId() as K;
-        const node = new TreeNode(nodeId, item, parentNode.id, undefined, this);
-        return parentNode.addChild(node, afterNodeId);
+	insert(item: Item, afterNodeId: K, id?: K): TreeNode<K, Item> | undefined {
+		const parentNode = this.parent(afterNodeId);
+		if (!parentNode) {
+			console.error('Parent node not found.', afterNodeId);
+			return undefined;
+		}
+		const nodeId = id || (generateId() as K);
+		const node = new TreeNode(nodeId, item, parentNode.id, undefined, this);
+		return parentNode.addChild(node, afterNodeId);
 	}
 
 	remove(nodeId: K): void {
@@ -98,7 +98,7 @@ export class Tree<K, Item> {
 		if (!rootItem) rootItem = {} as Item;
 		this.root = new TreeNode(rootId, rootItem, null, undefined, this);
 		this.nodes.set(this.root.id, this.root);
-	}	
+	}
 
 	parent(nodeId: K): TreeNode<K, Item> | undefined {
 		const node = this.nodes.get(nodeId);
@@ -108,8 +108,8 @@ export class Tree<K, Item> {
 	}
 
 	protected createNode(id: K, item: Item): TreeNode<K, Item> {
-        return new TreeNode(id, item);
-    }
+		return new TreeNode(id, item);
+	}
 
 	previous(nodeId: K): TreeNode<K, Item> | undefined {
 		let siblings = this.siblings(nodeId);
@@ -149,7 +149,6 @@ export class Tree<K, Item> {
 		if (siblings) {
 			let index = siblings.findIndex((node) => node.id === nodeId);
 			let sibling = index >= 0 && index < siblings.length - 1 ? siblings[index + 1] : undefined;
-			console.log('getNextSibling', nodeId, sibling);
 			return sibling;
 		}
 		return undefined;
@@ -179,17 +178,17 @@ export class Tree<K, Item> {
 	}
 
 	getNestingLevel(nodeId: K): number {
-        let level = -1; // Start at -1 because root is at level 0
-        let currentNode: TreeNode<K, Item> | undefined = this.get(nodeId);
+		let level = -1; // Start at -1 because root is at level 0
+		let currentNode: TreeNode<K, Item> | undefined = this.get(nodeId);
 
-        while (currentNode) {
-            level++;
+		while (currentNode) {
+			level++;
 			currentNode = this.parent(currentNode.id);
-			if(currentNode && currentNode.id === this.root.id) break;
-        }
+			if (currentNode && currentNode.id === this.root.id) break;
+		}
 
-        return level;
-    }
+		return level;
+	}
 
 	addNodeToMap(node: TreeNode<K, Item>): void {
 		node.children.forEach((child) => this.addNodeToMap(child as TreeNode<K, Item>));
@@ -205,7 +204,7 @@ export class Tree<K, Item> {
 	*[Symbol.iterator](): Generator<TreeNode<K, Item>> {
 		yield* this.traverse(this.root, {});
 	}
-	
+
 	*iterator(
 		options: {
 			start?: TreeNode<K, Item>;
@@ -217,7 +216,7 @@ export class Tree<K, Item> {
 		const startNode = options.start || this.root;
 		yield* this.traverse(startNode, options);
 	}
-	
+
 	private *traverse(
 		node: TreeNode<K, Item>,
 		options: {
@@ -227,18 +226,18 @@ export class Tree<K, Item> {
 		}
 	): Generator<TreeNode<K, Item>> {
 		const { match = () => true, stop = () => false, reverse = false } = options;
-	
+
 		if (stop(node)) {
 			yield node;
 			return;
 		}
-	
+
 		if (match(node)) {
 			yield node;
 		}
-	
+
 		const children = reverse ? node.children.slice().reverse() : node.children;
-	
+
 		for (let child of children) {
 			yield* this.traverse(child as TreeNode<K, Item>, options);
 		}
@@ -247,31 +246,31 @@ export class Tree<K, Item> {
 	processSiblings(
 		callback: (siblings: TreeNode<K, Item>[], tree: Tree<K, Item>) => void,
 		options: {
-		  reverse?: boolean;
+			reverse?: boolean;
 		} = {}
-	  ): void {
+	): void {
 		const { reverse = false } = options;
-	
+
 		const processLevel = (nodes: TreeNode<K, Item>[]) => {
-		  if (reverse) {
-			callback([...nodes].reverse(), this);
-		  } else {
-			callback(nodes, this);
-		  }
-		  for (let n of nodes) {
-			processLevel(n.children as TreeNode<K, Item>[]);
-		  }
+			if (reverse) {
+				callback([...nodes].reverse(), this);
+			} else {
+				callback(nodes, this);
+			}
+			for (let n of nodes) {
+				processLevel(n.children as TreeNode<K, Item>[]);
+			}
 		};
-	
+
 		processLevel(this.root.children as TreeNode<K, Item>[]);
 	}
-	
+
 	findPreviousOfType(
 		currentId: K,
 		match: (node: TreeNode<K, Item>) => boolean
 	): TreeNode<K, Item> | undefined {
 		let found = false;
-	
+
 		for (let node of this.iterator({ reverse: true })) {
 			if (found && match(node)) {
 				return node;
@@ -282,13 +281,13 @@ export class Tree<K, Item> {
 		}
 		return undefined;
 	}
-	
+
 	findNextOfType(
 		currentId: K,
 		match: (node: TreeNode<K, Item>) => boolean
 	): TreeNode<K, Item> | undefined {
 		let found = false;
-	
+
 		for (let node of this) {
 			if (found && match(node)) {
 				return node;
@@ -298,7 +297,7 @@ export class Tree<K, Item> {
 			}
 		}
 		return undefined;
-	}	
+	}
 
 	findNodeInTree(predicate: (node: TreeNode<K, Item>) => boolean): TreeNode<K, Item> | undefined {
 		for (let node of this) {
@@ -328,10 +327,10 @@ export class Tree<K, Item> {
 		const attachNode = (node: TreeNode<K, Item>, parentId: K) => {
 			const id = generateId();
 			this.add(node.item, parentId as K, id as K);
-			node.children.forEach(child => attachNode(child, id as K));
+			node.children.forEach((child) => attachNode(child, id as K));
 		};
-		subtreeRoot.children.forEach(child => attachNode(child, parentId as K));
-	};	
+		subtreeRoot.children.forEach((child) => attachNode(child, parentId as K));
+	}
 
 	// New method to get tree content as nested items
 	getTreeContent(): Item[] {
@@ -349,7 +348,6 @@ export class Tree<K, Item> {
 
 	// New method to set tree content from nested items
 	setTreeContent(content: Item[]): void {
-		console.log('setTreeContent', content);
 		// clear the current content
 		this.reset(this.root.id, this.root.item);
 

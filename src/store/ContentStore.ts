@@ -3,6 +3,7 @@ import { StorageAdapter } from './StorageAdapter';
 import { Model } from '../model/model';
 import { SubscriptionManager } from './SubscriptionManager';
 import { ContentTree } from './ContentTree';
+import { generateId } from '../util/generateId';
 
 export class ContentStore {
 	private contentTree: ContentTree;
@@ -31,7 +32,13 @@ export class ContentStore {
 		modelDefinition: Model | undefined,
 		content: T['content']
 	): Promise<T> {
-		const id = this.generateUniqueId();
+		// get the first 3 letters of the model type and uppercase them and pass them as the prefix to the id
+		let prefix = '';
+		if (modelInfo.type) {
+			prefix = modelInfo.type.slice(0, 3).toUpperCase();
+		}
+		const id = generateId(prefix) as ContentId;
+
 		const newContent: T = {
 			id,
 			modelInfo,
@@ -103,7 +110,4 @@ export class ContentStore {
 		return this.contentTree.getAll();
 	}
 
-	private generateUniqueId(): ContentId {
-		return 'id_' + Math.random().toString(36).substr(2, 9);
-	}
 }
