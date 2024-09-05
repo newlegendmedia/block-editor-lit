@@ -12,6 +12,12 @@ export class ObjectBlock extends KeyedCompositeBlock {
 	//  @property({ type: Object }) inlineValue: any = null;
 	@state() private childComponentPromises: Record<string, Promise<TemplateResult>> = {};
 
+	constructor() {
+		;
+		super();
+		;
+	}
+
 	static styles = [
 		css`
 			.object-content {
@@ -64,6 +70,7 @@ export class ObjectBlock extends KeyedCompositeBlock {
 	}
 
 	private async initializeChildComponents() {
+		;
 		const componentPromises: Record<string, Promise<TemplateResult>> = {};
 		for (const prop of this.getModelProperties()) {
 			if (prop.key) {
@@ -107,7 +114,7 @@ export class ObjectBlock extends KeyedCompositeBlock {
 
 	protected renderContent(): TemplateResult {
 		if (
-			(!this.isInline && !this.content) ||
+			(!this.content) ||
 			!this.library ||
 			!this.model ||
 			!(this.model as ObjectModel).properties
@@ -132,6 +139,8 @@ export class ObjectBlock extends KeyedCompositeBlock {
 		if (!property.key) {
 			return html`<div>Invalid property</div>`;
 		}
+
+		;
 
 		const childKey = property.key;
 		const childComponentPromise = this.childComponentPromises[childKey];
@@ -173,6 +182,7 @@ export class ObjectBlock extends KeyedCompositeBlock {
 	};
 
 	async connectedCallback() {
+		;
 		await super.connectedCallback();
 		this.addEventListener('element-updated', this.handleElementUpdate as EventListener);
 	}

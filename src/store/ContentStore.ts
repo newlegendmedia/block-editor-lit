@@ -106,6 +106,9 @@ export class ContentStore {
 		return this.subscriptionManager.subscribeToAllContent(callback);
 	}
 
+async getAllHierarchical(): Promise<HierarchicalItem<Content>> {
+	return this.tree.getAllHierarchical();
+  }	
 	async getAllContent(): Promise<Content[]> {
 		return this.contentTree.getAll();
 	}

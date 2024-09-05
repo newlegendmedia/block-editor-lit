@@ -2,7 +2,7 @@
 import { CompositeBlock, IndexedChildren } from './CompositeBlock';
 import { ContentId, CompositeContent } from '../content/content';
 import { isCompositeModel, Model } from '../model/model';
-import { contentStore } from '../store';
+import { contentStore } from '../resourcestore';
 import { ContentFactory } from '../store/ContentFactory';
 
 export abstract class IndexedCompositeBlock extends CompositeBlock<'indexed'> {
@@ -32,33 +32,46 @@ export abstract class IndexedCompositeBlock extends CompositeBlock<'indexed'> {
 
 	protected async addChildBlock(itemType: Model): Promise<ContentId> {
 		const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(itemType);
-		const newChildContent = await contentStore.createContent(modelInfo, modelDefinition, content);
+		const newChildContent = await contentStore.create(modelInfo, modelDefinition, content, this.contentId);
 		const newChildId = newChildContent.id;
-
+	
 		if (!this.content) {
-			throw new Error('Content is not initialized');
+		  throw new Error('Content is not initialized');
 		}
-
+	
 		if (isCompositeModel(itemType)) {
-			(newChildContent as CompositeContent).children = [];
-			newChildContent.content = [];
+		  await contentStore.update(newChildId, (content) => ({
+			...content,
+			children: [],
+			content: [],
+		  }));
 		}
-
-		(this.content as CompositeContent).children.push(newChildId);
+	
+		await this.updateContent((currentContent) => {
+		  const updatedContent = currentContent as CompositeContent;
+		  updatedContent.children = [...updatedContent.children, newChildId];
+		  return updatedContent;
+		});
+	
 		this.childBlocks = (this.content as CompositeContent).children;
-
 		await this.updateChildStructure();
 		return newChildId;
-	}
-
-	protected async removeChildBlock(index: number): Promise<void> {
+	  }
+	
+	  protected async removeChildBlock(index: number): Promise<void> {
 		const childId = (this.childBlocks as IndexedChildren)[index];
 		if (childId) {
-			(this.childBlocks as IndexedChildren).splice(index, 1);
-			await this.updateChildStructure();
-			await contentStore.deleteContent(childId);
+		  await this.updateContent((currentContent) => {
+			const updatedContent = currentContent as CompositeContent;
+			updatedContent.children = updatedContent.children.filter((id) => id !== childId);
+			return updatedContent;
+		  });
+	
+		  this.childBlocks = (this.content as CompositeContent).children;
+		  await this.updateChildStructure();
+		  await contentStore.delete(childId);
 		}
-	}
+	  }
 
 	protected getChildPath(index: number, type?: string): string {
 		return type ? `${this.path}.${index}:${type}` : `${this.path}.${index}`;

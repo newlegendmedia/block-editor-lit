@@ -1,5 +1,6 @@
 import { TreeNode } from './TreeNode';
 import { generateId } from '../util/generateId';
+import { HierarchicalItem } from './HierarchicalItem';
 
 export class Tree<K, Item> {
 	private nodes: Map<K, TreeNode<K, Item>>;
@@ -18,24 +19,46 @@ export class Tree<K, Item> {
 	}
 
 	getAll(): Item[] {
-		const items: Item[] = [];
-		const collectItems = (node: TreeNode<K, Item>) => {
-			items.push(node.item);
-			for (let child of node.children) {
-				collectItems(child);
-			}
-		};
-		for (let child of this.root.children) {
-			collectItems(child);
-		}
+		;
+		const items: Item[] = Array.from(this.nodes.values()).map((node) => node.item);
+		;
 		return items;
 	}
+
+	// In your Tree class
+	getAllHierarchical(): HierarchicalItem<Item> {
+		const buildHierarchy = (node: TreeNode<K, Item>): HierarchicalItem<Item> => {
+			return {
+				...node.item,
+				children: node.children.map((child) => buildHierarchy(child as TreeNode<K, Item>)),
+			};
+		};
+
+		return buildHierarchy(this.root);
+	}
+
+	// getAll(): Item[] {
+	// 	const items: Item[] = [];
+	// 	;
+	// 	const collectItems = (node: TreeNode<K, Item>) => {
+	// 		items.push(node.item);
+	// 		for (let child of node.children) {
+	// 			collectItems(child);
+	// 		}
+	// 	};
+	// 	for (let child of this.root.children) {
+	// 		collectItems(child);
+	// 	}
+	// 	;
+	// 	return items;
+	// }
 
 	getRootId(): K {
 		return this.root.id;
 	}
 
 	add(item: Item, parentId?: K, id?: K): TreeNode<K, Item> | undefined {
+		;
 		const nodeId = id || (generateId() as K);
 		const node = new TreeNode(nodeId, item, parentId || null, undefined, this);
 		if (!parentId) return this.root.addChild(node);

@@ -100,6 +100,7 @@ export class AppComponent extends LitElement {
 	private async openDocument(id: DocumentId) {
 		try {
 			this.isLoading = true;
+			;
 			const theDocument = await documentManager.getDocument(id);
 			if (theDocument) {
 				await documentManager.activateDocument(id);
@@ -108,6 +109,7 @@ export class AppComponent extends LitElement {
 
 				// Update the current path to the document's root content ID
 				this.currentPath = theDocument.rootContent;
+				;
 			}
 		} catch (error) {
 			console.error('Failed to open document:', error);

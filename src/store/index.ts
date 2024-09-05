@@ -1,4 +1,4 @@
-import { ContentStore } from './ContentStore.ts';
+//import { ContentStore } from './XXContentStore.ts';
 import { IndexedDBAdapter } from './IndexedDBAdapter.ts';
 import { DocumentManager } from './DocumentManager.ts';
 
@@ -6,7 +6,7 @@ import { DocumentManager } from './DocumentManager.ts';
 export const storageAdapter = new IndexedDBAdapter();
 
 // Create a singleton instance of ContentStore
-export const contentStore = new ContentStore(storageAdapter);
+//export const contentStore = new ContentStore(storageAdapter);
 
 // Create a singleton instance of DocumentManager
 export const documentManager = new DocumentManager();

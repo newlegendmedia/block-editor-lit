@@ -3,7 +3,7 @@
 import { LitElement, html, TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { ComponentFactory } from '../util/ComponentFactory';
-import { contentStore } from '../store';
+import { contentStore } from '../resourcestore';
 import { documentManager } from '../store';
 import { libraryStore } from '../model/libraryStore';
 import { Document, Content } from '../content/content';
@@ -19,12 +19,12 @@ export class DocumentComponent extends LitElement {
     super.connectedCallback();
     await this.loadDocument();
   }
-
+  
   async loadDocument() {
     try {
       this.document = await documentManager.getDocument(this.documentId);
       if (this.document) {
-        this.rootContent = await contentStore.getContent(this.document.rootContent);
+        this.rootContent = await contentStore.get(this.document.rootContent);
         if (this.rootContent) {
           this.rootComponent = await ComponentFactory.createComponent(
             this.rootContent.id,

@@ -7,7 +7,7 @@ import { IndexedCompositeBlock } from './IndexedCompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
 import { GroupModel, Model, isModelReference } from '../model/model';
 import { ContentId } from '../content/content';
-import { contentStore } from '../store';
+import { contentStore } from '../resourcestore';
 
 @customElement('group-block')
 export class GroupBlock extends IndexedCompositeBlock {
@@ -55,7 +55,7 @@ export class GroupBlock extends IndexedCompositeBlock {
 
   private async updateChildTypes() {
     const childTypePromises = (this.childBlocks as ContentId[]).map(async (childId) => {
-      const childContent = await contentStore.getContent(childId);
+      const childContent = await contentStore.get(childId);
       return [childId, childContent?.modelInfo.key || 'unknown'] as [ContentId, string];
     });
     const childTypes = await Promise.all(childTypePromises);

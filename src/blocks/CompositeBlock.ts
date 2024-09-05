@@ -1,4 +1,3 @@
-// CompositeBlock.ts
 import { BaseBlock } from './BaseBlock';
 import { ContentId, CompositeContent } from '../content/content';
 import { Model, CompositeModel } from '../model/model';
@@ -15,7 +14,7 @@ export abstract class CompositeBlock<T extends CompositeType> extends BaseBlock 
 
   protected async updateChildStructure(): Promise<void> {
     this.syncChildrenWithContent();
-    await this.updateContent(() => this.content as CompositeContent);
+    await this.updateContent((content) => content as CompositeContent);
     this.requestUpdate();
   }
 

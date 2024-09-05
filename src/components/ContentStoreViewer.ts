@@ -1,12 +1,15 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, TemplateResult } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { contentStore } from '../store';
+import { contentStore } from '../resourcestore';
 import { Content, Document, isCompositeContent } from '../content/content';
+import { HierarchicalItem } from '../tree/HierarchicalItem';
 
 @customElement('content-store-viewer')
 export class ContentStoreViewer extends LitElement {
 	@state() private contents: Content[] = [];
 	@state() private documents: Document[] = [];
+	@state() private viewMode: 'flat' | 'hierarchical' = 'flat';
+	@state() private contentsHierarchy: HierarchicalItem<Content> | null = null;
 
 	private unsubscribe: (() => void) | null = null;
 
@@ -57,11 +60,17 @@ export class ContentStoreViewer extends LitElement {
 			max-width: 60%;
 			text-align: right;
 		}
+		.hierarchical-view {
+			margin-left: 20px;
+		}
+		.toggle-button {
+			margin-bottom: 10px;
+		}
 	`;
 
 	async connectedCallback() {
 		super.connectedCallback();
-		this.unsubscribe = contentStore.subscribeToAllContent(this.handleContentChange.bind(this));
+		this.unsubscribe = contentStore.subscribeAll(this.handleContentChange.bind(this));
 		await this.updateContents();
 		await this.updateDocuments();
 	}
@@ -77,14 +86,35 @@ export class ContentStoreViewer extends LitElement {
 		this.updateContents();
 	}
 
-	private async updateContents() {
-		this.contents = await contentStore.getAllContent();
+	private async updateDocuments() {
 		this.requestUpdate();
 	}
 
-	private async updateDocuments() {
-		// For now, we'll leave this as is. In a full implementation, we'd need a way to get all documents.
-		// this.documents = await contentStore.getAllDocuments();
+	// render() {
+	// 	return html`
+	// 		<div class="content-store-viewer">
+	// 			<h3>Content Store</h3>
+	// 			<div>Content Count: ${this.contents.length}</div>
+	// 			<div>Document Count: ${this.documents.length}</div>
+	// 			<h4>Documents</h4>
+	// 			<div class="document-list">${this.documents.map((doc) => this.renderDocument(doc))}</div>
+	// 			<h4>Contents</h4>
+	// 			<div class="content-list">
+	// 				${this.contents.map((content) => this.renderContent(content))}
+	// 			</div>
+	// 		</div>
+	// 	`;
+	// }
+
+	private toggleViewMode() {
+		this.viewMode = this.viewMode === 'flat' ? 'hierarchical' : 'flat';
+	}
+
+	private async updateContents() {
+		this.contents = await contentStore.getAll();
+		this.contentsHierarchy = null;
+		this.contentsHierarchy = await contentStore.getAllHierarchical();
+		;
 		this.requestUpdate();
 	}
 
@@ -92,14 +122,35 @@ export class ContentStoreViewer extends LitElement {
 		return html`
 			<div class="content-store-viewer">
 				<h3>Content Store</h3>
+				<button @click=${this.toggleViewMode}>
+					Switch to ${this.viewMode === 'flat' ? 'Hierarchical' : 'Flat'} View
+				</button>
 				<div>Content Count: ${this.contents.length}</div>
 				<div>Document Count: ${this.documents.length}</div>
 				<h4>Documents</h4>
 				<div class="document-list">${this.documents.map((doc) => this.renderDocument(doc))}</div>
 				<h4>Contents</h4>
 				<div class="content-list">
-					${this.contents.map((content) => this.renderContent(content))}
+					${this.viewMode === 'flat'
+						? this.contents.map((content) => this.renderContent(content))
+						: this.renderHierarchicalContents(this.contentsHierarchy)}
 				</div>
+			</div>
+		`;
+	}
+
+	private renderHierarchicalContents(
+		hierarchicalItem: HierarchicalItem<Content> | null,
+		level: number = 0
+	): TemplateResult {
+		if (!hierarchicalItem) return html``;
+
+		return html`
+			<div style="margin-left: ${level * 20}px;">
+				${this.renderContent(hierarchicalItem)}
+				${hierarchicalItem.children.map((child) =>
+					this.renderHierarchicalContents(child, level + 1)
+				)}
 			</div>
 		`;
 	}
@@ -128,6 +179,14 @@ export class ContentStoreViewer extends LitElement {
 	}
 
 	private renderContentDetails(content: Content) {
+		// check if content is an empty object
+		if (
+			content.content &&
+			typeof content.content === 'object' &&
+			Object.keys(content.content).length === 0
+		) {
+			return html`<div class="simple-content">Empty Content</div>`;
+		}
 		if (isCompositeContent(content)) {
 			return this.renderCompositeContent(content.content);
 		} else {
