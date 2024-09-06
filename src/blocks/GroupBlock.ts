@@ -86,55 +86,18 @@ export class GroupBlock extends IndexedCompositeBlock {
     );
   }
 
-  protected async renderContent(): Promise<TemplateResult> {
+  protected renderContent(): TemplateResult {
     if (!this.content || !this.modelStore || !this.model) {
       return html`<div>Group Loading...</div>`;
     }
-
-    const groupModel = this.model as GroupModel;
-
-    // Fetch item types asynchronously
-    this.itemTypes = this.getItemTypes(groupModel);
-
     return html`
       <div>
-        <h3>${groupModel.name || 'Group'}</h3>
-        <div class="group-content">
-          ${repeat(
-            this.childComponentPromises,
-            (_, index) => index,
-            (childPromise, index) => html`
-              <div class="group-item">
-                <div class="item-container">
-                  ${until(
-                    childPromise,
-                    html`<span>Loading child component...</span>`,
-                    html`<span>Error loading component</span>`
-                  )}
-                </div>
-                ${this.enableMirroring && this.mirroredBlocks[index] ? html`
-                  <div class="mirror-container">
-                    ${until(
-                      ComponentFactory.createComponent(
-                        `mirror:${this.childBlocks[index]}`,
-                        `${this.getChildPath(index, this.childTypes.get(this.childBlocks[index]))}.mirror`
-                      ),
-                      html`<span>Loading mirrored component...</span>`,
-                      html`<span>Error loading mirrored component</span>`
-                    )}
-                  </div>
-                ` : ''}
-                ${groupModel.editable
-                  ? html`<button class="remove-button" @click=${() => this.removeChildBlock(index)}>
-                      Remove
-                    </button>`
-                  : ''}
-              </div>
-            `
-          )}
-        </div>
-        ${groupModel.editable ? this.renderAddButton() : ''}
+        ${this.renderAddButton()}
         ${this.showSlashMenu ? this.renderSlashMenu() : ''}
+        ${until(
+          Promise.all(this.childComponentPromises).then(components => html`${components}`),
+          html`<span>Loading child components...</span>`
+        )}
       </div>
     `;
   }
@@ -147,7 +110,7 @@ export class GroupBlock extends IndexedCompositeBlock {
     return html`
       <div class="slash-menu">
         ${until(
-          this.itemTypes?.then(itemTypes => 
+          this.loadItemTypes().then(itemTypes => 
             itemTypes.map(itemType => 
               html`<button @click=${() => this.addItem(itemType)}>${itemType.name || itemType.key}</button>`
             )
@@ -157,6 +120,16 @@ export class GroupBlock extends IndexedCompositeBlock {
         )}
       </div>
     `;
+  }
+
+  private async loadItemTypes(): Promise<Model[]> {
+    if (this.itemTypes) {
+      return this.itemTypes;
+    }
+
+    const groupModel = this.model as GroupModel; // Assume this method exists and returns a GroupModel
+    this.itemTypes = this.getItemTypes(groupModel);
+    return this.itemTypes;
   }
 
   private async getItemTypes(groupModel: GroupModel): Promise<Model[]> {

@@ -119,10 +119,12 @@ export abstract class BaseBlock extends LitElement {
     if (!this.content || !this.modelStore) return undefined;
 
     const { modelInfo } = this.content;
-    if (this.content.modelDefinition) return this.content.modelDefinition;
+    if (this.content.modelDefinition) {
+      return this.content.modelDefinition;
+    }
     if (!modelInfo.ref) return undefined;
 
-    return this.modelStore.getDefinition(modelInfo.ref, modelInfo.type);
+    return await this.modelStore.getDefinition(modelInfo.ref, modelInfo.type);
   }
 
   protected updated(changedProperties: PropertyValues) {
@@ -142,7 +144,7 @@ export abstract class BaseBlock extends LitElement {
       return html`<div>Loading...</div>`;
     }
     return html`
-      ${this.renderDebug()} ${this.renderPath()}
+      ${this.renderPath()}
       <div>${this.renderContent()}</div>
     `;
   }

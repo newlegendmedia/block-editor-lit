@@ -19,6 +19,7 @@ export class Tree<K, Item> {
 	}
 
 	getAll(): Item[] {
+		console.log('getAll Items Array');
 		const items: Item[] = Array.from(this.nodes.values()).map((node) => node.item);
 		return items;
 	}
@@ -62,11 +63,8 @@ export class Tree<K, Item> {
 		// Check if the node already exists
 		const existingNode = this.nodes.get(nodeId);
 		if (existingNode) {
-			console.warn(`Node with id ${nodeId} already exists in the tree.`);
-
 			// If the parent is different, we need to handle the move
 			if (existingNode.parentId !== parentId) {
-				;
 				this.moveNode(nodeId, parentId);
 			}
 
@@ -416,6 +414,7 @@ export class Tree<K, Item> {
 		this.reset(this.root.id, this.root.item);
 
 		// iterate the Items and add them to the tree
+		console.log('setTreeContent items');
 		const createTreeNodes = (items: Item[], parentId: K) => {
 			items.forEach((item) => {
 				const id = generateId(); // Implement your own ID generation logic

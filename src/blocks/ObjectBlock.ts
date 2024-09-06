@@ -13,9 +13,7 @@ export class ObjectBlock extends KeyedCompositeBlock {
 	@state() private childComponentPromises: Record<string, Promise<TemplateResult>> = {};
 
 	constructor() {
-		;
 		super();
-		;
 	}
 
 	static styles = [

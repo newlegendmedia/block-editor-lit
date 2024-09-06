@@ -2,6 +2,7 @@
 import { html, css, TemplateResult } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
+import { until } from 'lit/directives/until.js';
 import { IndexedCompositeBlock } from './IndexedCompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
 import { ArrayModel, Model } from '../model/model';
@@ -50,19 +51,24 @@ export class ArrayBlock extends IndexedCompositeBlock {
     }
 
     const arrayModel = this.model as ArrayModel;
+    const childBlocks = Array.isArray(this.childBlocks) ? this.childBlocks : [];
 
     return html`
       <div>
         <h3>${arrayModel.name || 'Array'}</h3>
         <div class="array-content">
           ${repeat(
-            this.childBlocks as ContentId[],
+            childBlocks,
             (childId) => childId,
             (childId, index) => html`
               <div class="array-item">
-                ${ComponentFactory.createComponent(
-                  childId,
-                  this.getChildPath(index, this.childTypes.get(childId))
+                ${until(
+                  ComponentFactory.createComponent(
+                    childId,
+                    this.getChildPath(index, this.childTypes.get(childId))
+                  ),
+                  html`<span>Loading child component...</span>`,
+                  html`<span>Error loading component</span>`
                 )}
                 <button class="remove-button" @click=${() => this.removeChildBlock(index)}>
                   Remove

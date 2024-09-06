@@ -29,12 +29,10 @@ export class ResourceStore<K, T extends Resource> {
   async set(item: T, parentId?: K): Promise<void> {
     const existingItem = await this.get(item.id as K);
     if (existingItem) {
-      console.warn(`Item with id ${item.id} already exists. Updating instead of adding.`);
       item = { ...existingItem, ...item };
     }
 
     await this.storage.set(item);
-    ;
     
     // Use the improved Tree.add method
     const node = this.tree.add(item, parentId, item.id as K);
@@ -85,6 +83,7 @@ export class ResourceStore<K, T extends Resource> {
   }
 
   async setMany(items: T[]): Promise<void> {
+    console.log('Setting many items');
     await Promise.all(items.map(item => this.set(item)));
   }
 

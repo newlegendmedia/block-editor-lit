@@ -16,15 +16,38 @@ export abstract class IndexedCompositeBlock extends CompositeBlock<'indexed'> {
 
 	protected async initializeChildBlocks(): Promise<void> {
 		if (!this.content || !this.model) return;
-		this.initializeIndexedChildren(this.content as CompositeContent);
+		this.initializeIndexedChildren();
 		await this.updateChildStructure();
-	}
-
-	protected initializeIndexedChildren(compositeContent: CompositeContent): void {
+	  }
+	  
+	  protected async initializeIndexedChildren(): Promise<void> {
+		const compositeContent = this.content as CompositeContent;
 		this.childBlocks = Array.isArray(compositeContent.children)
-			? (compositeContent.children as IndexedChildren)
-			: [];
-	}
+		  ? (compositeContent.children as IndexedChildren)
+		  : [];
+	  }
+	
+	// protected async initializeIndexedChildren(): Promise<void> {
+	// 	const compositeContent = this.content as CompositeContent;
+	// 	this.childBlocks = Array.isArray(compositeContent.children)
+	// 		? (compositeContent.children as IndexedChildren)
+	// 		: [];
+		
+	// 	// added this for symmetry with keyCompositeBlock
+	// 	let updatedContent: IndexedCompositeContent =
+	// 	typeof compositeContent.content === 'string'
+	// 		? JSON.parse(compositeContent.content)
+	// 		: (compositeContent.content as IndexedCompositeContent);
+
+	// 	await this.updateContent(
+	// 		(currentContent: Content): CompositeContent => ({
+	// 			...currentContent,
+	// 			content: updatedContent,
+	// 			children: compositeContent.children,
+	// 		})
+	// 	);
+	// 	// end of added code
+	// }
 
 	protected async initializeKeyedChildren(): Promise<void> {
 		throw new Error('Indexed composites do not support keyed children');

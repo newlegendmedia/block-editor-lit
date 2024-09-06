@@ -7,10 +7,12 @@ export class ResourceStore<T extends Resource> {
   private subscribers: Map<string, Set<(item: T | null) => void>> = new Map();
 
   async get(id: string): Promise<T | undefined> {
+    console.log(`GET ITEMS ${id}`);
     return this.items.get(id);
   }
 
   async set(item: T): Promise<void> {
+    console.log(`SET ITEMS ${item.id}`);
     this.items.set(item.id, item);
     this.notifySubscribers(item.id, item);
   }

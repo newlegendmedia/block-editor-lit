@@ -6,6 +6,13 @@
       "name": "Notion++",
       "properties": [
         { "type": "element", "key": "titleElement1", "name": "Title", "ref": "textInput" },
+        {
+          "type": "array",
+          "key": "sections",
+          "name": "Document Sections",
+          "itemType": { "type": "object", "key": "section", "ref": "sectionModel" },
+          "repeatable": true
+        },
         { "type": "element", "key": "dateElement1", "name": "Created On", "ref": "dateElement" },
         { "type": "element", "key": "dateElement2", "name": "Last Updated", "ref": "dateElement" },
         { "type": "element", "key": "textInput1", "name": "Tags", "base": "text" },
