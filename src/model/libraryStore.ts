@@ -1,45 +1,48 @@
-// libraryStore.ts
-
-import { ModelLibrary } from './ModelLibrary';
+import { ModelStore } from '../modelstore/ModelStore';
+import { IndexedDBAdapter } from '../resourcestore/IndexedDBAdapter';
+import { Model } from './model';
+import { DEFAULT_SCHEMA_NAME } from '../modelstore/constants';
 
 class LibraryStore {
-  private subscribers: Set<(value: ModelLibrary, ready: boolean) => void> = new Set();
-  private _library: ModelLibrary;
+  private subscribers: Set<(value: ModelStore, ready: boolean) => void> = new Set();
+  private _modelStore: ModelStore;
   private _ready: boolean = false;
 
   constructor() {
-    this._library = new ModelLibrary();
+    const storage = new IndexedDBAdapter<Model>('model-store', 1);
+    this._modelStore = new ModelStore(storage);
     this.initializeLibrary();
   }
 
   private async initializeLibrary() {
-    // Simulate async loading (replace with actual async operations if needed)
-//    await new Promise(resolve => setTimeout(resolve, 1000));
+    await this._modelStore.loadSchema(DEFAULT_SCHEMA_NAME);
     this._ready = true;
     this.notify();
   }
 
-  get value(): ModelLibrary {
-    return this._library;
+  get value(): ModelStore {
+    return this._modelStore;
   }
 
   get ready(): boolean {
     return this._ready;
   }
 
-  subscribe(callback: (value: ModelLibrary, ready: boolean) => void): () => void {
+  subscribe(callback: (value: ModelStore, ready: boolean) => void): () => void {
     this.subscribers.add(callback);
-    callback(this._library, this._ready);
-    return () => this.subscribers.delete(callback);
+    callback(this._modelStore, this._ready);
+    return () => {
+      this.subscribers.delete(callback);
+    };
   }
 
   private notify() {
     for (const callback of this.subscribers) {
-      callback(this._library, this._ready);
+      callback(this._modelStore, this._ready);
     }
   }
 }
 
 export const libraryStore = new LibraryStore();
 
-export type { ModelLibrary };
+export type { ModelStore };

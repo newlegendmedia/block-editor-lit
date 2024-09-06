@@ -6,7 +6,7 @@ import { SubscriptionManager } from './SubscriptionManager';
 export class ResourceStore<K, T extends Resource> {
   protected tree: Tree<K, T>;
   private storage: StorageAdapter<T>;
-  private subscriptions: SubscriptionManager<K, T>;
+  protected subscriptions: SubscriptionManager<K, T>;
 
   constructor(storage: StorageAdapter<T>, rootId: K, rootItem: T) {
     this.storage = storage;
@@ -27,16 +27,25 @@ export class ResourceStore<K, T extends Resource> {
   }
   
   async set(item: T, parentId?: K): Promise<void> {
-    if (parentId) {
-      item.parentId = parentId as string;
+    const existingItem = await this.get(item.id as K);
+    if (existingItem) {
+      console.warn(`Item with id ${item.id} already exists. Updating instead of adding.`);
+      item = { ...existingItem, ...item };
     }
+
     await this.storage.set(item);
     ;
-    this.tree.add(item, parentId, item.id as K);
+    
+    // Use the improved Tree.add method
+    const node = this.tree.add(item, parentId, item.id as K);
+    if (!node) {
+      console.error(`Failed to add/update item ${item.id} in the tree.`);
+    }
+
     this.subscriptions.notify(item.id as K, item);
     this.subscriptions.notifyAll();
   }
-
+  
   async delete(id: K): Promise<void> {
     await this.storage.delete(id as string);
     this.tree.remove(id);
@@ -61,6 +70,10 @@ export class ResourceStore<K, T extends Resource> {
   }
 
   // Additional utility methods
+
+  protected getStorage(): StorageAdapter<T> {
+    return this.storage;
+  }
 
   // Method to get all resources
   async getAll(): Promise<T[]> {
@@ -90,5 +103,12 @@ export class ResourceStore<K, T extends Resource> {
     await this.storage.clear();
     this.tree = new Tree<K, T>(this.tree.getRootId(), this.tree.get(this.tree.getRootId())!.item);
     this.subscriptions.notifyAll();
+  }
+
+  protected getParentId(item: T): K | undefined {
+    // This method should be implemented based on how you determine the parent ID
+    // It might be a property of the item, or you might need to look it up elsewhere
+    // For now, we'll return undefined
+    return undefined;
   }
 }

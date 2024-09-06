@@ -13,6 +13,7 @@ export const AtomType = {
 export type AtomType = (typeof AtomType)[keyof typeof AtomType];
 
 export interface BaseModel {
+  id: string;
   type: ModelType;
   key: string;
   name?: string;
@@ -23,15 +24,12 @@ export interface BaseModel {
 
 export interface BaseCompositeModel extends BaseModel {
   inlineChildren?: boolean;
-};
-
+}
 
 export interface ElementModel extends BaseModel {
   type: 'element';
   base: AtomType;
 }
-
-export type CompositeType = 'keyed' | 'indexed';
 
 export interface ObjectModel extends BaseCompositeModel {
   type: 'object';
@@ -50,16 +48,8 @@ export interface GroupModel extends BaseCompositeModel {
   editable?: boolean;
 }
 
-export function isKeyedComposite(model: Model): model is ObjectModel {
-  return isObject(model);
-}
-
-export function isIndexedComposite(model: Model): model is ArrayModel | GroupModel {
-  return (isArray(model) || isGroup(model));
-}
-
 export type ModelReference = BaseModel & {
-  ref: string;
+  ref?: string; // Make ref optional
 };
 
 export type Model =
@@ -88,10 +78,17 @@ export function isGroup(model: Model): model is GroupModel {
   return model.type === 'group' && 'itemTypes' in model;
 }
 
+// Update the isModelReference function
 export function isModelReference(model: Model): model is ModelReference {
-  return 'ref' in model && typeof model.ref === 'string';
+  return 'ref' in model && typeof (model as ModelReference).ref === 'string';
 }
 
 export function isCompositeModel(model: Model): model is CompositeModel {
   return ['object', 'array', 'group'].includes(model.type);
+}
+export function isIndexedCompositeModel(model: Model): model is CompositeModel {
+  return ['array', 'group'].includes(model.type);
+}
+export function isKeyedCompositeModel(model: Model): model is CompositeModel {
+  return ['object'].includes(model.type);
 }

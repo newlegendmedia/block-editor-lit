@@ -14,7 +14,7 @@ export class DocumentManager {
 
   async createDocument(title: string, docModelKey: string = 'documentRoot'): Promise<Document> {
     // Get the doc model
-    let docModel = this.modelLibrary.getDefinition(docModelKey, 'object');
+    let docModel = await this.modelLibrary.getDefinition(docModelKey, 'object');
     if (!docModel) {
       throw new Error(`Document model not found: ${docModelKey}`);
     }

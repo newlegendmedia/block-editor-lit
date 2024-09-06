@@ -41,8 +41,8 @@ export class ObjectBlock extends KeyedCompositeBlock {
 		await super.initializeBlock();
 		this.inlineChildren = this.useInlineChildren();
 		await this.initializeChildComponents();
-	}
-
+	}	
+	
 	protected getModelProperties(): Model[] {
 		return (this.model as ObjectModel)?.properties || [];
 	}
@@ -81,41 +81,39 @@ export class ObjectBlock extends KeyedCompositeBlock {
 		this.requestUpdate();
 	}
 
-	private createInlineChildComponent(property: Model, childKey: string, childPath: string) {
-		let value = (this.content?.content as KeyedCompositeContent)?.[childKey];
-		return ComponentFactory.createComponent(
-			`inline:${this.contentId}:${childKey}`,
-			this.library!,
-			childPath,
-			property,
-			value
-		);
-	}
-
-	private createStandardChildComponent(_property: Model, childKey: string, childPath: string) {
-		const childContentId = (this.content?.content as KeyedCompositeContent)?.[childKey];
-		if (!childContentId) {
-			console.warn(`No content found for child key: ${childKey}`);
-			return html`<div>No content for ${childKey}</div>`;
-		}
-		return ComponentFactory.createComponent(childContentId, this.library!, childPath);
-	}
-
 	private async createChildComponent(property: Model): Promise<TemplateResult> {
 		const childKey = property.key!;
 		const childPath = this.getChildPath(childKey);
-
+	
 		if (this.inlineChildren && isElement(property)) {
-			return this.createInlineChildComponent(property, childKey, childPath);
+		  return this.createInlineChildComponent(property, childKey, childPath);
 		} else {
-			return this.createStandardChildComponent(property, childKey, childPath);
+		  return this.createStandardChildComponent(property, childKey, childPath);
 		}
-	}
+	  }
+	
+	  private createInlineChildComponent(property: Model, childKey: string, childPath: string) {
+		let value = (this.content?.content as KeyedCompositeContent)?.[childKey];
+		return ComponentFactory.createComponent(
+		  `inline:${this.contentId}:${childKey}`,
+		  childPath,
+		  property,
+		  value
+		);
+	  }
+		
+	  private createStandardChildComponent(_property: Model, childKey: string, childPath: string) {
+		const childContentId = (this.content?.content as KeyedCompositeContent)?.[childKey];
+		if (!childContentId) {
+		  console.warn(`No content found for child key: ${childKey}`);
+		  return html`<div>No content for ${childKey}</div>`;
+		}
+		return ComponentFactory.createComponent(childContentId, childPath);
+	  }
 
 	protected renderContent(): TemplateResult {
 		if (
 			(!this.content) ||
-			!this.library ||
 			!this.model ||
 			!(this.model as ObjectModel).properties
 		) {
@@ -139,8 +137,6 @@ export class ObjectBlock extends KeyedCompositeBlock {
 		if (!property.key) {
 			return html`<div>Invalid property</div>`;
 		}
-
-		;
 
 		const childKey = property.key;
 		const childComponentPromise = this.childComponentPromises[childKey];

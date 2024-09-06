@@ -5,7 +5,6 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { ComponentFactory } from '../util/ComponentFactory';
 import { contentStore } from '../resourcestore';
 import { documentManager } from '../store';
-import { libraryStore } from '../model/libraryStore';
 import { Document, Content } from '../content/content';
 
 @customElement('document-component')
@@ -28,7 +27,6 @@ export class DocumentComponent extends LitElement {
         if (this.rootContent) {
           this.rootComponent = await ComponentFactory.createComponent(
             this.rootContent.id,
-            libraryStore.value,
             `document.${this.documentId}.root`
           );
         }

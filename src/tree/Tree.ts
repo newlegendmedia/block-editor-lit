@@ -19,9 +19,7 @@ export class Tree<K, Item> {
 	}
 
 	getAll(): Item[] {
-		;
 		const items: Item[] = Array.from(this.nodes.values()).map((node) => node.item);
-		;
 		return items;
 	}
 
@@ -57,12 +55,55 @@ export class Tree<K, Item> {
 		return this.root.id;
 	}
 
+	// Proposed improved add method:
 	add(item: Item, parentId?: K, id?: K): TreeNode<K, Item> | undefined {
-		;
 		const nodeId = id || (generateId() as K);
+
+		// Check if the node already exists
+		const existingNode = this.nodes.get(nodeId);
+		if (existingNode) {
+			console.warn(`Node with id ${nodeId} already exists in the tree.`);
+
+			// If the parent is different, we need to handle the move
+			if (existingNode.parentId !== parentId) {
+				;
+				this.moveNode(nodeId, parentId);
+			}
+
+			// Update the item data
+			existingNode.item = item;
+			return existingNode;
+		}
+
+		// If the node doesn't exist, create and add it
 		const node = new TreeNode(nodeId, item, parentId || null, undefined, this);
-		if (!parentId) return this.root.addChild(node);
+		this.nodes.set(nodeId, node);
+
+		if (!parentId) {
+			return this.root.addChild(node);
+		}
 		return this.nodes.get(parentId)?.addChild(node);
+	}
+
+	// New method to handle moving nodes
+	private moveNode(nodeId: K, newParentId: K | undefined): void {
+		const node = this.nodes.get(nodeId);
+		if (!node) return;
+
+		// Remove from old parent
+		if (node.parentId) {
+			const oldParent = this.nodes.get(node.parentId);
+			oldParent?.children.splice(oldParent.children.indexOf(node), 1);
+		}
+
+		// Add to new parent
+		node.parentId = newParentId || null;
+		if (newParentId) {
+			const newParent = this.nodes.get(newParentId);
+			newParent?.children.push(node);
+		} else {
+			this.root.children.push(node);
+		}
 	}
 
 	insert(item: Item, afterNodeId: K, id?: K): TreeNode<K, Item> | undefined {

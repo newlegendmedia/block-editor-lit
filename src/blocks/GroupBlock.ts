@@ -8,6 +8,7 @@ import { ComponentFactory } from '../util/ComponentFactory';
 import { GroupModel, Model, isModelReference } from '../model/model';
 import { ContentId } from '../content/content';
 import { contentStore } from '../resourcestore';
+import { ModelStore } from '../model/libraryStore';
 
 @customElement('group-block')
 export class GroupBlock extends IndexedCompositeBlock {
@@ -15,6 +16,8 @@ export class GroupBlock extends IndexedCompositeBlock {
   @property({ type: Array }) mirroredBlocks: string[] = [];
   @state() private childComponentPromises: Promise<TemplateResult>[] = [];
   @state() private childTypes: Map<ContentId, string> = new Map();
+  @state() protected modelStore?: ModelStore;
+  @state() private itemTypes: Promise<Model[]> | null = null;
 
   private enableMirroring: boolean = false; // Feature toggle for mirroring
 
@@ -79,17 +82,19 @@ export class GroupBlock extends IndexedCompositeBlock {
   private createChildComponent(childId: ContentId, index: number): Promise<TemplateResult> {
     return ComponentFactory.createComponent(
       childId,
-      this.library!,
       this.getChildPath(index, this.childTypes.get(childId))
     );
   }
 
-  protected renderContent(): TemplateResult {
-    if (!this.content || !this.library || !this.model) {
+  protected async renderContent(): Promise<TemplateResult> {
+    if (!this.content || !this.modelStore || !this.model) {
       return html`<div>Group Loading...</div>`;
     }
 
     const groupModel = this.model as GroupModel;
+
+    // Fetch item types asynchronously
+    this.itemTypes = this.getItemTypes(groupModel);
 
     return html`
       <div>
@@ -112,7 +117,6 @@ export class GroupBlock extends IndexedCompositeBlock {
                     ${until(
                       ComponentFactory.createComponent(
                         `mirror:${this.childBlocks[index]}`,
-                        this.library!,
                         `${this.getChildPath(index, this.childTypes.get(this.childBlocks[index]))}.mirror`
                       ),
                       html`<span>Loading mirrored component...</span>`,
@@ -140,32 +144,33 @@ export class GroupBlock extends IndexedCompositeBlock {
   }
 
   private renderSlashMenu(): TemplateResult {
-    const groupModel = this.model as GroupModel;
-    const itemTypes = this.getItemTypes(groupModel);
-
     return html`
       <div class="slash-menu">
-        ${repeat(
-          itemTypes,
-          (itemType) => itemType.key,
-          (itemType) => html`
-            <button @click=${() => this.addItem(itemType)}>${itemType.name || itemType.key}</button>
-          `
+        ${until(
+          this.itemTypes?.then(itemTypes => 
+            itemTypes.map(itemType => 
+              html`<button @click=${() => this.addItem(itemType)}>${itemType.name || itemType.key}</button>`
+            )
+          ),
+          html`<span>Loading item types...</span>`,
+          html`<span>Error loading item types</span>`
         )}
       </div>
     `;
   }
 
-  private getItemTypes(groupModel: GroupModel): Model[] {
+  private async getItemTypes(groupModel: GroupModel): Promise<Model[]> {
     if (Array.isArray(groupModel.itemTypes)) {
       return groupModel.itemTypes;
     } else if (isModelReference(groupModel.itemTypes)) {
-      const resolved = this.library!.getDefinition(
-        groupModel.itemTypes.ref,
-        groupModel.itemTypes.type
-      );
-      if (resolved && 'itemTypes' in resolved) {
-        return this.getItemTypes(resolved as GroupModel);
+      if (groupModel.itemTypes.ref) {
+        const resolved = await this.modelStore?.getDefinition(
+          groupModel.itemTypes.ref,
+          groupModel.itemTypes.type
+        );
+        if (resolved && 'itemTypes' in resolved) {
+          return this.getItemTypes(resolved as GroupModel);
+        }
       }
     }
     console.warn(`Invalid itemTypes: ${JSON.stringify(groupModel.itemTypes)}`);

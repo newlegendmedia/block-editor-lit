@@ -45,7 +45,7 @@ export class ArrayBlock extends IndexedCompositeBlock {
   }
 
   protected renderContent(): TemplateResult {
-    if (!this.content || !this.library || !this.model) {
+    if (!this.content || !this.model) {
       return html`<div>Loading...</div>`;
     }
 
@@ -62,7 +62,6 @@ export class ArrayBlock extends IndexedCompositeBlock {
               <div class="array-item">
                 ${ComponentFactory.createComponent(
                   childId,
-                  this.library!,
                   this.getChildPath(index, this.childTypes.get(childId))
                 )}
                 <button class="remove-button" @click=${() => this.removeChildBlock(index)}>

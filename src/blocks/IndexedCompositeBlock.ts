@@ -32,6 +32,9 @@ export abstract class IndexedCompositeBlock extends CompositeBlock<'indexed'> {
 
 	protected async addChildBlock(itemType: Model): Promise<ContentId> {
 		const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(itemType);
+		if (!modelDefinition) {
+			return "Model notFound"; // fix this
+		}
 		const newChildContent = await contentStore.create(modelInfo, modelDefinition, content, this.contentId);
 		const newChildId = newChildContent.id;
 	

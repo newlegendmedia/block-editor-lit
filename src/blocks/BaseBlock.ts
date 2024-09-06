@@ -1,9 +1,9 @@
-import { LitElement, html, PropertyValues, TemplateResult } from 'lit';
+import { LitElement, html, PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { Content, ContentId } from '../content/content';
 import { Model } from '../model/model';
 import { contentStore } from '../resourcestore/';
-import { ModelLibrary, libraryStore } from '../model/libraryStore';
+import { libraryStore, ModelStore } from '../model/libraryStore';
 import { DebugController } from '../util/DebugController';
 
 export abstract class BaseBlock extends LitElement {
@@ -12,42 +12,59 @@ export abstract class BaseBlock extends LitElement {
   @state() protected content?: Content;
   @state() protected model?: Model;
   @state() protected error: string | null = null;
-  @state() protected library?: ModelLibrary;
+  @state() protected modelStore?: ModelStore;
 
-  private unsubscribe: (() => void) | null = null;
+  private unsubscribeContent: (() => void) | null = null;
+  private unsubscribeLibrary: (() => void) | null = null;
   protected debugController: DebugController;
+  private initialized: boolean = false;
 
   constructor() {
     super();
-    ;
     this.debugController = new DebugController(this);
   }
 
   async connectedCallback() {
-    ;
     super.connectedCallback();
-    this.library = libraryStore.value;
+    ;
+    this.unsubscribeLibrary = libraryStore.subscribe(this.handleLibraryChange.bind(this));
     await this.initialize();
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     this.unsubscribeFromContent();
+    if (this.unsubscribeLibrary) {
+      this.unsubscribeLibrary();
+    }
+  }
+
+  private handleLibraryChange(modelStore: ModelStore, ready: boolean) {
+    this.modelStore = modelStore;
+    if (ready) {
+//      this.initialize();
+    }
   }
 
   protected async initialize() {
+    if (this.initialized) return;
+    
     try {
-      ;
       await this.initializeContent();
       this.subscribeToContent();
       await this.initializeModel();
       await this.initializeBlock();
+      this.initialized = true;
     } catch (error) {
       console.error('Initialization error:', error);
       this.error = `Initialization failed: ${
         error instanceof Error ? error.message : String(error)
       }`;
     }
+  }
+
+  protected async initializeBlock() {
+    // This method is intentionally left empty in the base class
   }
 
   protected async initializeContent() {
@@ -61,8 +78,8 @@ export abstract class BaseBlock extends LitElement {
   }
 
   protected async initializeModel() {
-    if (this.content) {
-      this.model = this.getModel();
+    if (this.content && this.modelStore) {
+      this.model = await this.getModel();
     }
 
     if (!this.model) {
@@ -70,22 +87,18 @@ export abstract class BaseBlock extends LitElement {
     }
   }
 
-  protected async initializeBlock() {
-    // Override in subclasses if needed
-  }
-
   private subscribeToContent() {
     this.unsubscribeFromContent();
-    this.unsubscribe = contentStore.subscribe(this.contentId, (content) => {
-      this.content = content || undefined;
-      this.requestUpdate();
-    });
+    // this.unsubscribeContent = contentStore.subscribe(this.contentId, (content) => {
+    //   this.content = content || undefined;
+    //   this.requestUpdate();
+    // });
   }
 
   private unsubscribeFromContent() {
-    if (this.unsubscribe) {
-      this.unsubscribe();
-      this.unsubscribe = null;
+    if (this.unsubscribeContent) {
+      this.unsubscribeContent();
+      this.unsubscribeContent = null;
     }
   }
 
@@ -102,15 +115,14 @@ export abstract class BaseBlock extends LitElement {
     }
   }
 
-  protected getModel(): Model | undefined {
-    if (this.model) return this.model;
-    if (!this.content) return undefined;
+  protected async getModel(): Promise<Model | undefined> {
+    if (!this.content || !this.modelStore) return undefined;
 
-    const { modelInfo, modelDefinition } = this.content;
-    if (modelDefinition) return modelDefinition;
-    if (!modelInfo.ref || !this.library) return undefined;
+    const { modelInfo } = this.content;
+    if (this.content.modelDefinition) return this.content.modelDefinition;
+    if (!modelInfo.ref) return undefined;
 
-    return this.library.getDefinition(modelInfo.ref, modelInfo.type);
+    return this.modelStore.getDefinition(modelInfo.ref, modelInfo.type);
   }
 
   protected updated(changedProperties: PropertyValues) {
@@ -122,7 +134,7 @@ export abstract class BaseBlock extends LitElement {
     });
   }
 
-  render(): TemplateResult {
+  render() {
     if (this.error) {
       return html`<div class="error">${this.error}</div>`;
     }
@@ -135,9 +147,9 @@ export abstract class BaseBlock extends LitElement {
     `;
   }
 
-  protected abstract renderContent(): TemplateResult;
+  protected abstract renderContent(): unknown;
 
-  protected renderPath(): TemplateResult {
+  protected renderPath() {
     return html`
       <div class="path-display" @click=${this.handlePathClick}>Current Path: ${this.path}</div>
     `;
@@ -154,7 +166,7 @@ export abstract class BaseBlock extends LitElement {
     );
   }
 
-  protected renderDebug(): TemplateResult {
+  protected renderDebug() {
     return html`
       ${this.debugController.renderDebugButton()} ${this.debugController.renderDebugInfo()}
     `;

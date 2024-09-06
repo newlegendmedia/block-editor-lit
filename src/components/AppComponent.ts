@@ -2,6 +2,8 @@ import { LitElement, html, css, TemplateResult } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { documentManager, storageAdapter } from '../store';
 import { Document, DocumentId } from '../content/content';
+import { libraryStore } from '../model/libraryStore';
+import { loadDefaultSchema } from '../modelstore/loadDefaultSchema';
 import './DocumentComponent';
 import './SidebarComponent';
 import './PathRenderer';
@@ -63,6 +65,37 @@ export class AppComponent extends LitElement {
 		storageAdapter.clearAllData();
 	}
 
+	async initializeApp() {
+		try {
+		  // Load the default schema
+		  await loadDefaultSchema();
+	  
+		  // Wait for the libraryStore to be ready
+		  let unsubscribe: (() => void) | undefined;
+		  await new Promise<void>((resolve) => {
+			unsubscribe = libraryStore.subscribe((_, ready) => {
+			  if (ready) {
+				resolve();
+			  }
+			});
+		  });
+	  
+		  // Unsubscribe after resolution
+		  if (unsubscribe) {
+			unsubscribe();
+		  }
+	  
+		  ;
+	  
+		  // Continue with the rest of your app initialization
+		  // ...
+		} catch (error) {
+		  console.error('Failed to initialize the app:', error);
+		  // Handle the error appropriately (e.g., show an error message to the user)
+		}
+	}
+	  
+
 	async connectedCallback() {
 		super.connectedCallback();
 		await this.loadDocuments();
@@ -87,6 +120,7 @@ export class AppComponent extends LitElement {
 	private async createNewDocument() {
 		try {
 			this.isLoading = true;
+			await this.initializeApp();
 			const newDocument = await documentManager.createDocument('New Document', 'notion');
 			this.allDocuments = [...this.allDocuments, newDocument];
 			await this.openDocument(newDocument.id);

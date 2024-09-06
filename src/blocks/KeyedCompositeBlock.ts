@@ -79,12 +79,11 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
     if (existingChildId) {
       const existingContent = await contentStore.get(existingChildId);
       if (existingContent) {
-;
         return existingContent;
       }
     }
     const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(prop);
-;   if(!modelDefinition) throw new Error('Model definition not found');
+    if(!modelDefinition) throw new Error('Model definition not found');
     return await contentStore.create(
       modelInfo,
       modelDefinition,
@@ -100,6 +99,8 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
     const childProperties = this.getModelProperties();
     this.childBlocks = {} as KeyedChildren;
 
+    ;
+    
     if (!Array.isArray(compositeContent.children)) {
       compositeContent.children = [];
     }
@@ -142,16 +143,16 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
       await this.updateChildStructure();
       return 'inline:' + this.contentId + ':' + key;
     }
-
+  
     const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(itemType);
     if(!modelDefinition) throw new Error('Model definition not found');
     const newChildContent = await contentStore.create(modelInfo, modelDefinition, content, this.contentId);
     const newChildId = newChildContent.id;
-
+  
     if (!this.content) {
       throw new Error('Content is not initialized');
     }
-
+  
     if (isCompositeModel(itemType)) {
       await contentStore.update(newChildId, (content) => ({
         ...content,
@@ -159,7 +160,7 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
         content: {},
       }));
     }
-
+  
     (this.childBlocks as KeyedChildren)[key] = newChildId;
     
     await this.updateContent((currentContent) => {
@@ -168,7 +169,7 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
       updatedContent.children.push(newChildId);
       return updatedContent;
     });
-
+  
     await this.updateChildStructure();
     return newChildId;
   }

@@ -19,7 +19,6 @@ export abstract class CompositeBlock<T extends CompositeType> extends BaseBlock 
   }
 
   protected async initializeBlock() {
-    await super.initializeBlock();
     await this.initializeChildBlocks();
   }
 

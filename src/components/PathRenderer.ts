@@ -8,7 +8,7 @@ import {
   isKeyedCompositeContent,
 } from '../content/content';
 import { contentStore } from '../resourcestore';
-import { isIndexedComposite, isKeyedComposite, isElement, isObject, Model } from '../model/model';
+import { isIndexedCompositeModel, isKeyedCompositeModel, isElement, isObject, Model } from '../model/model';
 import { ComponentFactory } from '../util/ComponentFactory';
 import { libraryStore } from '../model/libraryStore';
 import { ReactiveController, ReactiveControllerHost } from 'lit';
@@ -74,7 +74,7 @@ class PathController implements ReactiveController {
 
       for (let i = 1; i < pathParts.length; i++) {
         const part = pathParts[i];
-        const childId = this.getChildId(currentContent, part);
+        const childId = await this.getChildId(currentContent, part);
 
         if (!childId) {
           throw new Error(`Child content not found for key: ${part}`);
@@ -103,28 +103,28 @@ class PathController implements ReactiveController {
     this.host.requestUpdate();
   }
 
-  private getModelForBlock(block: Content): Model | undefined {
+  private async getModelForBlock(block: Content): Promise<Model | undefined> {
     return (
       block.modelDefinition ||
-      libraryStore.value.getDefinition(block.modelInfo.ref!, block.modelInfo.type)
+      await libraryStore.value.getDefinition(block.modelInfo.ref!, block.modelInfo.type)
     );
   }
 
-  private getChildId(content: Content, pathPart: string): ContentId | undefined {
-    const model = this.getModelForBlock(content);
+  private async getChildId(content: Content, pathPart: string): Promise<ContentId | undefined> {
+    const model = await this.getModelForBlock(content);
     if (!model) {
       console.error(`Model not found for block: ${content.id}`);
       return undefined;
     }
     const childKey = pathPart;
-    if (isIndexedComposite(model)) {
+    if (isIndexedCompositeModel(model)) {
       const index = parseInt(childKey, 10);
       if (isIndexedCompositeContent(content)) {
         if (!isNaN(index) && index >= 0 && index < content.children.length) {
           return content.children[index];
         }
       }
-    } else if (isKeyedComposite(model)) {
+    } else if (isKeyedCompositeModel(model)) {
       if (isKeyedCompositeContent(content)) {
         // Handle keyed composite (object)
         if (isObject(model) && model.inlineChildren) {
@@ -134,6 +134,7 @@ class PathController implements ReactiveController {
             return childContentId;
           }
         }
+        ;
         return content.content[pathPart];
       }
     }
@@ -187,7 +188,6 @@ export class PathRenderer extends LitElement {
     ;
     return ComponentFactory.createComponent(
       content.id || this.pathController.targetContentId,
-      libraryStore.value,
       this.path
     );
   }
