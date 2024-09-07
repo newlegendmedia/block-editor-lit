@@ -5,6 +5,7 @@ import { Model } from '../model/model';
 import { contentStore } from '../resourcestore/';
 import { libraryStore, ModelStore } from '../model/libraryStore';
 import { DebugController } from '../util/DebugController';
+import '../components/Breadcrumbs';
 
 export abstract class BaseBlock extends LitElement {
   @property({ type: String }) contentId: ContentId = '';
@@ -26,7 +27,6 @@ export abstract class BaseBlock extends LitElement {
 
   async connectedCallback() {
     super.connectedCallback();
-    ;
     this.unsubscribeLibrary = libraryStore.subscribe(this.handleLibraryChange.bind(this));
     await this.initialize();
   }
@@ -42,7 +42,7 @@ export abstract class BaseBlock extends LitElement {
   private handleLibraryChange(modelStore: ModelStore, ready: boolean) {
     this.modelStore = modelStore;
     if (ready) {
-//      this.initialize();
+      // this.initialize();
     }
   }
 
@@ -89,10 +89,7 @@ export abstract class BaseBlock extends LitElement {
 
   private subscribeToContent() {
     this.unsubscribeFromContent();
-    // this.unsubscribeContent = contentStore.subscribe(this.contentId, (content) => {
-    //   this.content = content || undefined;
-    //   this.requestUpdate();
-    // });
+    // Subscription logic here
   }
 
   private unsubscribeFromContent() {
@@ -119,12 +116,10 @@ export abstract class BaseBlock extends LitElement {
     if (!this.content || !this.modelStore) return undefined;
 
     const { modelInfo } = this.content;
-    if (this.content.modelDefinition) {
-      return this.content.modelDefinition;
-    }
+    if (this.content.modelDefinition) return this.content.modelDefinition;
     if (!modelInfo.ref) return undefined;
 
-    return await this.modelStore.getDefinition(modelInfo.ref, modelInfo.type);
+    return this.modelStore.getDefinition(modelInfo.ref, modelInfo.type);
   }
 
   protected updated(changedProperties: PropertyValues) {
@@ -144,7 +139,9 @@ export abstract class BaseBlock extends LitElement {
       return html`<div>Loading...</div>`;
     }
     return html`
+      ${this.renderDebug()}
       ${this.renderPath()}
+      <div style="font-size:11px; margin-bottom:5px;">${this.contentId}</div>
       <div>${this.renderContent()}</div>
     `;
   }
@@ -153,15 +150,18 @@ export abstract class BaseBlock extends LitElement {
 
   protected renderPath() {
     return html`
-      <div class="path-display" @click=${this.handlePathClick}>Current Path: ${this.path}</div>
+      <h-breadcrumbs 
+        .path=${this.path}
+        @breadcrumb-clicked=${this.handleBreadcrumbClick}
+      ></h-breadcrumbs>
     `;
   }
 
-  private handlePathClick(e: Event) {
-    e.stopPropagation();
+  private handleBreadcrumbClick(e: CustomEvent) {
+    const clickedPath = e.detail.path;
     this.dispatchEvent(
       new CustomEvent('path-clicked', {
-        detail: { path: this.path },
+        detail: { path: clickedPath },
         bubbles: true,
         composed: true,
       })

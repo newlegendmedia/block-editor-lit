@@ -23,6 +23,15 @@ export class ContentStoreViewer extends LitElement {
 		.content-store-viewer {
 			padding: 10px;
 		}
+		.content-item-header {
+			display: flex;
+			align-items: left;
+			flex-direction: column;
+			font-size: 14px;
+			line-height: 1;
+			justify-content: space-between;
+			padding: 4px 0;
+		}
 		.content-item {
 			border: 1px solid #ccc;
 			border-radius: 4px;
@@ -30,15 +39,17 @@ export class ContentStoreViewer extends LitElement {
 			padding: 8px;
 		}
 		.content-id {
-			font-weight: bold;
-			margin-bottom: 4px;
+			font-size: 11px;
+			margin-top: 6px;
 		}
 		.content-type {
-			color: #666;
-			margin-bottom: 4px;
+			font-weight: bold;
 		}
 		.content-details {
 			margin-top: 4px;
+		}
+		.level-wrap {
+			margin-left: 15px;
 		}
 		.property-list {
 			list-style-type: none;
@@ -61,7 +72,7 @@ export class ContentStoreViewer extends LitElement {
 			text-align: right;
 		}
 		.hierarchical-view {
-			margin-left: 20px;
+			margin-left: 10px;
 		}
 		.toggle-button {
 			margin-bottom: 10px;
@@ -146,7 +157,7 @@ export class ContentStoreViewer extends LitElement {
 		if (!hierarchicalItem) return html``;
 
 		return html`
-			<div style="margin-left: ${level * 20}px;">
+			<div class="level-wrap">
 				${this.renderContent(hierarchicalItem)}
 				${hierarchicalItem.children.map((child) =>
 					this.renderHierarchicalContents(child, level + 1)
@@ -170,8 +181,10 @@ export class ContentStoreViewer extends LitElement {
 	private renderContent(content: Content) {
 		return html`
 			<div class="content-item">
-				<div class="content-id">${content.id}</div>
-				<div class="content-type">${content.modelInfo.type} | ${content.modelInfo.key}</div>
+				<div class="content-item-header">
+					<div class="content-type">${content.modelInfo.type} | ${content.modelInfo.key}</div>
+					<div class="content-id">${content.id}</div>
+				</div>
 				${content.modelInfo.ref ? html`<div>Model Ref: ${content.modelInfo.ref}</div>` : ''}
 				<div class="content-details">${this.renderContentDetails(content)}</div>
 			</div>

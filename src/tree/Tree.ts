@@ -116,30 +116,34 @@ export class Tree<K, Item> {
 	}
 
 	remove(nodeId: K): void {
-		if (nodeId === this.root.id) {
-			console.error('Cannot remove the root node.');
-			return;
-		}
-
-		// find the node to remove
-		const nodeToRemove = this.nodes.get(nodeId);
-		if (!nodeToRemove) return;
-
-		// find it's parent node
-		const parentNode = this.nodes.get(nodeToRemove.parentId!);
-		if (!parentNode) return;
-
-		// remove the node from the parent's children
-		const childIndex = parentNode.children.findIndex((child) => child.id === nodeId);
-		if (childIndex !== -1) {
-			parentNode.children.splice(childIndex, 1);
-		}
+		const node = this.nodes.get(nodeId);
+		if (!node) return;
 
 		// Recursively remove all children
-		nodeToRemove.children.forEach((child) => this.remove(child.id));
+		node.children.forEach((child) => {
+			this.remove(child.id);
+		});
 
-		// Finally, remove the node itself
+		this.removeSingleNode(nodeId);
+	}
+
+	removeSingleNode(nodeId: K): void {
+		const node = this.nodes.get(nodeId);
+		if (!node) return;
+
+		// Remove the node itself
 		this.nodes.delete(nodeId);
+
+		// Remove from parent
+		if (node.parentId) {
+			const parent = this.nodes.get(node.parentId);
+			if (parent) {
+				const index = parent.children.findIndex((child) => child.id === nodeId);
+				if (index !== -1) {
+					parent.children.splice(index, 1);
+				}
+			}
+		}
 	}
 
 	replace(id: K, item: Item): void {

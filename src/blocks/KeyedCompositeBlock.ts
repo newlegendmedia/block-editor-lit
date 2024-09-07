@@ -1,5 +1,5 @@
 import { CompositeBlock, KeyedChildren } from './CompositeBlock';
-import { Content, ContentId, CompositeContent, KeyedCompositeContent } from '../content/content';
+import { Content, CompositeContent, KeyedCompositeContent } from '../content/content';
 import { CompositeModel, isCompositeModel, isElement, Model } from '../model/model';
 import { contentStore } from '../resourcestore';
 import { ContentFactory } from '../store/ContentFactory';
@@ -135,47 +135,48 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
 		);
 	}
 
-	protected async addChildBlock(itemType: Model, key: string): Promise<ContentId> {
-		if (this.inlineChildren && isElement(itemType)) {
-			(this.childBlocks as Record<string, any>)[key] = this.getDefaultValue(itemType);
-			await this.updateChildStructure();
-			return 'inline:' + this.contentId + ':' + key;
-		}
+// 	protected async addChildBlock(itemType: Model, key: string): Promise<ContentId> {
+// 		alert("KeyedCompositeBlock.addChildBlock");
+// 		if (this.inlineChildren && isElement(itemType)) {
+// 			(this.childBlocks as Record<string, any>)[key] = this.getDefaultValue(itemType);
+// 			await this.updateChildStructure();
+// 			return 'inline:' + this.contentId + ':' + key;
+// 		}
 
-		const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(itemType);
-		if (!modelDefinition) throw new Error('Model definition not found');
-		const newChildContent = await contentStore.create(
-			modelInfo,
-			modelDefinition,
-			content,
-			this.contentId
-		);
-		const newChildId = newChildContent.id;
+// 		const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(itemType);
+// 		if (!modelDefinition) throw new Error('Model definition not found');
+// 		const newChildContent = await contentStore.create(
+// 			modelInfo,
+// 			modelDefinition,
+// 			content,
+// 			this.contentId
+// 		);
+// 		const newChildId = newChildContent.id;
 
-		if (!this.content) {
-			throw new Error('Content is not initialized');
-		}
+// 		if (!this.content) {
+// 			throw new Error('Content is not initialized');
+// 		}
 
-		if (isCompositeModel(itemType)) {
-			await contentStore.update(newChildId, (content) => ({
-				...content,
-				children: [],
-				content: {},
-			}));
-		}
+// 		if (isCompositeModel(itemType)) {
+// 			await contentStore.update(newChildId, (content) => ({
+// 				...content,
+// 				children: [],
+// 				content: {},
+// 			}));
+// 		}
 
-		(this.childBlocks as KeyedChildren)[key] = newChildId;
+// 		(this.childBlocks as KeyedChildren)[key] = newChildId;
 
-		await this.updateContent((currentContent) => {
-			const updatedContent = currentContent as CompositeContent;
-			(updatedContent.content as KeyedCompositeContent)[key] = newChildId;
-			updatedContent.children.push(newChildId);
-			return updatedContent;
-		});
+// 		await this.updateContent((currentContent) => {
+// 			const updatedContent = currentContent as CompositeContent;
+// //			(updatedContent.content as KeyedCompositeContent)[key] = newChildId;
+// 			updatedContent.children.push(newChildId);
+// 			return updatedContent;
+// 		});
 
-		await this.updateChildStructure();
-		return newChildId;
-	}
+// 		await this.updateChildStructure();
+// 		return newChildId;
+// 	}
 
 	protected async removeChildBlock(key: string): Promise<void> {
 		if (this.inlineChildren) {

@@ -12,8 +12,10 @@ export const AtomType = {
 
 export type AtomType = (typeof AtomType)[keyof typeof AtomType];
 
+export type ModelId = string;
+
 export interface BaseModel {
-  id: string;
+  id: ModelId;
   type: ModelType;
   key: string;
   name?: string;

@@ -66,10 +66,10 @@ class PathController implements ReactiveController {
     }
 
     try {
-      // Find the root content
-      let currentContent: Content | undefined = await contentStore.get(pathParts[0]);
+      // Find the root content using the first part of the path (root content key)
+      let currentContent: Content | undefined = await this.findRootContent(pathParts[0]);
       if (!currentContent) {
-        throw new Error(`Content not found for root: ${pathParts[0]}`);
+        throw new Error(`Root content not found for key: ${pathParts[0]}`);
       }
 
       for (let i = 1; i < pathParts.length; i++) {
@@ -103,6 +103,12 @@ class PathController implements ReactiveController {
     this.host.requestUpdate();
   }
 
+  private async findRootContent(rootKey: string): Promise<Content | undefined> {
+    // Fetch all contents and find the one with matching modelInfo.key
+    const allContents = await contentStore.getAll();
+    return allContents.find(content => content.modelInfo.key === rootKey);
+  }
+
   private async getModelForBlock(block: Content): Promise<Model | undefined> {
     return (
       block.modelDefinition ||
@@ -134,7 +140,6 @@ class PathController implements ReactiveController {
             return childContentId;
           }
         }
-        ;
         return content.content[pathPart];
       }
     }
@@ -184,8 +189,6 @@ export class PathRenderer extends LitElement {
     const content = this.pathController.targetContent;
     if (!content) return html`<div>Content not found</div>`;
 
-    // Render the entire content
-    ;
     return ComponentFactory.createComponent(
       content.id || this.pathController.targetContentId,
       this.path

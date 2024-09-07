@@ -34,6 +34,7 @@ export class ContentFactory {
 		} else if (isGroup(model)) {
 			return createGroupContent(model, modelInfo);
 		}
+		console.error(`Unsupported model type: ${model.type}`, model);
 		throw new Error(`Unsupported model type: ${model.type}`);
 
 		function createElementContent(

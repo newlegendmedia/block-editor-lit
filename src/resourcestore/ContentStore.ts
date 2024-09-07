@@ -33,14 +33,10 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		content: any,
 		parentId?: ContentId
 	): Promise<Content> {
-
-    ;
-
-    const id = generateId(
+		const id = generateId(
 			modelInfo.type ? modelInfo.type.slice(0, 3).toUpperCase() : ''
 		) as ContentId;
 		const newContent: Content = { id, modelInfo, modelDefinition, content };
-		;
 		await this.addCompositeContent(newContent, parentId);
 		return newContent;
 	}
@@ -53,7 +49,7 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		if (content) {
 			const updatedContent = updater(content);
 			const parentNode = this.tree.parent(id);
-			await this.updateCompositeContent(updatedContent, parentNode?.id, id); // Add the 'id' parameter
+			await this.updateCompositeContent(updatedContent, parentNode?.id); // Add the 'id' parameter
 			return updatedContent;
 		}
 		return undefined;
@@ -67,7 +63,6 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 			return;
 		}
 
-		;
 		await this.set(content, parentId);
 
 		if (isCompositeContent(content)) {
@@ -78,6 +73,13 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 				}
 			}
 		}
+	}
+
+	async remove(id: ContentId): Promise<void> {
+		this.tree.remove(id);
+		// Notify subscribers that the content has been removed
+		this.subscriptions.notify(id, null);
+		this.subscriptions.notifyAll();
 	}
 
 	async updateCompositeContent(content: Content, parentId?: ContentId): Promise<void> {

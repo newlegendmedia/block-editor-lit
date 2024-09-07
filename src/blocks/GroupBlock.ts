@@ -1,7 +1,6 @@
 // GroupBlock.ts
 import { html, css, TemplateResult } from 'lit';
 import { customElement, state, property } from 'lit/decorators.js';
-import { repeat } from 'lit/directives/repeat.js';
 import { until } from 'lit/directives/until.js';
 import { IndexedCompositeBlock } from './IndexedCompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';

@@ -1,8 +1,6 @@
-import { LitElement, html, css, TemplateResult } from 'lit';
+import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { documentManager, storageAdapter } from '../store';
-import { Document, DocumentId } from '../content/content';
-import { libraryStore } from '../model/libraryStore';
+import { DocumentId } from '../content/content';
 import { loadDefaultSchema } from '../modelstore/loadDefaultSchema';
 import './DocumentComponent';
 import './SidebarComponent';
@@ -11,212 +9,162 @@ import './Breadcrumbs';
 
 @customElement('app-component')
 export class AppComponent extends LitElement {
-	@state() private allDocuments: Document[] = [];
-	@state() private activeDocuments: Document[] = [];
-	@state() private activeDocumentId: DocumentId | null = null;
-	@state() private isSidebarOpen: boolean = true;
-	@state() private isDarkMode: boolean = false;
-	@state() private currentPath: string | null = null;
-	@state() private pathRenderError: string | null = null;
-	@state() private isLoading: boolean = false;
+  @state() private activeDocumentId: DocumentId | null = null;
+  @state() private isSidebarOpen: boolean = true;
+  @state() private isDarkMode: boolean = false;
+  @state() private currentPath: string | null = null;
+  @state() private pathRenderError: string | null = null;
+  @state() private isLoading: boolean = false;
 
-	static styles = css`
-		:host {
-			display: flex;
-			height: 100vh;
-			overflow: hidden;
-			color: var(--text-color);
-			background-color: var(--background-color);
-		}
-		.sidebar {
-			width: 350px;
-			overflow-y: auto;
-			background-color: var(--sidebar-bg-color);
-			transition: transform 0.3s ease-in-out;
-		}
-		.sidebar.closed {
-			transform: translateX(-250px);
-		}
-		.main-content {
-			flex-grow: 1;
-			overflow-y: auto;
-			padding: 20px;
-		}
-		.toggle-sidebar {
-			position: fixed;
-			top: 10px;
-			left: 10px;
-			z-index: 1000;
-		}
-		.theme-toggle {
-			position: fixed;
-			top: 10px;
-			right: 10px;
-			z-index: 1000;
-		}
-	`;
+  static styles = css`
+    :host {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      color: var(--text-color);
+      background-color: var(--background-color);
+    }
+    .sidebar {
+      width: 350px;
+      overflow-y: auto;
+      background-color: var(--sidebar-bg-color);
+      transition: transform 0.3s ease-in-out;
+    }
+    .sidebar.closed {
+      transform: translateX(-250px);
+    }
+    .main-content {
+      flex-grow: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    .toggle-sidebar {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+    }
+  `;
 
-	constructor() {
-		super();
-		this.addEventListener('toggle-sidebar', this.toggleSidebar as EventListener);
-		this.addEventListener('toggle-theme', this.toggleTheme as EventListener);
-		this.addEventListener('path-clicked', this.handlePathClick as EventListener);
-		this.addEventListener('breadcrumb-clicked', this.handleBreadcrumbClick as EventListener);
-		storageAdapter.clearAllData();
-	}
+  constructor() {
+    super();
+    this.addEventListener('toggle-sidebar', this.toggleSidebar as EventListener);
+    this.addEventListener('toggle-theme', this.toggleTheme as EventListener);
+    this.addEventListener('path-clicked', this.handlePathClick as EventListener);
+    this.addEventListener('breadcrumb-clicked', this.handleBreadcrumbClick as EventListener);
+    this.addEventListener('document-opened', this.handleDocumentOpened as EventListener);
+    this.addEventListener('document-closed', this.handleDocumentClosed as EventListener);
+    this.addEventListener('document-deleted', this.handleDocumentDeleted as EventListener);
+  }
 
-	async initializeApp() {
-		try {
-		  // Load the default schema
-		  await loadDefaultSchema();
-	  
-		  // Wait for the libraryStore to be ready
-		  let unsubscribe: (() => void) | undefined;
-		  await new Promise<void>((resolve) => {
-			unsubscribe = libraryStore.subscribe((_, ready) => {
-			  if (ready) {
-				resolve();
-			  }
-			});
-		  });
-	  
-		  // Unsubscribe after resolution
-		  if (unsubscribe) {
-			unsubscribe();
-		  }
-	  
-		  ;
-	  
-		  // Continue with the rest of your app initialization
-		  // ...
-		} catch (error) {
-		  console.error('Failed to initialize the app:', error);
-		  // Handle the error appropriately (e.g., show an error message to the user)
-		}
-	}
-	  
+  async connectedCallback() {
+    super.connectedCallback();
+    await this.initializeApp();
+    this.applyTheme();
+  }
 
-	async connectedCallback() {
-		super.connectedCallback();
-		await this.loadDocuments();
-		this.applyTheme();
-	}
+  private async initializeApp() {
+    try {
+      this.isLoading = true;
+      await loadDefaultSchema();
+      // Additional initialization if needed
+    } catch (error) {
+      console.error('Failed to initialize the app:', error);
+    } finally {
+      this.isLoading = false;
+    }
+  }
 
-	private handleBreadcrumbClick(event: CustomEvent) {
-		this.currentPath = event.detail.path;
-		this.pathRenderError = null;
-		this.requestUpdate();
-	}
+  private handleDocumentOpened(event: CustomEvent) {
+    this.activeDocumentId = event.detail.documentId;
+    this.currentPath = null;
+    this.requestUpdate();
+  }
 
-	private async loadDocuments() {
-		try {
-			this.allDocuments = await documentManager.getAllDocuments();
-			this.activeDocuments = this.allDocuments.filter((doc) => doc.isActive);
-		} catch (error) {
-			console.error('Failed to load documents:', error);
-		}
-	}
+  private handleDocumentClosed(event: CustomEvent) {
+    if (this.activeDocumentId === event.detail.documentId) {
+      this.activeDocumentId = null;
+      this.currentPath = null;
+    }
+    this.requestUpdate();
+  }
 
-	private async createNewDocument() {
-		try {
-			this.isLoading = true;
-			await this.initializeApp();
-			const newDocument = await documentManager.createDocument('New Document', 'notion');
-			this.allDocuments = [...this.allDocuments, newDocument];
-			await this.openDocument(newDocument.id);
-		} catch (error) {
-			console.error('Failed to create new document:', error);
-		} finally {
-			this.isLoading = false;
-		}
-	}
+  private handleDocumentDeleted(event: CustomEvent) {
+    if (this.activeDocumentId === event.detail.documentId) {
+      this.activeDocumentId = null;
+      this.currentPath = null;
+    }
+    this.requestUpdate();
+  }
 
-	private async openDocument(id: DocumentId) {
-		try {
-			this.isLoading = true;
-			;
-			const theDocument = await documentManager.getDocument(id);
-			if (theDocument) {
-				await documentManager.activateDocument(id);
-				this.activeDocuments = this.allDocuments.filter((doc) => doc.isActive);
-				this.activeDocumentId = id;
+  private toggleSidebar() {
+    this.isSidebarOpen = !this.isSidebarOpen;
+  }
 
-				// Update the current path to the document's root content ID
-				this.currentPath = theDocument.rootContent;
-				;
-			}
-		} catch (error) {
-			console.error('Failed to open document:', error);
-		} finally {
-			this.isLoading = false;
-		}
-	}
+  private toggleTheme() {
+    this.isDarkMode = !this.isDarkMode;
+    this.applyTheme();
+  }
 
-	private async closeDocument(id: DocumentId) {
-		await documentManager.deactivateDocument(id);
-		this.activeDocuments = this.allDocuments.filter((doc) => doc.isActive);
-		if (this.activeDocumentId === id) {
-			this.activeDocumentId = this.activeDocuments.length > 0 ? this.activeDocuments[0].id : null;
-		}
-	}
+  private applyTheme() {
+    document.body.classList.toggle('dark-theme', this.isDarkMode);
+  }
 
-	private toggleSidebar() {
-		this.isSidebarOpen = !this.isSidebarOpen;
-	}
+  private handlePathClick(event: CustomEvent) {
+    this.currentPath = event.detail.path;
+    this.pathRenderError = null;
+    this.requestUpdate();
+  }
 
-	private toggleTheme() {
-		this.isDarkMode = !this.isDarkMode;
-		this.applyTheme();
-	}
+  private handleBreadcrumbClick(event: CustomEvent) {
+    this.currentPath = event.detail.path;
+    this.pathRenderError = null;
+    this.requestUpdate();
+  }
 
-	private applyTheme() {
-		document.body.classList.toggle('dark-theme', this.isDarkMode);
-	}
-
-	private handlePathClick(event: CustomEvent) {
-		this.currentPath = event.detail.path;
-		this.pathRenderError = null;
-		this.requestUpdate();
-	}
-
-	render(): TemplateResult {
-		return html`
-			<button class="toggle-sidebar" @click=${this.toggleSidebar}>
-				${this.isSidebarOpen ? '←' : '→'}
-			</button>
-			<button class="theme-toggle" @click=${this.toggleTheme}>
-				${this.isDarkMode ? '☀️' : '🌙'}
-			</button>
-			<div class="sidebar ${this.isSidebarOpen ? '' : 'closed'}">
-				<sidebar-component
-					.allDocuments=${this.allDocuments}
-					.activeDocuments=${this.activeDocuments}
-					.activeDocumentId=${this.activeDocumentId}
-					@document-selected=${(e: CustomEvent) => this.openDocument(e.detail.documentId)}
-					@document-closed=${(e: CustomEvent) => this.closeDocument(e.detail.documentId)}
-					@new-document=${this.createNewDocument}
-				></sidebar-component>
-			</div>
-			<div class="main-content">
-				${this.isLoading
-					? html`<div>Loading...</div>`
-					: this.currentPath
-					? html`
-							<h-breadcrumbs .path=${this.currentPath}></h-breadcrumbs>
-							<path-renderer
-								.path=${this.currentPath}
-								@render-error=${(e: CustomEvent) => {
-									this.pathRenderError = e.detail.error;
-								}}
-							></path-renderer>
-							${this.pathRenderError
-								? html`<div class="error">Error rendering path: ${this.pathRenderError}</div>`
-								: ''}
-					  `
-					: this.activeDocumentId
-					? html`<document-component .documentId=${this.activeDocumentId}></document-component>`
-					: html`<p>Select or create a document to begin.</p>`}
-			</div>
-		`;
-	}
+  render() {
+    return html`
+      <button class="toggle-sidebar" @click=${this.toggleSidebar}>
+        ${this.isSidebarOpen ? '←' : '→'}
+      </button>
+      <button class="theme-toggle" @click=${this.toggleTheme}>
+        ${this.isDarkMode ? '☀️' : '🌙'}
+      </button>
+      <div class="sidebar ${this.isSidebarOpen ? '' : 'closed'}">
+        <sidebar-component></sidebar-component>
+      </div>
+      <div class="main-content">
+        ${this.isLoading
+          ? html`<div>Loading...</div>`
+          : this.renderMainContent()}
+      </div>
+    `;
+  }
+	
+  private renderMainContent() {
+    if (this.currentPath) {
+      return html`
+        <h-breadcrumbs .path=${this.currentPath}></h-breadcrumbs>
+        <path-renderer
+          .path=${this.currentPath}
+          @render-error=${(e: CustomEvent) => {
+            this.pathRenderError = e.detail.error;
+          }}
+        ></path-renderer>
+        ${this.pathRenderError
+          ? html`<div class="error">Error rendering path: ${this.pathRenderError}</div>`
+          : ''}
+      `;
+    } else if (this.activeDocumentId) {
+      return html`<document-component .documentId=${this.activeDocumentId}></document-component>`;
+    } else {
+      return html`<p>Select or create a document to begin.</p>`;
+    }
+  }
 }

@@ -1,5 +1,3 @@
-// DocumentComponent.ts
-
 import { LitElement, html, TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { ComponentFactory } from '../util/ComponentFactory';
@@ -35,14 +33,6 @@ export class DocumentComponent extends LitElement {
       console.error('Error loading document:', error);
     }
     this.requestUpdate();
-  }
-
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    // Close the document when the component is removed from the DOM
-    if (this.documentId) {
-      documentManager.deactivateDocument(this.documentId);
-    }
   }
 
   render() {

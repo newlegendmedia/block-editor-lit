@@ -1,6 +1,5 @@
 //import { ContentStore } from './XXContentStore.ts';
 import { IndexedDBAdapter } from './IndexedDBAdapter.ts';
-import { DocumentManager } from './DocumentManager.ts';
 
 // Create a singleton instance of IndexedDBAdapter
 export const storageAdapter = new IndexedDBAdapter();
@@ -9,7 +8,7 @@ export const storageAdapter = new IndexedDBAdapter();
 //export const contentStore = new ContentStore(storageAdapter);
 
 // Create a singleton instance of DocumentManager
-export const documentManager = new DocumentManager();
+export { documentManager } from './DocumentManager';
 
 // Export the types for use in other files
 // export type { ContentStore } from './ContentStore';

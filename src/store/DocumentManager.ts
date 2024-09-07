@@ -1,81 +1,39 @@
-// documentManager.ts
-
+import { Document, DocumentId, ContentId } from '../content/content';
 import { contentStore } from '../resourcestore';
-import { Content, Document, DocumentId } from '../content/content';
-import { ObjectModel } from '../model/model';
-import { ContentFactory } from '../store/ContentFactory';
 import { libraryStore } from '../model/libraryStore';
 import { generateId } from '../util/generateId';
 
-export class DocumentManager {
+class DocumentManager {
   private documents: Map<DocumentId, Document> = new Map();
 
-  constructor(private modelLibrary = libraryStore.value) {}
-
-  async createDocument(title: string, docModelKey: string = 'documentRoot'): Promise<Document> {
-    // Get the doc model
-    let docModel = await this.modelLibrary.getDefinition(docModelKey, 'object');
-    if (!docModel) {
-      throw new Error(`Document model not found: ${docModelKey}`);
+  async createDocument(title: string): Promise<Document> {
+    const modelStore = libraryStore.value;
+    const notionModel = await modelStore.getDefinition('notion', 'object');
+    if (!notionModel) {
+      throw new Error('Notion model not found');
     }
-  
-    // Create the document default content
-    const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(
-      docModel as ObjectModel
+
+    const rootContent = await contentStore.create(
+      { type: 'object', key: 'notion' },
+      notionModel,
+      { title }
     );
-  
-    // Save the doc content
-    const rootContentId = generateId('DOC');
-    await contentStore.set({
-      id: rootContentId,
-      modelInfo,
-      modelDefinition,
-      content
-    });
-  
-    // Create the document using the ID of the newly created content
-    const now = new Date().toISOString();
+
     const document: Document = {
-      id: generateId('DOC'),
+      id: generateId('DOC') as DocumentId,
       title,
-      rootContent: rootContentId,
-      createdAt: now,
-      updatedAt: now,
+      rootContent: rootContent.id,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       isActive: false,
     };
-  
-    // Save the document in the DocumentManager
+
     this.documents.set(document.id, document);
-  
     return document;
   }
 
   async getDocument(id: DocumentId): Promise<Document | undefined> {
-    return this.documents.get(id) || undefined;
-  }
-
-  async updateDocument(id: DocumentId, updates: Partial<Document>): Promise<Document | undefined> {
-    const document = this.documents.get(id);
-    if (!document) return undefined;
-
-    const updatedDocument = { ...document, ...updates, updatedAt: new Date().toISOString() };
-    this.documents.set(id, updatedDocument);
-    return updatedDocument;
-  }
-
-  async deleteDocument(id: DocumentId): Promise<void> {
-    const document = this.documents.get(id);
-    if (!document) return;
-
-    await contentStore.delete(document.rootContent);
-    this.documents.delete(id);
-  }
-
-  async getDocumentContent(documentId: DocumentId): Promise<Content | undefined> {
-    const document = this.documents.get(documentId);
-    if (!document) return undefined;
-
-    return contentStore.get(document.rootContent);
+    return this.documents.get(id);
   }
 
   async getAllDocuments(): Promise<Document[]> {
@@ -97,4 +55,34 @@ export class DocumentManager {
       this.documents.set(id, document);
     }
   }
+
+  async closeDocument(id: DocumentId): Promise<void> {
+    const document = this.documents.get(id);
+    if (document) {
+      await this.deactivateDocument(id);
+      await contentStore.remove(document.rootContent);
+    }
+  }
+
+  async deleteDocument(id: DocumentId): Promise<void> {
+    const document = this.documents.get(id);
+    if (document) {
+      await this.deleteContentRecursively(document.rootContent);
+      this.documents.delete(id);
+    }
+  }
+
+  private async deleteContentRecursively(contentId: ContentId): Promise<void> {
+    const content = await contentStore.get(contentId);
+    if (content) {
+      if ('children' in content && Array.isArray(content.children)) {
+        for (const childId of content.children) {
+          await this.deleteContentRecursively(childId);
+        }
+      }
+      await contentStore.delete(contentId);
+    }
+  }
 }
+
+export const documentManager = new DocumentManager();

@@ -1,6 +1,5 @@
 import { BaseBlock } from './BaseBlock';
 import { ContentId, CompositeContent } from '../content/content';
-import { Model } from '../model/model';
 
 export type KeyedChildren = Record<string, ContentId>;
 export type IndexedChildren = ContentId[];
@@ -24,10 +23,10 @@ export abstract class CompositeBlock<T extends CompositeType> extends BaseBlock 
 	protected abstract initializeChildBlocks(): Promise<void>;
 	protected abstract initializeIndexedChildren(): Promise<void>;
 	protected abstract initializeKeyedChildren(): Promise<void>;
-	protected abstract addChildBlock(
-		itemType: Model,
-		keyOrIndex?: T extends 'keyed' ? string : number
-	): Promise<ContentId>;
+	// protected abstract addChildBlock(
+	// 	itemType: Model,
+	// 	keyOrIndex?: T extends 'keyed' ? string : number
+	// ): Promise<ContentId>;
 	protected abstract removeChildBlock(
 		keyOrIndex: T extends 'keyed' ? string : number
 	): Promise<void>;

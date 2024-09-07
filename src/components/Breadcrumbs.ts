@@ -8,30 +8,29 @@ export class Breadcrumbs extends LitElement {
   static styles = css`
     :host {
       display: block;
-      margin-bottom: 20px;
+      margin-bottom: 5px;
+      font-size: 14px;
     }
     .breadcrumbs-container {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      padding: 8px;
+      padding: 5px;
       background-color: #f0f0f0;
       border-radius: 4px;
     }
     .breadcrumb {
       cursor: pointer;
-      margin-right: 8px;
       color: #0077cc;
     }
     .breadcrumb:hover {
       text-decoration: underline;
     }
     .separator {
-      margin: 0 8px;
+      margin: 0 6px;
       color: #666;
     }
     .current {
-      font-weight: bold;
       color: #333;
     }
   `;
