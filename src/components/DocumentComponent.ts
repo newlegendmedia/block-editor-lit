@@ -7,43 +7,45 @@ import { Document, Content } from '../content/content';
 
 @customElement('document-component')
 export class DocumentComponent extends LitElement {
-	@property({ type: String }) documentId!: string;
-	@state() private document: Document | undefined = undefined;
-	@state() private rootContent: Content | undefined = undefined;
-	@state() private rootComponent: TemplateResult | undefined = undefined;
+  @property({ type: String }) documentId!: string;
+  @state() private document: Document | undefined = undefined;
+  @state() private rootContent: Content | undefined = undefined;
+  @state() private rootComponent: TemplateResult | undefined = undefined;
 
-	async connectedCallback() {
-		super.connectedCallback();
-		await this.loadDocument();
-	}
+  async connectedCallback() {
+    super.connectedCallback();
+    await this.loadDocument();
+  }
 
-	async loadDocument() {
-		try {
-			this.document = await documentManager.getDocument(this.documentId);
-			if (this.document) {
-				this.rootContent = await contentStore.get(this.document.rootContent);
-				if (this.rootContent) {
-					// Change this line to use only the document ID
-					this.rootComponent = await ComponentFactory.createComponent(
-						this.rootContent.id,
-						`${this.documentId}`
-					);
-				}
-			}
-		} catch (error) {
-			console.error('Error loading document:', error);
-		}
-		this.requestUpdate();
-	}
+  async loadDocument() {
+    try {
+      this.document = await documentManager.getDocument(this.documentId);
+      if (this.document) {
+		  this.rootContent = await contentStore.get(this.document.rootContent);
+		  console.log('DocumentComponent: loadDocument - Root Content', this.rootContent);
+        if (this.rootContent) {
+			// Use the document ID as the parent path
+			console.log('DocumentComponent: createComponent - Creating root component with ID, Path', this.rootContent.id, this.documentId);
+          this.rootComponent = await ComponentFactory.createComponent(
+			  this.rootContent.id,
+			  `${this.documentId}.${this.rootContent.modelInfo.key}`
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error loading document:', error);
+    }
+    this.requestUpdate();
+  }
 
-	render() {
-		if (!this.document || !this.rootContent) {
-			return html`<div>Loading document...</div>`;
-		}
+  render() {
+    if (!this.document || !this.rootContent) {
+      return html`<div>Loading document...</div>`;
+    }
 
-		return html`
-			<h1>${this.document.title}</h1>
-			${this.rootComponent}
-		`;
-	}
+    return html`
+      <h1>${this.document.title}</h1>
+      ${this.rootComponent}
+    `;
+  }
 }

@@ -6,6 +6,7 @@ import './DocumentComponent';
 import './SidebarComponent';
 import './PathRenderer';
 import './Breadcrumbs';
+import { documentManager } from '../store';
 
 @customElement('app-component')
 export class AppComponent extends LitElement {
@@ -57,11 +58,15 @@ export class AppComponent extends LitElement {
 		this.addEventListener('toggle-sidebar', this.toggleSidebar as EventListener);
 		this.addEventListener('toggle-theme', this.toggleTheme as EventListener);
 		this.addEventListener('path-clicked', this.handlePathClick as EventListener);
-		this.addEventListener('breadcrumb-clicked', this.handleBreadcrumbClick as EventListener);
+		this.addEventListener('breadcrumb-clicked', this.handleBreadcrumbClickWrapper as EventListener);
 		this.addEventListener('document-opened', this.handleDocumentOpened as EventListener);
 		this.addEventListener('document-closed', this.handleDocumentClosed as EventListener);
 		this.addEventListener('document-deleted', this.handleDocumentDeleted as EventListener);
-	}
+		this.addEventListener('document-id-only', ((e: Event) => {
+			const customEvent = e as CustomEvent<{ documentId: string }>;
+		  this.handleDocumentIdOnly(customEvent.detail.documentId);
+		}) as EventListener);
+	  }
 
 	async connectedCallback() {
 		super.connectedCallback();
@@ -101,7 +106,7 @@ export class AppComponent extends LitElement {
 		}
 		this.requestUpdate();
 	}
-
+	
 	private toggleSidebar() {
 		this.isSidebarOpen = !this.isSidebarOpen;
 	}
@@ -115,53 +120,95 @@ export class AppComponent extends LitElement {
 		document.body.classList.toggle('dark-theme', this.isDarkMode);
 	}
 
-	private handlePathClick(event: CustomEvent) {
-		this.currentPath = event.detail.path;
-		this.pathRenderError = null;
-		this.requestUpdate();
+	private handleBreadcrumbClickWrapper(event: CustomEvent): void {
+		this.handleBreadcrumbClick(event).catch(error => {
+		  console.error('Error handling breadcrumb click:', error);
+		});
 	}
 
-	private handleBreadcrumbClick(event: CustomEvent) {
+	private async handleBreadcrumbClick(event: CustomEvent) {
+		const clickedPath = event.detail.path;
+		console.log('Breadcrumb clicked:', clickedPath);
+	
+		const pathParts = clickedPath.split('.');
+		if (pathParts.length === 1 && pathParts[0].startsWith('DOC-')) {
+		  // If the clicked path is a document ID, handle it as a document-id-only event
+		  await this.handleDocumentIdOnly(pathParts[0]);
+		} else {
+		  // Otherwise, update the current path and render the corresponding content
+		  this.currentPath = clickedPath;
+		  this.activeDocumentId = null; // Reset active document when navigating to a sub-path
+		  this.pathRenderError = null;
+		}
+		this.requestUpdate();
+	  }
+	
+	  private handlePathClick(event: CustomEvent) {
+		console.log('Path clicked:', event.detail.path);
 		this.currentPath = event.detail.path;
 		this.pathRenderError = null;
 		this.requestUpdate();
-	}
+	  }
+	
+	  private async handleDocumentIdOnly(documentId: string) {
+		console.log('Handling document ID:', documentId);
+		this.isLoading = true;
+		try {
+		  const document = await documentManager.getDocument(documentId);
+		  if (document) {
+			this.activeDocumentId = documentId;
+			this.currentPath = documentId;
+		  } else {
+			console.error(`Document not found for ID: ${documentId}`);
+			this.pathRenderError = `Document not found for ID: ${documentId}`;
+		  }
+		} catch (error) {
+		  console.error('Error loading document:', error);
+		  this.pathRenderError = `Error loading document: ${error}`;
+		} finally {
+		  this.isLoading = false;
+		  this.requestUpdate();
+		}
+	  }
 
 	render() {
 		return html`
-			<button class="toggle-sidebar" @click=${this.toggleSidebar}>
-				${this.isSidebarOpen ? '←' : '→'}
-			</button>
-			<button class="theme-toggle" @click=${this.toggleTheme}>
-				${this.isDarkMode ? '☀️' : '🌙'}
-			</button>
-			<div class="sidebar ${this.isSidebarOpen ? '' : 'closed'}">
-				<sidebar-component></sidebar-component>
-			</div>
-			<div class="main-content">
-				${this.isLoading ? html`<div>Loading...</div>` : this.renderMainContent()}
-			</div>
+		  <button class="toggle-sidebar" @click=${this.toggleSidebar}>
+			${this.isSidebarOpen ? '←' : '→'}
+		  </button>
+		  <button class="theme-toggle" @click=${this.toggleTheme}>
+			${this.isDarkMode ? '☀️' : '🌙'}
+		  </button>
+		  <div class="sidebar ${this.isSidebarOpen ? '' : 'closed'}">
+			<sidebar-component></sidebar-component>
+		  </div>
+		  <div class="main-content">
+			${this.isLoading ? html`<div>Loading...</div>` : this.renderMainContent()}
+		  </div>
 		`;
-	}
-
-	private renderMainContent() {
-		if (this.currentPath) {
-			return html`
-				<h-breadcrumbs .path=${this.currentPath}></h-breadcrumbs>
-				<path-renderer
-					.path=${this.currentPath}
-					@render-error=${(e: CustomEvent) => {
-						this.pathRenderError = e.detail.error;
-					}}
-				></path-renderer>
-				${this.pathRenderError
-					? html`<div class="error">Error rendering path: ${this.pathRenderError}</div>`
-					: ''}
-			`;
-		} else if (this.activeDocumentId) {
-			return html`<document-component .documentId=${this.activeDocumentId}></document-component>`;
+	  }
+	
+	  private renderMainContent() {
+		if (this.activeDocumentId) {
+		  return html`
+			<h-breadcrumbs .path=${this.currentPath || this.activeDocumentId}></h-breadcrumbs>
+			<document-component .documentId=${this.activeDocumentId}></document-component>
+		  `;
+		} else if (this.currentPath) {
+		  return html`
+			<h-breadcrumbs .path=${this.currentPath}></h-breadcrumbs>
+			<path-renderer
+			  .path=${this.currentPath}
+			  @render-error=${(e: CustomEvent) => {
+				this.pathRenderError = e.detail.error;
+			  }}
+			></path-renderer>
+			${this.pathRenderError
+			  ? html`<div class="error">Error rendering path: ${this.pathRenderError}</div>`
+			  : ''}
+		  `;
 		} else {
-			return html`<p>Select or create a document to begin.</p>`;
+		  return html`<p>Select or create a document to begin.</p>`;
 		}
+	  }
 	}
-}

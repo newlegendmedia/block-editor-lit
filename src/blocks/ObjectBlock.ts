@@ -103,6 +103,7 @@ export class ObjectBlock extends KeyedCompositeBlock {
 	
 	  private createInlineChildComponent(property: Model, childKey: string, childPath: string) {
 		let value = (this.content?.content as KeyedCompositeContent)?.[childKey];
+		console.log('ObjectBlock: createComponent inline key, path', childKey, childPath);
 		return ComponentFactory.createComponent(
 		  `inline:${this.contentId}:${childKey}`,
 		  childPath,
@@ -117,6 +118,7 @@ export class ObjectBlock extends KeyedCompositeBlock {
 		  console.warn(`No content found for child key: ${childKey}`);
 		  return html`<div>No content for ${childKey}</div>`;
 		}
+		  console.log('ObjectBlock: createComponent id, path', childContentId, childPath);
 		return ComponentFactory.createComponent(childContentId, childPath);
 	  }
 

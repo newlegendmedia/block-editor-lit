@@ -25,7 +25,7 @@ export class ModelStore extends ResourceStore<string, Model> {
 
   async getModel(path: string, type: ModelType, schemaName: string = DEFAULT_SCHEMA_NAME): Promise<Model | undefined> {
 	console.log('getModel:', path, type, schemaName);
-	const fullPath = `${schemaName}:${path}`;
+    const fullPath = path;  //`${schemaName}:${path}`;
 	
 	// First, check if the model is already in the tree
 	const existingModel = this.tree.get(fullPath)?.item;

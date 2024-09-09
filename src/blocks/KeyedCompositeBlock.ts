@@ -156,7 +156,7 @@ export abstract class KeyedCompositeBlock extends CompositeBlock<'keyed'> {
 		}
 	}
 
-	protected getChildPath(childKey: string): string {
+	protected getChildPath(childKey: string): string {		
 		return `${this.path}.${childKey}`;
 	}
 

@@ -9,7 +9,7 @@ export class Breadcrumbs extends LitElement {
     :host {
       display: block;
       margin-bottom: 5px;
-      font-size: 12px;
+      font-size: 14px;
     }
     .breadcrumbs-container {
       display: flex;
@@ -42,12 +42,14 @@ export class Breadcrumbs extends LitElement {
         ${parts.map((part, index) => {
           const currentPath = parts.slice(0, index + 1).join('.');
           const isLast = index === parts.length - 1;
+          const isDocumentId = index === 0 && part.startsWith('DOC-');
+          const displayText = isDocumentId ? 'document' : part;
           return html`
             ${index > 0 ? html`<span class="separator">/</span>` : ''}
             <span 
               class=${isLast ? 'current' : 'breadcrumb'}
               @click=${() => this.handleClick(currentPath)}
-            >${part}</span>
+            >${displayText}</span>
           `;
         })}
       </div>
