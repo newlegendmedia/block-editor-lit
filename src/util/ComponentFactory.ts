@@ -17,7 +17,6 @@ export class ComponentFactory {
     inlineValue?: any
   ): Promise<TemplateResult> {
     try {
-      ;
       // Handle inline elements
       if (contentId.startsWith('inline:')) {
         return this.createInlineElement(contentId, path, inlineModel, inlineValue);
@@ -35,6 +34,7 @@ export class ComponentFactory {
         return html`<div>Error: Content not found</div>`;
       }
 
+      // Use the path directly without prefixing
       const fullPath = path || content.modelInfo.key;
 
       // Create the appropriate block based on content type

@@ -9,7 +9,7 @@ export class Breadcrumbs extends LitElement {
     :host {
       display: block;
       margin-bottom: 5px;
-      font-size: 14px;
+      font-size: 12px;
     }
     .breadcrumbs-container {
       display: flex;

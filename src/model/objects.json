@@ -13,10 +13,11 @@
           "itemType": { "type": "object", "key": "section", "ref": "sectionModel" },
           "repeatable": true
         },
+        { "type": "group", "key": "page1", "name": "content", "editable": true, "ref": "page" },
         { "type": "element", "key": "dateElement1", "name": "Created On", "ref": "dateElement" },
         { "type": "element", "key": "dateElement2", "name": "Last Updated", "ref": "dateElement" },
         { "type": "element", "key": "textInput1", "name": "Tags", "base": "text" },
-        { "type": "group", "key": "page", "name": "content", "editable": true, "ref": "page" }
+        { "type": "group", "key": "page2", "name": "content", "editable": true, "ref": "page" }
       ]
     },
     "documentRoot": {

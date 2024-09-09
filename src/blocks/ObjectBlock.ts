@@ -35,11 +35,22 @@ export class ObjectBlock extends KeyedCompositeBlock {
 		`,
 	];
 
+	async connectedCallback() {
+		;
+		await super.connectedCallback();
+		this.addEventListener('element-updated', this.handleElementUpdate as EventListener);
+	}
+
+	disconnectedCallback() {
+		super.disconnectedCallback();
+		this.removeEventListener('element-updated', this.handleElementUpdate as EventListener);
+	}
+	
 	protected async initializeBlock() {
 		await super.initializeBlock();
 		this.inlineChildren = this.useInlineChildren();
 		await this.initializeChildComponents();
-	}	
+	}
 	
 	protected getModelProperties(): Model[] {
 		return (this.model as ObjectModel)?.properties || [];
@@ -175,14 +186,4 @@ export class ObjectBlock extends KeyedCompositeBlock {
 		}
 	};
 
-	async connectedCallback() {
-		;
-		await super.connectedCallback();
-		this.addEventListener('element-updated', this.handleElementUpdate as EventListener);
-	}
-
-	disconnectedCallback() {
-		super.disconnectedCallback();
-		this.removeEventListener('element-updated', this.handleElementUpdate as EventListener);
-	}
 }

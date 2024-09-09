@@ -59,9 +59,9 @@ export class ResourceStore<K, T extends Resource> {
     this.subscriptions.unsubscribe(id, callback);
   }
 
-  subscribeToAll(callback: () => void): void {
-    this.subscriptions.subscribeToAll(callback);
-  }
+  subscribeToAll(callback: () => void): () => void {
+    return this.subscriptions.subscribeToAll(callback);
+  }  
 
   unsubscribeFromAll(callback: () => void): void {
     this.subscriptions.unsubscribeFromAll(callback);

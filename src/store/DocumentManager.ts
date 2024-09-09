@@ -1,24 +1,25 @@
 import { Document, DocumentId, ContentId } from '../content/content';
 import { contentStore } from '../resourcestore';
-import { libraryStore } from '../model/libraryStore';
 import { generateId } from '../util/generateId';
+import { modelStore } from '../modelstore/ModelStoreInstance';
 
-class DocumentManager {
+export class DocumentManager {
   private documents: Map<DocumentId, Document> = new Map();
-
-  async createDocument(title: string): Promise<Document> {
-    const modelStore = libraryStore.value;
-    const notionModel = await modelStore.getDefinition('notion', 'object');
-    if (!notionModel) {
-      throw new Error('Notion model not found');
+  
+  async createDocument(title: string, modelKey: string): Promise<Document> {
+    const model = await modelStore.getModel(modelKey.toLowerCase(), 'object');
+    if (!model) {
+      throw new Error(`${modelKey} model not found`);
     }
 
+
+//    const rootContentId = generateId() as ContentId;
     const rootContent = await contentStore.create(
-      { type: 'object', key: 'notion' },
-      notionModel,
+      { type: 'object', key: modelKey.toLowerCase() },
+      model,
       { title }
     );
-
+  
     const document: Document = {
       id: generateId('DOC') as DocumentId,
       title,
@@ -28,7 +29,10 @@ class DocumentManager {
       isActive: false,
     };
 
-    this.documents.set(document.id, document);
+    this.documents.set(document.id, document);    
+    // Save the document (you'll need to implement this method)
+   // await this.saveDocument(document);
+  
     return document;
   }
 

@@ -101,22 +101,6 @@ export class ContentStoreViewer extends LitElement {
 		this.requestUpdate();
 	}
 
-	// render() {
-	// 	return html`
-	// 		<div class="content-store-viewer">
-	// 			<h3>Content Store</h3>
-	// 			<div>Content Count: ${this.contents.length}</div>
-	// 			<div>Document Count: ${this.documents.length}</div>
-	// 			<h4>Documents</h4>
-	// 			<div class="document-list">${this.documents.map((doc) => this.renderDocument(doc))}</div>
-	// 			<h4>Contents</h4>
-	// 			<div class="content-list">
-	// 				${this.contents.map((content) => this.renderContent(content))}
-	// 			</div>
-	// 		</div>
-	// 	`;
-	// }
-
 	private toggleViewMode() {
 		this.viewMode = this.viewMode === 'flat' ? 'hierarchical' : 'flat';
 	}
@@ -125,7 +109,6 @@ export class ContentStoreViewer extends LitElement {
 		this.contents = await contentStore.getAll();
 		this.contentsHierarchy = null;
 		this.contentsHierarchy = await contentStore.getAllHierarchical();
-		;
 		this.requestUpdate();
 	}
 

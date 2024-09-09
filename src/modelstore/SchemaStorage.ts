@@ -1,3 +1,5 @@
+// SchemaStorage.ts
+
 import { ModelSchema } from './ModelStore';
 
 export class SchemaStorage {
@@ -10,11 +12,7 @@ export class SchemaStorage {
     localStorage.setItem(`schema:${schema.name}`, JSON.stringify(schema));
   }
 
-  static async loadSchemaFromJson(jsonData: any, schemaName: string): Promise<void> {
-    const schema: ModelSchema = {
-      name: schemaName,
-      models: jsonData
-    };
+  static async loadSchemaFromJson(schema: ModelSchema): Promise<void> {
     await this.saveSchema(schema);
   }
 }

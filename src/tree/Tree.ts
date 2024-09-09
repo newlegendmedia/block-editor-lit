@@ -26,6 +26,7 @@ export class Tree<K, Item> {
 
 	// In your Tree class
 	getAllHierarchical(): HierarchicalItem<Item> {
+		console.log('TREE getAllHierarchical Items Map', this.nodes);
 		const buildHierarchy = (node: TreeNode<K, Item>): HierarchicalItem<Item> => {
 			return {
 				...node.item,

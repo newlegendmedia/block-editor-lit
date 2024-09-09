@@ -19,6 +19,7 @@ export interface BaseModel {
   type: ModelType;
   key: string;
   name?: string;
+  path?: string;
   config?: Record<string, Model>;
   metadata?: Record<string, Model>;
   required?: boolean;
