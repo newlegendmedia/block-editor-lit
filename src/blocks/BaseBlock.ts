@@ -4,7 +4,6 @@ import { Content, ContentId } from '../content/content';
 import { Model } from '../model/model';
 import { contentStore } from '../resourcestore/';
 import { libraryStore, ModelStore } from '../model/libraryStore';
-import { DebugController } from '../util/DebugController';
 import '../components/Breadcrumbs';
 
 export abstract class BaseBlock extends LitElement {
@@ -17,12 +16,10 @@ export abstract class BaseBlock extends LitElement {
 
   private unsubscribeContent: (() => void) | null = null;
   private unsubscribeLibrary: (() => void) | null = null;
-  protected debugController: DebugController;
   private initialized: boolean = false;
 
   constructor() {
     super();
-    this.debugController = new DebugController(this);
   }
 
   async connectedCallback() {
@@ -39,6 +36,11 @@ export abstract class BaseBlock extends LitElement {
     }
   }
 
+  protected generateComponentPath(path: string): string {
+    const newPath = `${path}.${this.model?.key}`;
+    return newPath;
+  }
+  
   private handleLibraryChange(modelStore: ModelStore, ready: boolean) {
     this.modelStore = modelStore;
     if (ready) {
@@ -53,6 +55,8 @@ export abstract class BaseBlock extends LitElement {
       await this.initializeContent();
       this.subscribeToContent();
       await this.initializeModel();
+      this.path = this.generateComponentPath(this.path);
+      console.log('=== BaseBlock initialize', this.path, this.content, this.model);
       await this.initializeBlock();
       this.initialized = true;
     } catch (error) {
@@ -68,13 +72,7 @@ export abstract class BaseBlock extends LitElement {
   }
 
   protected async initializeContent() {
-    if (!this.contentId) {
-      throw new Error('ContentId is not set');
-    }
-    this.content = await contentStore.get(this.contentId);
-    if (!this.content) {
-      throw new Error('Content not found');
-    }
+      this.content = await contentStore.get(this.contentId);
   }
 
   protected async initializeModel() {
@@ -124,11 +122,6 @@ export abstract class BaseBlock extends LitElement {
 
   protected updated(changedProperties: PropertyValues) {
     super.updated(changedProperties);
-    this.debugController.setDebugInfo({
-      content: this.content,
-      model: this.model,
-      path: this.path,
-    });
   }
 
   render() {
@@ -139,7 +132,6 @@ export abstract class BaseBlock extends LitElement {
       return html`<div>Loading...</div>`;
     }
     return html`
-      ${this.renderDebug()}
       ${this.renderPath()}
       <div style="font-size:11px; margin-bottom:5px;">${this.contentId}</div>
       <div>${this.renderContent()}</div>
@@ -168,9 +160,4 @@ export abstract class BaseBlock extends LitElement {
     );
   }
 
-  protected renderDebug() {
-    return html`
-      ${this.debugController.renderDebugButton()} ${this.debugController.renderDebugInfo()}
-    `;
-  }
 }

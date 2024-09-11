@@ -19,14 +19,13 @@ export class Tree<K, Item> {
 	}
 
 	getAll(): Item[] {
-		console.log('getAll Items Array');
 		const items: Item[] = Array.from(this.nodes.values()).map((node) => node.item);
 		return items;
 	}
 
 	// In your Tree class
 	getAllHierarchical(): HierarchicalItem<Item> {
-		console.log('TREE getAllHierarchical Items Map', this.nodes);
+		(window as any).JeffMap = this.nodes;
 		const buildHierarchy = (node: TreeNode<K, Item>): HierarchicalItem<Item> => {
 			return {
 				...node.item,
@@ -36,22 +35,6 @@ export class Tree<K, Item> {
 
 		return buildHierarchy(this.root);
 	}
-
-	// getAll(): Item[] {
-	// 	const items: Item[] = [];
-	// 	;
-	// 	const collectItems = (node: TreeNode<K, Item>) => {
-	// 		items.push(node.item);
-	// 		for (let child of node.children) {
-	// 			collectItems(child);
-	// 		}
-	// 	};
-	// 	for (let child of this.root.children) {
-	// 		collectItems(child);
-	// 	}
-	// 	;
-	// 	return items;
-	// }
 
 	getRootId(): K {
 		return this.root.id;
@@ -81,6 +64,7 @@ export class Tree<K, Item> {
 		if (!parentId) {
 			return this.root.addChild(node);
 		}
+		const nodesCopy = new Map(this.nodes);
 		return this.nodes.get(parentId)?.addChild(node);
 	}
 
@@ -419,7 +403,6 @@ export class Tree<K, Item> {
 		this.reset(this.root.id, this.root.item);
 
 		// iterate the Items and add them to the tree
-		console.log('setTreeContent items');
 		const createTreeNodes = (items: Item[], parentId: K) => {
 			items.forEach((item) => {
 				const id = generateId(); // Implement your own ID generation logic

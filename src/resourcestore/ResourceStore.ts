@@ -19,7 +19,6 @@ export class ResourceStore<K, T extends Resource> {
     if (!item) {
       item = await this.storage.get(id as string);
       if (item) {
-        ;
         this.tree.add(item, item.parentId as K | undefined, item.id as K);
       }
     }
@@ -83,7 +82,6 @@ export class ResourceStore<K, T extends Resource> {
   }
 
   async setMany(items: T[]): Promise<void> {
-    console.log('Setting many items');
     await Promise.all(items.map(item => this.set(item)));
   }
 
@@ -104,7 +102,7 @@ export class ResourceStore<K, T extends Resource> {
     this.subscriptions.notifyAll();
   }
 
-  protected getParentId(item: T): K | undefined {
+  protected getParentId(_item: T): K | undefined {
     // This method should be implemented based on how you determine the parent ID
     // It might be a property of the item, or you might need to look it up elsewhere
     // For now, we'll return undefined

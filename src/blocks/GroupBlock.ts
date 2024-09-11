@@ -1,10 +1,9 @@
-// GroupBlock.ts
 import { html, css, TemplateResult } from 'lit';
 import { customElement, state, property } from 'lit/decorators.js';
 import { until } from 'lit/directives/until.js';
 import { IndexedCompositeBlock } from './IndexedCompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
-import { GroupModel, Model, isModelReference } from '../model/model';
+import { GroupModel, Model } from '../model/model';
 import { ContentId } from '../content/content';
 import { contentStore } from '../resourcestore';
 import { ModelStore } from '../model/libraryStore';
@@ -16,7 +15,7 @@ export class GroupBlock extends IndexedCompositeBlock {
   @state() private childComponentPromises: Promise<TemplateResult>[] = [];
   @state() private childTypes: Map<ContentId, string> = new Map();
   @state() protected modelStore?: ModelStore;
-  @state() private itemTypes: Promise<Model[]> | null = null;
+  @state() private itemTypes: Model[] | null = null;
 
   private enableMirroring: boolean = false; // Feature toggle for mirroring
 
@@ -53,6 +52,7 @@ export class GroupBlock extends IndexedCompositeBlock {
     await super.initializeBlock();
     await this.updateChildTypes();
     await this.initializeChildComponents();
+    await this.loadItemTypes();
   }
 
   private async updateChildTypes() {
@@ -78,11 +78,8 @@ export class GroupBlock extends IndexedCompositeBlock {
     this.requestUpdate();
   }
 
-  private createChildComponent(childId: ContentId, index: number): Promise<TemplateResult> {
-    return ComponentFactory.createComponent(
-      childId,
-      this.getChildPath(index, this.childTypes.get(childId))
-    );
+  private createChildComponent(childId: ContentId, _index: number): Promise<TemplateResult> {
+    return ComponentFactory.createComponent(childId, this.path);
   }
 
   protected renderContent(): TemplateResult {
@@ -108,44 +105,34 @@ export class GroupBlock extends IndexedCompositeBlock {
   private renderSlashMenu(): TemplateResult {
     return html`
       <div class="slash-menu">
-        ${until(
-          this.loadItemTypes().then(itemTypes => 
-            itemTypes.map(itemType => 
-              html`<button @click=${() => this.addItem(itemType)}>${itemType.name || itemType.key}</button>`
+        ${this.itemTypes
+          ? this.itemTypes.map(itemType => 
+              html`<button @click=${() => this.addItem(itemType)}>
+                ${itemType.name || itemType.key}
+              </button>`
             )
-          ),
-          html`<span>Loading item types...</span>`,
-          html`<span>Error loading item types</span>`
-        )}
+          : html`<span>Loading item types...</span>`
+        }
       </div>
     `;
   }
 
-  private async loadItemTypes(): Promise<Model[]> {
+  private async loadItemTypes(): Promise<void> {
     if (this.itemTypes) {
-      return this.itemTypes;
+      return;
     }
 
-    const groupModel = this.model as GroupModel; // Assume this method exists and returns a GroupModel
-    this.itemTypes = this.getItemTypes(groupModel);
-    return this.itemTypes;
+    const groupModel = this.model as GroupModel;
+    this.itemTypes = await this.getItemTypes(groupModel);
+    this.requestUpdate();
   }
 
   private async getItemTypes(groupModel: GroupModel): Promise<Model[]> {
     if (Array.isArray(groupModel.itemTypes)) {
+      console.log('getItemTypes Array.isArray', groupModel.itemTypes);
       return groupModel.itemTypes;
-    } else if (isModelReference(groupModel.itemTypes)) {
-      if (groupModel.itemTypes.ref) {
-        const resolved = await this.modelStore?.getDefinition(
-          groupModel.itemTypes.ref,
-          groupModel.itemTypes.type
-        );
-        if (resolved && 'itemTypes' in resolved) {
-          return this.getItemTypes(resolved as GroupModel);
-        }
-      }
     }
-    console.warn(`Invalid itemTypes: ${JSON.stringify(groupModel.itemTypes)}`);
+    console.log('getItemTypes not found - returning empty array');
     return [];
   }
 

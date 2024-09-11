@@ -64,7 +64,6 @@ class PathController implements ReactiveController {
     this._targetContent = null;
 	  this.host.requestUpdate();
 	  
-	  console.log('PathController: findTargetContent - Path', this._path);
 
     const pathParts = this._path.split('.');
 
@@ -101,6 +100,8 @@ class PathController implements ReactiveController {
 
         if (!childId) {
           throw new Error(`Child content not found for key: ${part}`);
+        } else {
+          console.log(`Found child content for key: ${part}`, childId);
         }
 
         if (childId.startsWith('inline:')) {
@@ -142,6 +143,7 @@ class PathController implements ReactiveController {
   }
 
   private async getChildId(content: Content, pathPart: string): Promise<ContentId | undefined> {
+console.log('getChildId', content, pathPart);
     const model = await this.getModelForBlock(content);
     if (!model) {
       console.error(`Model not found for block: ${content.id}`);
@@ -151,6 +153,7 @@ class PathController implements ReactiveController {
     if (isIndexedCompositeModel(model)) {
       const index = parseInt(childKey, 10);
       if (isIndexedCompositeContent(content)) {
+        console.log('isIndexedCompositeContent content', index, pathPart, content);
         if (!isNaN(index) && index >= 0 && index < content.children.length) {
           return content.children[index];
         }
@@ -194,6 +197,7 @@ export class PathRenderer extends LitElement {
     return html`
       <div>
         <p>PathRenderer is active. Current path: ${this.path}</p>
+        <div>Target Content: ${this.pathController.targetContentId}</div>
         ${this.pathController.error
           ? html`<div class="error">Error: ${this.pathController.error}</div>`
           : this.pathController.targetContentId
@@ -210,6 +214,7 @@ export class PathRenderer extends LitElement {
   }
 
   private async renderTargetContent(): Promise<TemplateResult> {
+
     if (!this.pathController.targetContentId) return html`<div>No target content found</div>`;
 
     if (this.pathController.targetContentId.startsWith('inline:')) {
@@ -219,9 +224,16 @@ export class PathRenderer extends LitElement {
     const content = this.pathController.targetContent;
     if (!content) return html`<div>Content not found</div>`;
 
+    // remove the last item from the path if it matches the content.modelInfo.key to avoid duplication
+    const pathParts = this.path.split('.');
+    if (pathParts[pathParts.length - 1] === content.modelInfo.key) {
+      pathParts.pop();
+    }
+    const parentPath = pathParts.join('.');
+
     return ComponentFactory.createComponent(
       content.id || this.pathController.targetContentId,
-      this.path
+      parentPath
     );
   }
 }

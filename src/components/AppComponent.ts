@@ -128,7 +128,6 @@ export class AppComponent extends LitElement {
 
 	private async handleBreadcrumbClick(event: CustomEvent) {
 		const clickedPath = event.detail.path;
-		console.log('Breadcrumb clicked:', clickedPath);
 	
 		const pathParts = clickedPath.split('.');
 		if (pathParts.length === 1 && pathParts[0].startsWith('DOC-')) {
@@ -144,14 +143,12 @@ export class AppComponent extends LitElement {
 	  }
 	
 	  private handlePathClick(event: CustomEvent) {
-		console.log('Path clicked:', event.detail.path);
-		this.currentPath = event.detail.path;
+		  this.currentPath = event.detail.path;
 		this.pathRenderError = null;
 		this.requestUpdate();
 	  }
 	
 	  private async handleDocumentIdOnly(documentId: string) {
-		console.log('Handling document ID:', documentId);
 		this.isLoading = true;
 		try {
 		  const document = await documentManager.getDocument(documentId);

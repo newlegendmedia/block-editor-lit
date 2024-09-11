@@ -26,87 +26,87 @@ export class ContentFactory {
 		};
 
 		if (isElement(model)) {
-			return createElementContent(model, modelInfo);
+			return this.createElementContent(model, modelInfo);
 		} else if (isObject(model)) {
-			return createObjectContent(model, modelInfo);
+			return this.createObjectContent(model, modelInfo);
 		} else if (isArray(model)) {
-			return createArrayContent(model, modelInfo);
+			return this.createArrayContent(model, modelInfo);
 		} else if (isGroup(model)) {
-			return createGroupContent(model, modelInfo);
+			return this.createGroupContent(model, modelInfo);
 		}
 		console.error(`Unsupported model type: ${model.type}`, model);
 		throw new Error(`Unsupported model type: ${model.type}`);
+	}
 
-		function createElementContent(
-			model: ElementModel,
-			modelInfo: Content['modelInfo']
-		): Omit<ElementContent, 'id'> {
-			let defaultValue: any;
+	private static createElementContent(
+		model: ElementModel,
+		modelInfo: Content['modelInfo']
+	): Omit<ElementContent, 'id'> {
+		let defaultValue: any;
 
-			switch (model.base) {
-				case AtomType.Boolean:
-					defaultValue = false;
-					break;
-				case AtomType.Number:
-					defaultValue = 0;
-					break;
-				case AtomType.Text:
-				case AtomType.Enum:
-				case AtomType.File:
-				case AtomType.Reference:
-					defaultValue = 'Hello World';
-					break;
-				case AtomType.Datetime:
-					defaultValue = new Date().toISOString();
-					break;
-				default:
-					defaultValue = null;
-			}
-
-			return {
-				modelInfo,
-				modelDefinition: model,
-				content: defaultValue,
-			};
+		switch (model.base) {
+			case AtomType.Boolean:
+				defaultValue = false;
+				break;
+			case AtomType.Number:
+				defaultValue = 0;
+				break;
+			case AtomType.Text:
+			case AtomType.Enum:
+			case AtomType.File:
+			case AtomType.Reference:
+				defaultValue = '';
+				break;
+			case AtomType.Datetime:
+				defaultValue = new Date().toISOString();
+				break;
+			default:
+				defaultValue = null;
 		}
 
-		function createObjectContent(
-			model: ObjectModel,
-			modelInfo: Content['modelInfo']
-		): Omit<CompositeContent, 'id'> {
-			const childContent: Record<string, string> = {};
-			const children: string[] = [];
+		return {
+			modelInfo,
+			modelDefinition: model,
+			content: defaultValue,
+		};
+	}
 
-			return {
-				modelInfo,
-				modelDefinition: model,
-				content: childContent,
-				children,
-			};
-		}
+	private static createObjectContent(
+		model: ObjectModel,
+		modelInfo: Content['modelInfo']
+	): Omit<CompositeContent, 'id'> {
+		const childContent: Record<string, string> = {};
+		const children: string[] = [];
 
-		function createArrayContent(
-			model: ArrayModel,
-			modelInfo: Content['modelInfo']
-		): Omit<CompositeContent, 'id'> {
-			return {
-				modelInfo,
-				modelDefinition: model,
-				content: [],
-				children: [],
-			};
-		}
+		return {
+			modelInfo,
+			modelDefinition: model,
+			content: childContent,
+			children,
+		};
+	}
 
-		function createGroupContent(
-			model: GroupModel,
-			modelInfo: Content['modelInfo']
-		): Omit<CompositeContent, 'id'> {
-			return {
-				modelInfo,
-				modelDefinition: model,
-				content: [],
-				children: [],
-			};
-		}
+	private static createArrayContent(
+		model: ArrayModel,
+		modelInfo: Content['modelInfo']
+	): Omit<CompositeContent, 'id'> {
+		return {
+			modelInfo,
+			modelDefinition: model,
+			content: [],
+			children: [],
+		};
+	}
+
+	private static createGroupContent(
+		model: GroupModel,
+		modelInfo: Content['modelInfo']
+	): Omit<CompositeContent, 'id'> {
+		return {
+			modelInfo,
+			modelDefinition: model,
+			content: [],
+			children: [],
+		};
 	}
 }

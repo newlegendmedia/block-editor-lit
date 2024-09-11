@@ -2,7 +2,6 @@ import { html, TemplateResult } from 'lit';
 import { contentStore } from '../resourcestore';
 import { Model } from '../model/model';
 import { ContentId } from '../content/content';
-import { modelStore } from '../modelstore/ModelStoreInstance';
 
 // Import your block components
 import '../blocks/ObjectBlock';
@@ -19,7 +18,6 @@ export class ComponentFactory {
     inlineValue?: any
   ): Promise<TemplateResult> {
     try {
-      console.log(`ComponentFactory: Creating component for ID ${contentId} at path ${path}`);
       // Handle inline elements
       if (contentId.startsWith('inline:')) {
         return this.createInlineElement(contentId, path, inlineModel, inlineValue);
@@ -39,10 +37,6 @@ export class ComponentFactory {
 
       // Use the path directly without prefixing
       const fullPath = path;
-
-      console.log(`ComponentFactory: Creating ${content.modelInfo.type} at path ${fullPath}`);
-      const modelPart = modelStore.getModel(fullPath, content.modelInfo.type);
-      console.log('Model part:', modelPart);
 
       // Create the appropriate block based on content type
       switch (content.modelInfo.type) {

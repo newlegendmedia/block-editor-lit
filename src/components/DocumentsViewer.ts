@@ -87,7 +87,7 @@ export class DocumentsViewer extends LitElement {
   async createNewDocument() {
 		try {
 			this.isLoading = true;
-			const newDocument = await documentManager.createDocument('New Document', 'notion');
+			const newDocument = await documentManager.createDocument("Test Document", "notion", "object");
 			await this.loadDocuments();
 			this.openDocument(newDocument.id);
 		} catch (error) {

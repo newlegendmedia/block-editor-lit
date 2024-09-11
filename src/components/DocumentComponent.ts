@@ -21,14 +21,12 @@ export class DocumentComponent extends LitElement {
     try {
       this.document = await documentManager.getDocument(this.documentId);
       if (this.document) {
-		  this.rootContent = await contentStore.get(this.document.rootContent);
-		  console.log('DocumentComponent: loadDocument - Root Content', this.rootContent);
+        this.rootContent = await contentStore.get(this.document.rootContent);
         if (this.rootContent) {
-			// Use the document ID as the parent path
-			console.log('DocumentComponent: createComponent - Creating root component with ID, Path', this.rootContent.id, this.documentId);
+          // Use the document ID as the initial path
           this.rootComponent = await ComponentFactory.createComponent(
-			  this.rootContent.id,
-			  `${this.documentId}.${this.rootContent.modelInfo.key}`
+            this.rootContent.id,
+            this.documentId  // Pass the document ID as the initial path
           );
         }
       }
@@ -45,7 +43,7 @@ export class DocumentComponent extends LitElement {
 
     return html`
       <h1>${this.document.title}</h1>
-      ${this.rootComponent}
+      ${this.rootComponent ?? html`<div>Error: Root component not loaded</div>`}
     `;
   }
 }

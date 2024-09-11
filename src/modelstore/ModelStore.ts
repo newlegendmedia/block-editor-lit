@@ -1,5 +1,3 @@
-// ModelStore.ts
-
 import { ResourceStore } from '../resourcestore/ResourceStore';
 import { Model, ModelType } from '../model/model';
 import { StorageAdapter } from '../resourcestore/StorageAdapter';
@@ -8,13 +6,13 @@ import { SchemaStorage } from './SchemaStorage';
 import { isModelReference, isObject, isArray, isGroup } from '../model/model';
 import { HierarchicalItem } from '../tree/HierarchicalItem';
 
-// ModelStore.ts or in a separate types file
 export interface ModelSchema {
   name: string;
   models: {
     [key in ModelType]?: Record<string, Model>;
   };
-}  
+}
+
 export class ModelStore extends ResourceStore<string, Model> {
   private schemas: Map<string, ModelSchema> = new Map();
 
@@ -23,120 +21,128 @@ export class ModelStore extends ResourceStore<string, Model> {
     super(storage, 'root', rootModel);
   }
 
-  async getModel(path: string, type: ModelType, schemaName: string = DEFAULT_SCHEMA_NAME): Promise<Model | undefined> {
-	console.log('getModel:', path, type, schemaName);
-    const fullPath = path;  //`${schemaName}:${path}`;
-	
-	// First, check if the model is already in the tree
-	const existingModel = this.tree.get(fullPath)?.item;
-	if (existingModel) {
-	  return existingModel;
-	}
-	
-	// If the path contains a dot and it's not in the tree, we don't look in the schema
-	if (path.includes('.')) {
-	  console.warn(`Model not found in tree for path: ${path}`);
-	  return undefined;
-	}
-  
-	// If not in the tree, load from schema and resolve
-	const schema = this.schemas.get(schemaName);
-	if (!schema) {
-	  console.warn(`Schema not found: ${schemaName}`);
-	  return undefined;
-	}
-  
-	const rawModel = this.findModelInSchema(schema, type, path);
-	if (!rawModel) {
-	  console.warn(`Model not found in schema: ${type}.${path}`);
-	  return undefined;
-	}
-  
-	// Deeply resolve the model and its hierarchy
-	const resolvedModel = await this.deepResolveModel(schemaName, rawModel, fullPath);
-	
-	// Notify subscribers after adding a new model
-	this.subscriptions.notifyAll();
-  
-	return resolvedModel;
-  }
-  
-  private findModelInSchema(schema: ModelSchema, type: ModelType, key: string): Model | undefined {
-	return schema.models[type]?.[key];
-  }
-
   async getDefinition(key: string, type: ModelType, schemaName: string = DEFAULT_SCHEMA_NAME): Promise<Model | undefined> {
     return this.getModel(key, type, schemaName);
   }
 
-  private async deepResolveModel(
-    schemaName: string,
-    model: Model,
-    modelPath: string,
-    parentPath: string | undefined = undefined,
-    resolvedRefs: Set<string> = new Set()
-  ): Promise<Model> {
-    // Construct the full path
-    const fullPath = parentPath ? `${parentPath}.${model.key}` : model.key;
+  async getModel(path: string, type: ModelType, schemaName: string = DEFAULT_SCHEMA_NAME): Promise<Model | undefined> {
     
-    // Set the path property on the model
-    model.path = fullPath;
+    const existingModel = this.tree.get(path)?.item;
+    if (existingModel) {
+      console.log('=== getModel existingModel', path, existingModel);
+      return existingModel;
+    }
+    console.log('=== getModel get model from Schema', path);
 
-    // Use the full path as the id when adding to the tree
-    this.tree.add(model, parentPath, fullPath);
-
-    if (isModelReference(model) && model.ref) {
-      if (resolvedRefs.has(model.ref)) {
-        return model;
-      }
-
-      const resolvedModel = await this.getDefinition(model.ref, model.type, schemaName);
-      if (resolvedModel) {
-        // Merge the resolved model with the original, preserving the original key
-        const mergedModel = { ...resolvedModel, ...model, key: model.key };
-        resolvedRefs.add(model.ref);
-        return this.deepResolveModel(schemaName, mergedModel, modelPath, parentPath, resolvedRefs);
-      } else {
-        console.warn(`Failed to resolve reference: ${model.ref}`);
-        return model;
-      }
+    const schema = this.schemas.get(schemaName);
+    if (!schema) {
+      console.warn(`Schema not found: ${schemaName}`);
+      return undefined;
     }
 
-    if (isObject(model)) {
-      const resolvedProperties = await Promise.all(
-        model.properties.map(async (prop, index) => {
-          const propPath = `${fullPath}.${prop.key}`;
-          return this.deepResolveModel(schemaName, prop, propPath, fullPath, new Set(resolvedRefs));
-        })
-      );
-      return { ...model, properties: resolvedProperties };
+    const rawModel = this.findModelInSchema(schema, type, path);
+    if (!rawModel) {
+      console.warn(`Model not found in schema: ${type}  ${path}`);
+      return undefined;
     }
 
-    if (isArray(model)) {
-      const itemTypePath = `${fullPath}.itemType`;
-      const resolvedItemType = await this.deepResolveModel(schemaName, model.itemType, itemTypePath, fullPath, new Set(resolvedRefs));
-      return { ...model, itemType: resolvedItemType };
+    const resolvedModel = await this.resolveStructure(rawModel, schemaName, path);
+
+    this.subscriptions.notifyAll();
+
+    return resolvedModel;
+  }
+
+  async getModelfromSchema(path: string, type: ModelType, schemaName: string = DEFAULT_SCHEMA_NAME): Promise<Model | undefined> {
+    
+    const schema = this.schemas.get(schemaName);
+    if (!schema) {
+      console.warn(`Schema not found: ${schemaName}`);
+      return undefined;
     }
 
-    if (isGroup(model)) {
-      let resolvedItemTypes: Model[];
-      if (Array.isArray(model.itemTypes)) {
-        resolvedItemTypes = await Promise.all(
-          model.itemTypes.map(async (item, index) => {
-            const itemPath = `${fullPath}.itemTypes[${index}]`;
-            return this.deepResolveModel(schemaName, item, itemPath, fullPath, new Set(resolvedRefs));
-          })
-        );
-      } else {
-        const resolvedRef = await this.deepResolveModel(schemaName, model.itemTypes, `${fullPath}.itemTypes`, fullPath, new Set(resolvedRefs));
-        resolvedItemTypes = [resolvedRef];
-      }
-      return { ...model, itemTypes: resolvedItemTypes };
+    const rawModel = this.findModelInSchema(schema, type, path);
+    if (!rawModel) {
+      console.warn(`Model not found in schema: ${type}.${path}`);
+      return undefined;
     }
 
-    return model;
+    return rawModel;
   }
   
+  private findModelInSchema(schema: ModelSchema, type: ModelType, key: string): Model | undefined {
+    return schema.models[type]?.[key];
+  }
+
+  private async resolveStructure(
+    model: Model,
+    schemaName: string,
+    currentPath: string,
+    parentPath: string = ""
+  ): Promise<Model> {
+    let resolvedModel = { ...model };
+
+    if (isModelReference(model) && model.ref) {
+      const referencedModel = await this.getModelfromSchema(model.ref, model.type, schemaName);
+      if (!referencedModel) {
+        console.warn(`Failed to resolve reference: ${model.ref}`);
+        return resolvedModel;
+      }
+      delete model.ref;
+      resolvedModel = { ...referencedModel, ...model };
+      return this.resolveStructure(resolvedModel, schemaName, currentPath, parentPath);
+    }
+
+    resolvedModel.path = currentPath;
+    this.tree.add(resolvedModel, parentPath, currentPath);
+
+    if (isObject(resolvedModel)) {
+      resolvedModel = await this.resolveObjectModel(resolvedModel, schemaName, currentPath);
+    } else if (isArray(resolvedModel)) {
+      resolvedModel = await this.resolveArrayModel(resolvedModel, schemaName, currentPath);
+    } else if (isGroup(resolvedModel)) {
+      resolvedModel = await this.resolveGroupModel(resolvedModel, schemaName, currentPath);
+    }
+
+    return resolvedModel;
+  }
+
+  private async resolveObjectModel(model: Model, schemaName: string, currentPath: string): Promise<Model> {
+    if (!isObject(model)) return model;
+    
+    const resolvedProperties = await Promise.all(
+      model.properties.map(async (property) => {
+        const propertyPath = `${currentPath}.${property.key}`;
+        return this.resolveStructure(property, schemaName, propertyPath, currentPath);
+      })
+    );
+    return { ...model, properties: resolvedProperties };
+  }
+
+  private async resolveArrayModel(model: Model, schemaName: string, currentPath: string): Promise<Model> {
+    if (!isArray(model)) return model;
+
+    const itemTypePath = `${currentPath}.itemType`;
+    const resolvedItemType = await this.resolveStructure(model.itemType, schemaName, itemTypePath, currentPath);
+    return { ...model, itemType: resolvedItemType };
+  }
+
+  private async resolveGroupModel(model: Model, schemaName: string, currentPath: string): Promise<Model> {
+    if (!isGroup(model)) return model;
+
+    if (Array.isArray(model.itemTypes)) {
+      const resolvedItemTypes = await Promise.all(
+        model.itemTypes.map((item, index) => 
+          this.resolveStructure(item, schemaName, `${currentPath}.itemTypes[${index}]`, currentPath)
+        )
+      );
+      return { ...model, itemTypes: resolvedItemTypes };
+    } else {
+      const resolvedItemTypes = await this.resolveStructure(model.itemTypes, schemaName, `${currentPath}.itemTypes`, currentPath);
+      return { ...model, itemTypes: resolvedItemTypes };
+    }
+  }
+
   async loadSchema(schemaName: string): Promise<void> {
     const schema = await SchemaStorage.loadSchema(schemaName);
     if (schema) {
@@ -160,7 +166,7 @@ export class ModelStore extends ResourceStore<string, Model> {
     return super.subscribeToAll(callback);
   }	
 	
-  protected getParentId(item: Model): string | undefined {
+  protected getParentId(_item: Model): string | undefined {
     // Implement based on your model structure
     // For example, you might use a convention like `${item.type}.${item.key}`
     return undefined;

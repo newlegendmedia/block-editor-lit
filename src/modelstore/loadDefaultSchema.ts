@@ -36,7 +36,6 @@ export async function loadDefaultSchema(): Promise<void> {
 
   // Log the Notion model to verify it's present
   if(defaultSchemaData.models.object)
-    console.log('Notion model:', defaultSchemaData?.models?.object['notion']);
 
   try {
     try {
@@ -46,7 +45,6 @@ export async function loadDefaultSchema(): Promise<void> {
       // Log all object models to verify 'notion' is present
 //      console.log('Loaded object models:', Object.keys(defaultSchemaData.models.object));
       
-      console.log(`Default schema '${DEFAULT_SCHEMA_NAME}' loaded successfully.`);
     } catch (error) {
       // ... error handling ...
     }

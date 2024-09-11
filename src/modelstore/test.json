@@ -1,0 +1,283 @@
+[
+	{
+		"type": "element",
+		"key": "titleElement1",
+		"name": "Title",
+		"base": "text",
+		"path": "notion.titleElement1"
+	},
+	{
+		"type": "array",
+		"key": "sections",
+		"name": "Document Sections",
+		"itemType": {
+			"type": "object",
+			"key": "section",
+			"name": "Document Section",
+			"properties": [
+				{
+					"type": "element",
+					"key": "heading",
+					"name": "Heading",
+					"base": "text",
+					"path": "notion.sections.itemType.heading"
+				},
+				{
+					"type": "element",
+					"key": "body",
+					"name": "Body",
+					"base": "text",
+					"path": "notion.sections.itemType.body"
+				}
+			],
+			"path": "notion.sections.itemType"
+		},
+		"repeatable": true,
+		"path": "notion.sections"
+	},
+	{
+		"type": "group",
+		"key": "page1",
+		"name": "content",
+		"editable": true,
+		"childrenType": "indexed",
+		"itemTypes": [
+			{
+				"type": "element",
+				"key": "textelement",
+				"name": "Text Block",
+				"base": "text",
+				"path": "notion.page1.itemTypes[0]"
+			},
+			{
+				"type": "array",
+				"key": "imageGallery",
+				"name": "Image Gallery",
+				"itemType": {
+					"type": "object",
+					"key": "image",
+					"name": "Image",
+					"properties": [
+						{
+							"type": "element",
+							"key": "url",
+							"name": "Image URL",
+							"base": "text",
+							"path": "notion.page1.itemTypes[1].itemType.url"
+						},
+						{
+							"type": "element",
+							"key": "caption",
+							"name": "Caption",
+							"base": "text",
+							"path": "notion.page1.itemTypes[1].itemType.caption"
+						}
+					],
+					"path": "notion.page1.itemTypes[1].itemType"
+				},
+				"repeatable": true,
+				"path": "notion.page1.itemTypes[1]"
+			},
+			{
+				"type": "object",
+				"key": "taskItem1",
+				"inlineChildren": true,
+				"name": "Task",
+				"properties": [
+					{
+						"type": "element",
+						"key": "title",
+						"name": "Task Title",
+						"base": "text",
+						"path": "notion.page1.itemTypes[2].title"
+					},
+					{
+						"type": "element",
+						"key": "completed",
+						"name": "Completed",
+						"base": "boolean",
+						"path": "notion.page1.itemTypes[2].completed"
+					},
+					{
+						"type": "element",
+						"key": "dueDate",
+						"name": "Due Date",
+						"base": "datetime",
+						"path": "notion.page1.itemTypes[2].dueDate"
+					}
+				],
+				"path": "notion.page1.itemTypes[2]"
+			},
+			{
+				"type": "array",
+				"key": "taskList",
+				"name": "Task List",
+				"itemType": {
+					"type": "object",
+					"key": "task",
+					"name": "Task",
+					"properties": [
+						{
+							"type": "element",
+							"key": "title",
+							"name": "Task Title",
+							"base": "text",
+							"path": "notion.page1.itemTypes[3].itemType.title"
+						},
+						{
+							"type": "element",
+							"key": "completed",
+							"name": "Completed",
+							"base": "boolean",
+							"path": "notion.page1.itemTypes[3].itemType.completed"
+						},
+						{
+							"type": "element",
+							"key": "dueDate",
+							"name": "Due Date",
+							"base": "datetime",
+							"path": "notion.page1.itemTypes[3].itemType.dueDate"
+						}
+					],
+					"path": "notion.page1.itemTypes[3].itemType"
+				},
+				"repeatable": true,
+				"path": "notion.page1.itemTypes[3]"
+			}
+		],
+		"path": "notion.page1"
+	},
+	{
+		"type": "element",
+		"key": "dateElement1",
+		"name": "Created On",
+		"base": "datetime",
+		"path": "notion.dateElement1"
+	},
+	{
+		"type": "element",
+		"key": "dateElement2",
+		"name": "Last Updated",
+		"base": "datetime",
+		"path": "notion.dateElement2"
+	},
+	{
+		"type": "element",
+		"key": "textInput1",
+		"name": "Tags",
+		"base": "text",
+		"path": "notion.textInput1"
+	},
+	{
+		"type": "group",
+		"key": "page2",
+		"name": "content",
+		"editable": true,
+		"childrenType": "indexed",
+		"itemTypes": [
+			{
+				"type": "element",
+				"key": "textelement",
+				"name": "Text Block",
+				"base": "text",
+				"path": "notion.page2.itemTypes[0]"
+			},
+			{
+				"type": "array",
+				"key": "imageGallery",
+				"name": "Image Gallery",
+				"itemType": {
+					"type": "object",
+					"key": "image",
+					"name": "Image",
+					"properties": [
+						{
+							"type": "element",
+							"key": "url",
+							"name": "Image URL",
+							"base": "text",
+							"path": "notion.page2.itemTypes[1].itemType.url"
+						},
+						{
+							"type": "element",
+							"key": "caption",
+							"name": "Caption",
+							"base": "text",
+							"path": "notion.page2.itemTypes[1].itemType.caption"
+						}
+					],
+					"path": "notion.page2.itemTypes[1].itemType"
+				},
+				"repeatable": true,
+				"path": "notion.page2.itemTypes[1]"
+			},
+			{
+				"type": "object",
+				"key": "taskItem1",
+				"inlineChildren": true,
+				"name": "Task",
+				"properties": [
+					{
+						"type": "element",
+						"key": "title",
+						"name": "Task Title",
+						"base": "text",
+						"path": "notion.page2.itemTypes[2].title"
+					},
+					{
+						"type": "element",
+						"key": "completed",
+						"name": "Completed",
+						"base": "boolean",
+						"path": "notion.page2.itemTypes[2].completed"
+					},
+					{
+						"type": "element",
+						"key": "dueDate",
+						"name": "Due Date",
+						"base": "datetime",
+						"path": "notion.page2.itemTypes[2].dueDate"
+					}
+				],
+				"path": "notion.page2.itemTypes[2]"
+			},
+			{
+				"type": "array",
+				"key": "taskList",
+				"name": "Task List",
+				"itemType": {
+					"type": "object",
+					"key": "task",
+					"name": "Task",
+					"properties": [
+						{
+							"type": "element",
+							"key": "title",
+							"name": "Task Title",
+							"base": "text",
+							"path": "notion.page2.itemTypes[3].itemType.title"
+						},
+						{
+							"type": "element",
+							"key": "completed",
+							"name": "Completed",
+							"base": "boolean",
+							"path": "notion.page2.itemTypes[3].itemType.completed"
+						},
+						{
+							"type": "element",
+							"key": "dueDate",
+							"name": "Due Date",
+							"base": "datetime",
+							"path": "notion.page2.itemTypes[3].itemType.dueDate"
+						}
+					],
+					"path": "notion.page2.itemTypes[3].itemType"
+				},
+				"repeatable": true,
+				"path": "notion.page2.itemTypes[3]"
+			}
+		],
+		"path": "notion.page2"
+	}
+]

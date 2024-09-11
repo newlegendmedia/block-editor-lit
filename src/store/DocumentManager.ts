@@ -2,20 +2,19 @@ import { Document, DocumentId, ContentId } from '../content/content';
 import { contentStore } from '../resourcestore';
 import { generateId } from '../util/generateId';
 import { modelStore } from '../modelstore/ModelStoreInstance';
+import { ModelType } from '../model/model';
 
 export class DocumentManager {
   private documents: Map<DocumentId, Document> = new Map();
   
-  async createDocument(title: string, modelKey: string): Promise<Document> {
-    const model = await modelStore.getModel(modelKey.toLowerCase(), 'object');
+  async createDocument(title: string = 'Untitled', modelKey: string = 'page', modelType: ModelType = 'group'): Promise<Document> {
+    const model = await modelStore.getModel(modelKey, modelType);
     if (!model) {
       throw new Error(`${modelKey} model not found`);
     }
 
-
-//    const rootContentId = generateId() as ContentId;
     const rootContent = await contentStore.create(
-      { type: 'object', key: modelKey.toLowerCase() },
+      { type: modelType, key: modelKey },
       model,
       { title }
     );
@@ -29,9 +28,7 @@ export class DocumentManager {
       isActive: false,
     };
 
-    this.documents.set(document.id, document);    
-    // Save the document (you'll need to implement this method)
-   // await this.saveDocument(document);
+    this.documents.set(document.id, document);
   
     return document;
   }
