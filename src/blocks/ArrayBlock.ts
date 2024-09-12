@@ -67,15 +67,14 @@ export class ArrayBlock extends IndexedCompositeBlock {
 									html`<span>Loading child component...</span>`,
 									html`<span>Error loading component</span>`
 								)}
-								// ... rest of the render logic
 							</div>
 						`
 					)}
 				</div>
 				${arrayModel.repeatable
 					? html`<button @click=${() => this.addChildBlock(arrayModel.itemType)}>
-							Add ${arrayModel.itemType.name || 'Item'}
-					  </button>`
+							Add ${arrayModel.itemType.name || arrayModel.itemType.key}
+						</button>`
 					: ''}
 			</div>
 		`;

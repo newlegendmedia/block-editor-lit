@@ -1,4 +1,10 @@
 {
+  "tags": {
+    "type": "element",
+    "key": "tags",
+    "name": "Tags", 
+    "base": "text" 
+  },
   "titleElement1": {
     "type": "element",
     "key": "titleElement1",

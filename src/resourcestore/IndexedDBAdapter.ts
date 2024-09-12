@@ -1,12 +1,16 @@
-import { StorageAdapter } from './StorageAdapter';
-import { Resource } from './Resource';
+import { StorageAdapter } from "./StorageAdapter";
+import { Resource } from "./Resource";
 
 export class IndexedDBAdapter<T extends Resource> implements StorageAdapter<T> {
   private dbName: string;
   private dbVersion: number;
   private storeName: string;
 
-  constructor(dbName: string, dbVersion: number, storeName: string = 'resources') {
+  constructor(
+    dbName: string,
+    dbVersion: number,
+    storeName: string = "resources",
+  ) {
     this.dbName = dbName;
     this.dbVersion = dbVersion;
     this.storeName = storeName;
@@ -21,7 +25,7 @@ export class IndexedDBAdapter<T extends Resource> implements StorageAdapter<T> {
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
-        db.createObjectStore(this.storeName, { keyPath: 'id' });
+        db.createObjectStore(this.storeName, { keyPath: "id" });
       };
     });
   }
@@ -29,7 +33,7 @@ export class IndexedDBAdapter<T extends Resource> implements StorageAdapter<T> {
   async get(id: string): Promise<T | undefined> {
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(this.storeName, 'readonly');
+      const transaction = db.transaction(this.storeName, "readonly");
       const store = transaction.objectStore(this.storeName);
       const request = store.get(id);
 
@@ -41,7 +45,7 @@ export class IndexedDBAdapter<T extends Resource> implements StorageAdapter<T> {
   async set(item: T): Promise<void> {
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(this.storeName, 'readwrite');
+      const transaction = db.transaction(this.storeName, "readwrite");
       const store = transaction.objectStore(this.storeName);
       const request = store.put(item);
 
@@ -53,7 +57,7 @@ export class IndexedDBAdapter<T extends Resource> implements StorageAdapter<T> {
   async delete(id: string): Promise<void> {
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(this.storeName, 'readwrite');
+      const transaction = db.transaction(this.storeName, "readwrite");
       const store = transaction.objectStore(this.storeName);
       const request = store.delete(id);
 
@@ -65,7 +69,7 @@ export class IndexedDBAdapter<T extends Resource> implements StorageAdapter<T> {
   async getAll(): Promise<T[]> {
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(this.storeName, 'readonly');
+      const transaction = db.transaction(this.storeName, "readonly");
       const store = transaction.objectStore(this.storeName);
       const request = store.getAll();
 
@@ -77,7 +81,7 @@ export class IndexedDBAdapter<T extends Resource> implements StorageAdapter<T> {
   async clear(): Promise<void> {
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(this.storeName, 'readwrite');
+      const transaction = db.transaction(this.storeName, "readwrite");
       const store = transaction.objectStore(this.storeName);
       const request = store.clear();
 
@@ -90,16 +94,16 @@ export class IndexedDBAdapter<T extends Resource> implements StorageAdapter<T> {
 
   async getMany(ids: string[]): Promise<(T | undefined)[]> {
     const db = await this.openDB();
-    return Promise.all(ids.map(id => this.get(id)));
+    return Promise.all(ids.map((id) => this.get(id)));
   }
 
   async setMany(items: T[]): Promise<void> {
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(this.storeName, 'readwrite');
+      const transaction = db.transaction(this.storeName, "readwrite");
       const store = transaction.objectStore(this.storeName);
 
-      items.forEach(item => store.put(item));
+      items.forEach((item) => store.put(item));
 
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
@@ -109,10 +113,10 @@ export class IndexedDBAdapter<T extends Resource> implements StorageAdapter<T> {
   async deleteMany(ids: string[]): Promise<void> {
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(this.storeName, 'readwrite');
+      const transaction = db.transaction(this.storeName, "readwrite");
       const store = transaction.objectStore(this.storeName);
 
-      ids.forEach(id => store.delete(id));
+      ids.forEach((id) => store.delete(id));
 
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);

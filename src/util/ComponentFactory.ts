@@ -1,37 +1,45 @@
-import { html, TemplateResult } from 'lit';
-import { contentStore } from '../resourcestore';
-import { Model } from '../model/model';
-import { ContentId } from '../content/content';
+import { TemplateResult } from "lit";
+import { html, literal } from "lit/static-html.js";
+import { contentStore } from "../resourcestore";
+import { Model } from "../model/model";
+import { ContentId } from "../content/content";
 
 // Import your block components
-import '../blocks/ObjectBlock';
-import '../blocks/ArrayBlock';
-import '../blocks/ElementBlock';
-import '../blocks/GroupBlock';
+import "../blocks/ObjectBlock";
+import "../blocks/ArrayBlock";
+import "../blocks/ElementBlock";
+import "../blocks/GroupBlock";
 
 export class ComponentFactory {
-
   static async createComponent(
     contentId: string,
     path: string,
     inlineModel?: Model,
-    inlineValue?: any
+    inlineValue?: any,
   ): Promise<TemplateResult> {
     try {
       // Handle inline elements
-      if (contentId.startsWith('inline:')) {
-        return this.createInlineElement(contentId, path, inlineModel, inlineValue);
+      if (contentId.startsWith("inline:")) {
+        return this.createInlineElement(
+          contentId,
+          path,
+          inlineModel,
+          inlineValue,
+        );
       }
 
       // Handle mirror blocks
-      if (contentId.startsWith('mirror:')) {
+      if (contentId.startsWith("mirror:")) {
         return this.createMirrorBlock(contentId, path);
       }
 
       // Fetch content for regular blocks
       const content = await contentStore.get(contentId as ContentId);
+
       if (!content) {
-        console.error(`ComponentFactory: Content not found for ID ${contentId}`);
+        console.error(
+          `ComponentFactory: Content not found for ID ${contentId}`,
+        );
         return html`<div>Error: Content not found</div>`;
       }
 
@@ -39,21 +47,29 @@ export class ComponentFactory {
       const fullPath = path;
 
       // Create the appropriate block based on content type
+
       switch (content.modelInfo.type) {
-        case 'object':
+        case "object":
           return this.createObjectBlock(contentId, fullPath);
-        case 'array':
+        case "array":
           return this.createArrayBlock(contentId, fullPath);
-        case 'element':
+        case "element":
           return this.createElementBlock(contentId, fullPath);
-        case 'group':
+        case "group":
           return this.createGroupBlock(contentId, fullPath);
         default:
-          console.warn(`ComponentFactory: Unknown content type: ${content.modelInfo.type}`);
-          return html`<div>Unknown content type: ${content.modelInfo.type}</div>`;
+          console.warn(
+            `ComponentFactory: Unknown content type: ${content.modelInfo.type}`,
+          );
+          return html`<div>
+            Unknown content type: ${content.modelInfo.type}
+          </div>`;
       }
     } catch (error) {
-      console.error(`ComponentFactory: Error creating component for ID ${contentId}:`, error);
+      console.error(
+        `ComponentFactory: Error creating component for ID ${contentId}:`,
+        error,
+      );
       return html`<div>Error: Failed to create component</div>`;
     }
   }
@@ -62,7 +78,7 @@ export class ComponentFactory {
     contentId: string,
     path: string,
     inlineModel?: Model,
-    inlineValue?: any
+    inlineValue?: any,
   ): TemplateResult {
     return html`
       <element-block
@@ -77,9 +93,9 @@ export class ComponentFactory {
 
   private static createMirrorBlock(
     contentId: string,
-    path: string
+    path: string,
   ): TemplateResult {
-    const originalId = contentId.split(':')[1];
+    const originalId = contentId.split(":")[1];
     return html`
       <mirror-block
         .contentId=${contentId}
@@ -91,16 +107,17 @@ export class ComponentFactory {
 
   private static createObjectBlock(
     contentId: ContentId,
-    path: string
+    path: string,
   ): TemplateResult {
+    let tag = literal`object-block`;
     return html`
-      <object-block .contentId=${contentId} .path=${path}></object-block>
+      <${tag} .contentId=${contentId} .path=${path}></${tag}>
     `;
   }
 
   private static createArrayBlock(
     contentId: ContentId,
-    path: string
+    path: string,
   ): TemplateResult {
     return html`
       <array-block .contentId=${contentId} .path=${path}></array-block>
@@ -109,7 +126,7 @@ export class ComponentFactory {
 
   private static createElementBlock(
     contentId: ContentId,
-    path: string
+    path: string,
   ): TemplateResult {
     return html`
       <element-block .contentId=${contentId} .path=${path}></element-block>
@@ -118,7 +135,7 @@ export class ComponentFactory {
 
   private static createGroupBlock(
     contentId: ContentId,
-    path: string
+    path: string,
   ): TemplateResult {
     return html`
       <group-block .contentId=${contentId} .path=${path}></group-block>

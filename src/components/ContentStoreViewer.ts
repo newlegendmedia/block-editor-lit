@@ -1,234 +1,315 @@
-import { LitElement, html, css, TemplateResult } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
-import { contentStore } from '../resourcestore';
-import { Content, Document, isCompositeContent } from '../content/content';
-import { HierarchicalItem } from '../tree/HierarchicalItem';
+import { LitElement, html, css, TemplateResult } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { contentStore } from "../resourcestore";
+import { Content } from "../content/content";
+import { HierarchicalItem } from "../tree/HierarchicalItem";
 
-@customElement('content-store-viewer')
+@customElement("content-store-viewer")
 export class ContentStoreViewer extends LitElement {
-	@state() private contents: Content[] = [];
-	@state() private documents: Document[] = [];
-	@state() private viewMode: 'flat' | 'hierarchical' = 'flat';
-	@state() private contentsHierarchy: HierarchicalItem<Content> | null = null;
+  @state() private contents: Content[] = [];
+  @state() private viewMode: "flat" | "hierarchical" | "tree" = "flat";
+  @state() private contentsHierarchy: HierarchicalItem<Content> | null = null;
 
-	private unsubscribe: (() => void) | null = null;
+  private unsubscribe: (() => void) | null = null;
 
-	static styles = css`
-		:host {
-			display: block;
-			font-family: Arial, sans-serif;
-			font-size: 12px;
-			line-height: 1.4;
-		}
-		.content-store-viewer {
-			padding: 10px;
-		}
-		.content-item-header {
-			display: flex;
-			align-items: left;
-			flex-direction: column;
-			font-size: 14px;
-			line-height: 1;
-			justify-content: space-between;
-			padding: 4px 0;
-		}
-		.content-item {
-			border: 1px solid #ccc;
-			border-radius: 4px;
-			margin-bottom: 10px;
-			padding: 8px;
-		}
-		.content-id {
-			font-size: 11px;
-			margin-top: 6px;
-		}
-		.content-type {
-			font-weight: bold;
-		}
-		.content-details {
-			margin-top: 4px;
-		}
-		.level-wrap {
-			margin-left: 15px;
-		}
-		.property-list {
-			list-style-type: none;
-			padding: 0;
-			margin: 0;
-		}
-		.property-item {
-			display: flex;
-			justify-content: space-between;
-			border-bottom: 1px solid #eee;
-			padding: 2px 0;
-		}
-		.property-key {
-			font-weight: bold;
-			margin-right: 8px;
-		}
-		.property-value {
-			word-break: break-all;
-			max-width: 60%;
-			text-align: right;
-		}
-		.hierarchical-view {
-			margin-left: 10px;
-		}
-		.toggle-button {
-			margin-bottom: 10px;
-		}
-	`;
+  static styles = css`
+    :host {
+      display: block;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .content-store-viewer {
+      padding: 10px;
+    }
+    .view-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .view-button {
+      padding: 5px 10px;
+      border: 1px solid #ccc;
+      background-color: #f0f0f0;
+      cursor: pointer;
+      border-radius: 3px;
+    }
+    .view-button.active {
+      background-color: #007bff;
+      color: white;
+    }
+    .content-list ul {
+      padding-left: 0;
+    }
+    .content-item {
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      padding: 8px;
+    }
+    .content-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .content-type {
+      color: #666;
+      font-size: 12px;
+    }
+    .content-details {
+      margin-top: 5px;
+    }
+    .property-list {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+    }
+    .property-item {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #eee;
+      padding: 2px 0;
+    }
+    .property-key {
+      font-weight: bold;
+      margin-right: 8px;
+    }
+    .property-value {
+      word-break: break-all;
+      max-width: 60%;
+      text-align: right;
+    }
+    .tree-view {
+      font-family: monospace;
+    }
+    .tree-node {
+      padding-left: 20px;
+    }
+    .tree-node-content {
+      display: flex;
+      align-items: center;
+    }
+    .tree-node-icon {
+      margin-right: 5px;
+    }
+    .tree-node-text {
+      cursor: pointer;
+    }
+    .tree-node-text:hover {
+      text-decoration: underline;
+    }
+    .tree-node-details {
+      margin-left: 20px;
+      font-size: 11px;
+      color: #666;
+    }
+    .level-wrap {
+      margin-left: 10px;
+    }
+  `;
 
-	async connectedCallback() {
-		super.connectedCallback();
-		this.unsubscribe = contentStore.subscribeAll(this.handleContentChange.bind(this));
-		await this.updateContents();
-		await this.updateDocuments();
-	}
+  connectedCallback() {
+    super.connectedCallback();
+    this.unsubscribe = contentStore.subscribeAll(
+      this.handleContentChange.bind(this),
+    );
+    this.updateContents();
+  }
 
-	disconnectedCallback() {
-		super.disconnectedCallback();
-		if (this.unsubscribe) {
-			this.unsubscribe();
-		}
-	}
+  disconnectedCallback() {
+    super.disconnectedCallback();
 
-	private handleContentChange() {
-		this.updateContents();
-	}
+    if (this.unsubscribe) {
+      this.unsubscribe();
+    }
+  }
 
-	private async updateDocuments() {
-		this.requestUpdate();
-	}
+  private handleContentChange() {
+    this.updateContents();
+  }
 
-	private toggleViewMode() {
-		this.viewMode = this.viewMode === 'flat' ? 'hierarchical' : 'flat';
-	}
+  private async updateContents() {
+    if (contentStore) {
+      this.contents = await contentStore.getAll();
+      this.contentsHierarchy = await contentStore.getAllHierarchical();
+      this.requestUpdate();
+    }
+  }
 
-	private async updateContents() {
-		this.contents = await contentStore.getAll();
-		this.contentsHierarchy = null;
-		this.contentsHierarchy = await contentStore.getAllHierarchical();
-		this.requestUpdate();
-	}
+  render() {
+    return html`
+      <div class="content-store-viewer">
+        <h3>Content Store</h3>
+        <div class="view-buttons">
+          ${this.renderViewButton("flat", "Flat")}
+          ${this.renderViewButton("hierarchical", "Hierarchy")}
+          ${this.renderViewButton("tree", "Tree")}
+        </div>
+        <div>Content Count: ${this.contents.length}</div>
+        <div class="content-list">${this.renderCurrentView()}</div>
+      </div>
+    `;
+  }
 
-	render() {
-		return html`
-			<div class="content-store-viewer">
-				<h3>Content Store</h3>
-				<button @click=${this.toggleViewMode}>
-					Switch to ${this.viewMode === 'flat' ? 'Hierarchical' : 'Flat'} View
-				</button>
-				<div>Content Count: ${this.contents.length}</div>
-				<div>Document Count: ${this.documents.length}</div>
-				<h4>Documents</h4>
-				<div class="document-list">${this.documents.map((doc) => this.renderDocument(doc))}</div>
-				<h4>Contents</h4>
-				<div class="content-list">
-					${this.viewMode === 'flat'
-						? this.contents.map((content) => this.renderContent(content))
-						: this.renderHierarchicalContents(this.contentsHierarchy)}
-				</div>
-			</div>
-		`;
-	}
+  private renderViewButton(
+    mode: "flat" | "hierarchical" | "tree",
+    label: string,
+  ) {
+    return html`
+      <button
+        class="view-button ${this.viewMode === mode ? "active" : ""}"
+        @click=${() => this.setViewMode(mode)}
+      >
+        ${label}
+      </button>
+    `;
+  }
 
-	private renderHierarchicalContents(
-		hierarchicalItem: HierarchicalItem<Content> | null,
-		level: number = 0
-	): TemplateResult {
-		if (!hierarchicalItem) return html``;
+  private setViewMode(mode: "flat" | "hierarchical" | "tree") {
+    this.viewMode = mode;
+  }
 
-		return html`
-			<div class="level-wrap">
-				${this.renderContent(hierarchicalItem)}
-				${hierarchicalItem.children.map((child) =>
-					this.renderHierarchicalContents(child, level + 1)
-				)}
-			</div>
-		`;
-	}
+  private renderCurrentView(): TemplateResult {
+    switch (this.viewMode) {
+      case "flat":
+        return this.renderFlatView();
+      case "hierarchical":
+        return this.renderHierarchicalView();
+      case "tree":
+        return this.renderTreeView();
+      default:
+        return html`<div>Invalid view mode</div>`;
+    }
+  }
 
-	private renderDocument(doc: Document) {
-		return html`
-			<div class="document-item">
-				<div class="document-id">${doc.id}</div>
-				<div>Title: ${doc.title}</div>
-				<div>Root Content: ${doc.rootContent}</div>
-				<div>Created: ${doc.createdAt}</div>
-				<div>Updated: ${doc.updatedAt}</div>
-			</div>
-		`;
-	}
+  private renderFlatView(): TemplateResult {
+    return html`
+      ${this.contents.map((content) => this.renderContent(content))}
+    `;
+  }
 
-	private renderContent(content: Content) {
-		return html`
-			<div class="content-item">
-				<div class="content-item-header">
-					<div class="content-type">${content.modelInfo.type} | ${content.modelInfo.key}</div>
-					<div class="content-id">${content.id}</div>
-				</div>
-				${content.modelInfo.ref ? html`<div>Model Ref: ${content.modelInfo.ref}</div>` : ''}
-				<div class="content-details">${this.renderContentDetails(content)}</div>
-			</div>
-		`;
-	}
+  private renderHierarchicalView(): TemplateResult {
+    return html`
+      <ul>
+        ${this.renderHierarchicalContents(this.contentsHierarchy)}
+      </ul>
+    `;
+  }
 
-	private renderContentDetails(content: Content) {
-		// check if content is an empty object
-		if (
-			content.content &&
-			typeof content.content === 'object' &&
-			Object.keys(content.content).length === 0
-		) {
-			return html`<div class="simple-content">Empty Content</div>`;
-		}
-		if (isCompositeContent(content)) {
-			return this.renderCompositeContent(content.content);
-		} else {
-			return this.renderSimpleContent(content.content);
-		}
-	}
+  private renderHierarchicalContents(
+    hierarchicalItem: HierarchicalItem<Content> | null,
+    level: number = 0,
+  ): TemplateResult {
+    if (!hierarchicalItem) return html``;
 
-	private renderCompositeContent(content: any) {
-		if (typeof content === 'string') {
-			try {
-				const parsedContent = JSON.parse(content);
-				return this.renderParsedContent(parsedContent);
-			} catch (error) {
-				//        return html`<div class="error">Error parsing JSON: ${error.message}</div>`;
-			}
-		} else if (typeof content === 'object' && content !== null) {
-			return this.renderParsedContent(content);
-		} else {
-			return html`<div class="simple-content">${String(content)}</div>`;
-		}
-	}
+    return html`
+      <div class="level-wrap">
+        ${this.renderContent(hierarchicalItem)}
+        ${hierarchicalItem.children.map((child) =>
+          this.renderHierarchicalContents(child, level + 1),
+        )}
+      </div>
+    `;
+  }
 
-	private renderSimpleContent(content: any) {
-		return html`<div class="simple-content">${String(content)}</div>`;
-	}
+  private renderHierarchicalContent(contents: Content[]): TemplateResult {
+    return html`
+      ${contents.map(
+        (content) => html`
+          <li>
+            ${content.modelInfo.key} (${content.modelInfo.type})
+            ${Array.isArray(content.content)
+              ? html`<ul>
+                  ${this.renderHierarchicalContent(content.content)}
+                </ul>`
+              : ""}
+          </li>
+        `,
+      )}
+    `;
+  }
 
-	private renderParsedContent(content: any) {
-		return html`
-			<ul class="property-list">
-				${Object.entries(content).map(
-					([key, value]) => html`
-						<li class="property-item">
-							<span class="property-key">${key}:</span>
-							<span class="property-value">${this.renderValue(value)}</span>
-						</li>
-					`
-				)}
-			</ul>
-		`;
-	}
+  private renderTreeView(): TemplateResult {
+    if (!this.contentsHierarchy) {
+      return html`<div>No hierarchy data available</div>`;
+    }
+    return this.renderTreeNode(this.contentsHierarchy);
+  }
 
-	private renderValue(value: any) {
-		if (typeof value === 'object' && value !== null) {
-			return JSON.stringify(value);
-		} else {
-			return String(value);
-		}
-	}
+  private renderTreeNode(node: HierarchicalItem<Content>): TemplateResult {
+    const hasChildren = node.children && node.children.length > 0;
+    const nodeIcon = hasChildren ? "📁" : "📄";
+    return html`
+      <div class="tree-node">
+        <div class="tree-node-content">
+          <span class="tree-node-icon">${nodeIcon}</span>
+          <span
+            class="tree-node-text"
+            @click=${() => this.toggleNodeDetails(node.id)}
+          >
+            ${node.modelDefinition?.name} (${node.modelInfo.key} |
+            ${node.modelInfo.type})
+          </span>
+        </div>
+        <div
+          class="tree-node-details"
+          id="details-${node.id}"
+          style="display: none;"
+        >
+          ${this.renderContentDetails(node)}
+        </div>
+        ${hasChildren
+          ? node.children.map((child) => this.renderTreeNode(child))
+          : ""}
+      </div>
+    `;
+  }
+
+  private toggleNodeDetails(nodeId: string) {
+    const detailsElement = this.shadowRoot?.getElementById(`details-${nodeId}`);
+
+    if (detailsElement) {
+      detailsElement.style.display =
+        detailsElement.style.display === "none" ? "block" : "none";
+    }
+  }
+
+  private renderContent(content: Content): TemplateResult {
+    return html`
+      <div class="content-item">
+        <div class="content-item-header">
+          <span>${content.modelInfo.key}</span>
+          <span class="content-type">${content.modelInfo.type}</span>
+        </div>
+        <div class="content-id">${content.id}</div>
+        <div class="content-details">${this.renderContentDetails(content)}</div>
+      </div>
+    `;
+  }
+
+  private renderContentDetails(content: Content): TemplateResult {
+    return html`
+      <ul class="property-list">
+        ${Object.entries(content).map(
+          ([key, value]) => html`
+            <li class="property-item">
+              <span class="property-key">${key}:</span>
+              <span class="property-value">${this.renderValue(value)}</span>
+            </li>
+          `,
+        )}
+      </ul>
+    `;
+  }
+
+  private renderValue(value: any): string {
+    if (typeof value === "object" && value !== null) {
+      return JSON.stringify(value);
+    } else {
+      return String(value);
+    }
+  }
 }

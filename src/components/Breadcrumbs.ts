@@ -1,9 +1,9 @@
-import { LitElement, html, css } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { LitElement, html, css } from "lit";
+import { customElement, property } from "lit/decorators.js";
 
-@customElement('h-breadcrumbs')
+@customElement("h-breadcrumbs")
 export class Breadcrumbs extends LitElement {
-  @property({ type: String }) path: string = '';
+  @property({ type: String }) path: string = "";
 
   static styles = css`
     :host {
@@ -36,20 +36,21 @@ export class Breadcrumbs extends LitElement {
   `;
 
   render() {
-    const parts = this.path.split('.');
+    const parts = this.path.split(".");
     return html`
       <div class="breadcrumbs-container">
         ${parts.map((part, index) => {
-          const currentPath = parts.slice(0, index + 1).join('.');
+          const currentPath = parts.slice(0, index + 1).join(".");
           const isLast = index === parts.length - 1;
-          const isDocumentId = index === 0 && part.startsWith('DOC-');
-          const displayText = isDocumentId ? 'document' : part;
+          const isDocumentId = index === 0 && part.startsWith("DOC-");
+          const displayText = isDocumentId ? "document" : part;
           return html`
-            ${index > 0 ? html`<span class="separator">/</span>` : ''}
-            <span 
-              class=${isLast ? 'current' : 'breadcrumb'}
+            ${index > 0 ? html`<span class="separator">/</span>` : ""}
+            <span
+              class=${isLast ? "current" : "breadcrumb"}
               @click=${() => this.handleClick(currentPath)}
-            >${displayText}</span>
+              >${displayText}</span
+            >
           `;
         })}
       </div>
@@ -57,10 +58,12 @@ export class Breadcrumbs extends LitElement {
   }
 
   private handleClick(path: string) {
-    this.dispatchEvent(new CustomEvent('breadcrumb-clicked', {
-      detail: { path },
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("breadcrumb-clicked", {
+        detail: { path },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 }

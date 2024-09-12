@@ -18,64 +18,71 @@ export abstract class IndexedCompositeBlock extends CompositeBlock<'indexed'> {
 		if (!this.content || !this.model) return;
 		this.initializeIndexedChildren();
 		await this.updateChildStructure();
-	  }
-	  
-	  protected async initializeIndexedChildren(): Promise<void> {
+	}
+
+	protected async initializeIndexedChildren(): Promise<void> {
 		const compositeContent = this.content as CompositeContent;
 		this.childBlocks = Array.isArray(compositeContent.children)
-		  ? (compositeContent.children as IndexedChildren)
-		  : [];
-	  }
-	
+			? (compositeContent.children as IndexedChildren)
+			: [];
+	}
+
 	protected async initializeKeyedChildren(): Promise<void> {
 		throw new Error('Indexed composites do not support keyed children');
 	}
 
 	protected async addChildBlock(itemType: Model): Promise<ContentId> {
 		const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(itemType);
+
 		if (!modelDefinition) {
-			return "Model notFound"; // fix this
+			return 'Model notFound'; // fix this
 		}
-		const newChildContent = await contentStore.create(modelInfo, modelDefinition, content, this.contentId);
+		const newChildContent = await contentStore.create(
+			modelInfo,
+			modelDefinition,
+			content,
+			this.contentId
+		);
 		const newChildId = newChildContent.id;
-	
+
 		if (!this.content) {
-		  throw new Error('Content is not initialized');
+			throw new Error('Content is not initialized');
 		}
-	
+
 		if (isCompositeModel(itemType)) {
-		  await contentStore.update(newChildId, (content) => ({
-			...content,
-			children: [],
-			content: [],
-		  }));
+			await contentStore.update(newChildId, (content) => ({
+				...content,
+				children: [],
+				content: [],
+			}));
 		}
-	
+
 		await this.updateContent((currentContent) => {
-		  const updatedContent = currentContent as CompositeContent;
-		  updatedContent.children = [...updatedContent.children, newChildId];
-		  return updatedContent;
+			const updatedContent = currentContent as CompositeContent;
+			updatedContent.children = [...updatedContent.children, newChildId];
+			return updatedContent;
 		});
-	
+
 		this.childBlocks = (this.content as CompositeContent).children;
 		await this.updateChildStructure();
 		return newChildId;
-	  }
-	
-	  protected async removeChildBlock(index: number): Promise<void> {
+	}
+
+	protected async removeChildBlock(index: number): Promise<void> {
 		const childId = (this.childBlocks as IndexedChildren)[index];
+
 		if (childId) {
-		  await this.updateContent((currentContent) => {
-			const updatedContent = currentContent as CompositeContent;
-			updatedContent.children = updatedContent.children.filter((id) => id !== childId);
-			return updatedContent;
-		  });
-	
-		  this.childBlocks = (this.content as CompositeContent).children;
-		  await this.updateChildStructure();
-		  await contentStore.delete(childId);
+			await this.updateContent((currentContent) => {
+				const updatedContent = currentContent as CompositeContent;
+				updatedContent.children = updatedContent.children.filter((id) => id !== childId);
+				return updatedContent;
+			});
+
+			this.childBlocks = (this.content as CompositeContent).children;
+			await this.updateChildStructure();
+			await contentStore.delete(childId);
 		}
-	  }
+	}
 
 	protected getChildPath(index: number, type?: string): string {
 		return type ? `${this.path}.${index}:${type}` : `${this.path}.${index}`;

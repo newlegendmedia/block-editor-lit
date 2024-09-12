@@ -1,5 +1,5 @@
 // storageAdapter.ts
-import { Content, ContentId } from '../content/content';
+import { Content, ContentId } from "../content/content";
 
 export interface StorageAdapter {
   loadContent(id: ContentId): Promise<Content | undefined>;

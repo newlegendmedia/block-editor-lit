@@ -1,21 +1,27 @@
-import { LitElement, html, TemplateResult } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
-import { until } from 'lit/directives/until.js';
+import { LitElement, html, TemplateResult } from "lit";
+import { customElement, property } from "lit/decorators.js";
+import { until } from "lit/directives/until.js";
 import {
   Content,
   ContentId,
   isIndexedCompositeContent,
   isKeyedCompositeContent,
-} from '../content/content';
-import { contentStore } from '../resourcestore';
-import { isIndexedCompositeModel, isKeyedCompositeModel, isElement, isObject, Model } from '../model/model';
-import { ComponentFactory } from '../util/ComponentFactory';
-import { libraryStore } from '../model/libraryStore';
-import { ReactiveController } from 'lit';
+} from "../content/content";
+import { contentStore } from "../resourcestore";
+import {
+  isIndexedCompositeModel,
+  isKeyedCompositeModel,
+  isElement,
+  isObject,
+  Model,
+} from "../model/model";
+import { ComponentFactory } from "../util/ComponentFactory";
+import { modelStore } from "../modelstore/ModelStoreInstance";
+import { ReactiveController } from "lit";
 
 class PathController implements ReactiveController {
   private host: PathRenderer;
-  private _path: string = '';
+  private _path: string = "";
   private _targetContentId: string | null = null;
   private _error: string | null = null;
   private _targetContent: Content | null = null;
@@ -62,34 +68,37 @@ class PathController implements ReactiveController {
     this._error = null;
     this._targetContentId = null;
     this._targetContent = null;
-	  this.host.requestUpdate();
-	  
+    this.host.requestUpdate();
 
-    const pathParts = this._path.split('.');
+    const pathParts = this._path.split(".");
 
     if (pathParts.length === 0) {
-      this._error = 'Invalid path';
+      this._error = "Invalid path";
       this._isLoading = false;
       this.host.requestUpdate();
       return;
     }
 
     try {
-      if (pathParts.length === 1 && pathParts[0].startsWith('DOC-')) {
-		  // If only document ID is provided, emit an event to handle it in the AppComponent
-        this.host.dispatchEvent(new CustomEvent('document-id-only', {
-          detail: { documentId: pathParts[0] },
-          bubbles: true,
-          composed: true
-        }));
+      if (pathParts.length === 1 && pathParts[0].startsWith("DOC-")) {
+        // If only document ID is provided, emit an event to handle it in the AppComponent
+        this.host.dispatchEvent(
+          new CustomEvent("document-id-only", {
+            detail: { documentId: pathParts[0] },
+            bubbles: true,
+            composed: true,
+          }),
+        );
         this._isLoading = false;
         this.host.requestUpdate();
         return;
-	  }
+      }
 
       // Handle nested content
       const rootContentKey = pathParts[1];
-      let currentContent: Content | undefined = await this.findRootContent(rootContentKey);
+      let currentContent: Content | undefined =
+        await this.findRootContent(rootContentKey);
+
       if (!currentContent) {
         throw new Error(`Root content not found for key: ${rootContentKey}`);
       }
@@ -104,13 +113,14 @@ class PathController implements ReactiveController {
           console.log(`Found child content for key: ${part}`, childId);
         }
 
-        if (childId.startsWith('inline:')) {
+        if (childId.startsWith("inline:")) {
           this._targetContentId = childId;
           this._targetContent = currentContent;
           break;
         }
 
         currentContent = await contentStore.get(childId);
+
         if (!currentContent) {
           throw new Error(`Content not found for id: ${childId}`);
         }
@@ -121,7 +131,7 @@ class PathController implements ReactiveController {
         this._targetContent = currentContent;
       }
     } catch (error) {
-      console.error('Error in findTargetContent:', error);
+      console.error("Error in findTargetContent:", error);
       this._error = error instanceof Error ? error.message : String(error);
     } finally {
       this._isLoading = false;
@@ -132,19 +142,26 @@ class PathController implements ReactiveController {
   private async findRootContent(rootKey: string): Promise<Content | undefined> {
     // Fetch all contents and find the one with matching modelInfo.key
     const allContents = await contentStore.getAll();
-    return allContents.find(content => content.modelInfo.key === rootKey);
+    return allContents.find((content) => content.modelInfo.key === rootKey);
   }
 
   private async getModelForBlock(block: Content): Promise<Model | undefined> {
     return (
       block.modelDefinition ||
-      await libraryStore.value.getDefinition(block.modelInfo.ref!, block.modelInfo.type)
+      (await modelStore.getDefinition(
+        block.modelInfo.ref!,
+        block.modelInfo.type,
+      ))
     );
   }
 
-  private async getChildId(content: Content, pathPart: string): Promise<ContentId | undefined> {
-console.log('getChildId', content, pathPart);
+  private async getChildId(
+    content: Content,
+    pathPart: string,
+  ): Promise<ContentId | undefined> {
+    console.log("getChildId", content, pathPart);
     const model = await this.getModelForBlock(content);
+
     if (!model) {
       console.error(`Model not found for block: ${content.id}`);
       return undefined;
@@ -153,7 +170,12 @@ console.log('getChildId', content, pathPart);
     if (isIndexedCompositeModel(model)) {
       const index = parseInt(childKey, 10);
       if (isIndexedCompositeContent(content)) {
-        console.log('isIndexedCompositeContent content', index, pathPart, content);
+        console.log(
+          "isIndexedCompositeContent content",
+          index,
+          pathPart,
+          content,
+        );
         if (!isNaN(index) && index >= 0 && index < content.children.length) {
           return content.children[index];
         }
@@ -162,7 +184,9 @@ console.log('getChildId', content, pathPart);
       if (isKeyedCompositeContent(content)) {
         // Handle keyed composite (object)
         if (isObject(model) && model.inlineChildren) {
-          const childProperty = model.properties.find((prop) => prop.key === childKey);
+          const childProperty = model.properties.find(
+            (prop) => prop.key === childKey,
+          );
           if (childProperty && isElement(childProperty)) {
             const childContentId = `inline:${content.id}:${childKey}`;
             return childContentId;
@@ -175,7 +199,7 @@ console.log('getChildId', content, pathPart);
   }
 }
 
-@customElement('path-renderer')
+@customElement("path-renderer")
 export class PathRenderer extends LitElement {
   private pathController: PathController;
 
@@ -201,23 +225,23 @@ export class PathRenderer extends LitElement {
         ${this.pathController.error
           ? html`<div class="error">Error: ${this.pathController.error}</div>`
           : this.pathController.targetContentId
-          ? html`<div>
-              ${until(
-                this.renderTargetContent(),
-                html`<div>Loading content...</div>`,
-                html`<div>Error loading content</div>`
-              )}
-            </div>`
-          : html`<div>Loading...</div>`}
+            ? html`<div>
+                ${until(
+                  this.renderTargetContent(),
+                  html`<div>Loading content...</div>`,
+                  html`<div>Error loading content</div>`,
+                )}
+              </div>`
+            : html`<div>Loading...</div>`}
       </div>
     `;
   }
 
   private async renderTargetContent(): Promise<TemplateResult> {
+    if (!this.pathController.targetContentId)
+      return html`<div>No target content found</div>`;
 
-    if (!this.pathController.targetContentId) return html`<div>No target content found</div>`;
-
-    if (this.pathController.targetContentId.startsWith('inline:')) {
+    if (this.pathController.targetContentId.startsWith("inline:")) {
       return html`<div>Path not supported for inline content</div>`;
     }
 
@@ -225,15 +249,16 @@ export class PathRenderer extends LitElement {
     if (!content) return html`<div>Content not found</div>`;
 
     // remove the last item from the path if it matches the content.modelInfo.key to avoid duplication
-    const pathParts = this.path.split('.');
+    const pathParts = this.path.split(".");
+
     if (pathParts[pathParts.length - 1] === content.modelInfo.key) {
       pathParts.pop();
     }
-    const parentPath = pathParts.join('.');
+    const parentPath = pathParts.join(".");
 
     return ComponentFactory.createComponent(
       content.id || this.pathController.targetContentId,
-      parentPath
+      parentPath,
     );
   }
 }

@@ -1,20 +1,19 @@
-import { html, css, TemplateResult } from 'lit';
-import { customElement, state, property } from 'lit/decorators.js';
-import { until } from 'lit/directives/until.js';
-import { IndexedCompositeBlock } from './IndexedCompositeBlock';
-import { ComponentFactory } from '../util/ComponentFactory';
-import { GroupModel, Model } from '../model/model';
-import { ContentId } from '../content/content';
-import { contentStore } from '../resourcestore';
-import { ModelStore } from '../model/libraryStore';
+import { html, css, TemplateResult } from "lit";
+import { customElement, state, property } from "lit/decorators.js";
+import { until } from "lit/directives/until.js";
+import { IndexedCompositeBlock } from "./IndexedCompositeBlock";
+import { ComponentFactory } from "../util/ComponentFactory";
+import { GroupModel, Model } from "../model/model";
+import { ContentId } from "../content/content";
+import { contentStore } from "../resourcestore";
+import { modelStore } from "../modelstore/ModelStoreInstance";
 
-@customElement('group-block')
+@customElement("group-block")
 export class GroupBlock extends IndexedCompositeBlock {
   @state() private showSlashMenu: boolean = false;
   @property({ type: Array }) mirroredBlocks: string[] = [];
   @state() private childComponentPromises: Promise<TemplateResult>[] = [];
   @state() private childTypes: Map<ContentId, string> = new Map();
-  @state() protected modelStore?: ModelStore;
   @state() private itemTypes: Model[] | null = null;
 
   private enableMirroring: boolean = false; // Feature toggle for mirroring
@@ -56,43 +55,54 @@ export class GroupBlock extends IndexedCompositeBlock {
   }
 
   private async updateChildTypes() {
-    const childTypePromises = (this.childBlocks as ContentId[]).map(async (childId) => {
-      const childContent = await contentStore.get(childId);
-      return [childId, childContent?.modelInfo.key || 'unknown'] as [ContentId, string];
-    });
+    const childTypePromises = (this.childBlocks as ContentId[]).map(
+      async (childId) => {
+        const childContent = await contentStore.get(childId);
+        return [childId, childContent?.modelInfo.key || "unknown"] as [
+          ContentId,
+          string,
+        ];
+      },
+    );
     const childTypes = await Promise.all(childTypePromises);
     this.childTypes = new Map(childTypes);
+    console.log("Group updateChildTypes", this.childTypes);
     this.requestUpdate();
   }
 
   private async initializeChildComponents() {
     if (!Array.isArray(this.childBlocks)) {
-      console.error('ChildBlocks is not an array:', this.childBlocks);
+      console.error("ChildBlocks is not an array:", this.childBlocks);
       return;
     }
-
-    this.childComponentPromises = this.childBlocks.map((childId, index) => 
-      this.createChildComponent(childId, index)
+    console.log("Group initializeChildComponents", this.childBlocks);
+    this.childComponentPromises = this.childBlocks.map((childId, index) =>
+      this.createChildComponent(childId, index),
     );
 
     this.requestUpdate();
   }
 
-  private createChildComponent(childId: ContentId, _index: number): Promise<TemplateResult> {
+  private createChildComponent(
+    childId: ContentId,
+    _index: number,
+  ): Promise<TemplateResult> {
     return ComponentFactory.createComponent(childId, this.path);
   }
 
   protected renderContent(): TemplateResult {
-    if (!this.content || !this.modelStore || !this.model) {
+    if (!this.content || !this.model) {
       return html`<div>Group Loading...</div>`;
     }
     return html`
       <div>
         ${this.renderAddButton()}
-        ${this.showSlashMenu ? this.renderSlashMenu() : ''}
+        ${this.showSlashMenu ? this.renderSlashMenu() : ""}
         ${until(
-          Promise.all(this.childComponentPromises).then(components => html`${components}`),
-          html`<span>Loading child components...</span>`
+          Promise.all(this.childComponentPromises).then(
+            (components) => html`${components}`,
+          ),
+          html`<span>Loading child components...</span>`,
         )}
       </div>
     `;
@@ -106,13 +116,13 @@ export class GroupBlock extends IndexedCompositeBlock {
     return html`
       <div class="slash-menu">
         ${this.itemTypes
-          ? this.itemTypes.map(itemType => 
-              html`<button @click=${() => this.addItem(itemType)}>
-                ${itemType.name || itemType.key}
-              </button>`
+          ? this.itemTypes.map(
+              (itemType) =>
+                html`<button @click=${() => this.addItem(itemType)}>
+                  ${itemType.name || itemType.key}
+                </button>`,
             )
-          : html`<span>Loading item types...</span>`
-        }
+          : html`<span>Loading item types...</span>`}
       </div>
     `;
   }
@@ -129,10 +139,18 @@ export class GroupBlock extends IndexedCompositeBlock {
 
   private async getItemTypes(groupModel: GroupModel): Promise<Model[]> {
     if (Array.isArray(groupModel.itemTypes)) {
-      console.log('getItemTypes Array.isArray', groupModel.itemTypes);
+      console.log("getItemTypes Array.isArray", groupModel.itemTypes);
       return groupModel.itemTypes;
     }
-    console.log('getItemTypes not found - returning empty array');
+
+    if (typeof groupModel.itemTypes === "string") {
+      const model = await modelStore.getDefinition(
+        groupModel.itemTypes,
+        "group",
+      );
+      return model ? [model] : [];
+    }
+    console.log("getItemTypes not found - returning empty array");
     return [];
   }
 
@@ -151,7 +169,7 @@ export class GroupBlock extends IndexedCompositeBlock {
     // Add the new child component promise
     this.childComponentPromises = [
       ...this.childComponentPromises,
-      this.createChildComponent(newChildId, this.childComponentPromises.length)
+      this.createChildComponent(newChildId, this.childComponentPromises.length),
     ];
 
     this.showSlashMenu = false;
@@ -167,7 +185,9 @@ export class GroupBlock extends IndexedCompositeBlock {
     }
 
     // Remove the child component promise
-    this.childComponentPromises = this.childComponentPromises.filter((_, i) => i !== index);
+    this.childComponentPromises = this.childComponentPromises.filter(
+      (_, i) => i !== index,
+    );
 
     this.requestUpdate();
   }

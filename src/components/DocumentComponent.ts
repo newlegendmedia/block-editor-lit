@@ -1,11 +1,11 @@
-import { LitElement, html, TemplateResult } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
-import { ComponentFactory } from '../util/ComponentFactory';
-import { contentStore } from '../resourcestore';
-import { documentManager } from '../store';
-import { Document, Content } from '../content/content';
+import { LitElement, html, TemplateResult } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
+import { ComponentFactory } from "../util/ComponentFactory";
+import { contentStore } from "../resourcestore";
+import { documentManager } from "../store";
+import { Document, Content } from "../content/content";
 
-@customElement('document-component')
+@customElement("document-component")
 export class DocumentComponent extends LitElement {
   @property({ type: String }) documentId!: string;
   @state() private document: Document | undefined = undefined;
@@ -20,18 +20,20 @@ export class DocumentComponent extends LitElement {
   async loadDocument() {
     try {
       this.document = await documentManager.getDocument(this.documentId);
+
       if (this.document) {
         this.rootContent = await contentStore.get(this.document.rootContent);
+
         if (this.rootContent) {
           // Use the document ID as the initial path
           this.rootComponent = await ComponentFactory.createComponent(
             this.rootContent.id,
-            this.documentId  // Pass the document ID as the initial path
+            this.documentId, // Pass the document ID as the initial path
           );
         }
       }
     } catch (error) {
-      console.error('Error loading document:', error);
+      console.error("Error loading document:", error);
     }
     this.requestUpdate();
   }

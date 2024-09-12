@@ -1,21 +1,19 @@
-import { LitElement, html, PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
-import { Content, ContentId } from '../content/content';
-import { Model } from '../model/model';
-import { contentStore } from '../resourcestore/';
-import { libraryStore, ModelStore } from '../model/libraryStore';
-import '../components/Breadcrumbs';
+import { LitElement, html, PropertyValues } from "lit";
+import { property, state } from "lit/decorators.js";
+import { Content, ContentId } from "../content/content";
+import { Model } from "../model/model";
+import { contentStore } from "../resourcestore/";
+import { modelStore } from "../modelstore/ModelStoreInstance";
+import "../components/Breadcrumbs";
 
 export abstract class BaseBlock extends LitElement {
-  @property({ type: String }) contentId: ContentId = '';
-  @property({ type: String }) path: string = '';
+  @property({ type: String }) contentId: ContentId = "";
+  @property({ type: String }) path: string = "";
   @state() protected content?: Content;
   @state() protected model?: Model;
   @state() protected error: string | null = null;
-  @state() protected modelStore?: ModelStore;
 
   private unsubscribeContent: (() => void) | null = null;
-  private unsubscribeLibrary: (() => void) | null = null;
   private initialized: boolean = false;
 
   constructor() {
@@ -24,43 +22,36 @@ export abstract class BaseBlock extends LitElement {
 
   async connectedCallback() {
     super.connectedCallback();
-    this.unsubscribeLibrary = libraryStore.subscribe(this.handleLibraryChange.bind(this));
     await this.initialize();
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     this.unsubscribeFromContent();
-    if (this.unsubscribeLibrary) {
-      this.unsubscribeLibrary();
-    }
   }
 
   protected generateComponentPath(path: string): string {
-    const newPath = `${path}.${this.model?.key}`;
-    return newPath;
-  }
-  
-  private handleLibraryChange(modelStore: ModelStore, ready: boolean) {
-    this.modelStore = modelStore;
-    if (ready) {
-      // this.initialize();
-    }
+    return `${path}.${this.model?.key}`;
   }
 
   protected async initialize() {
     if (this.initialized) return;
-    
+
     try {
       await this.initializeContent();
       this.subscribeToContent();
       await this.initializeModel();
       this.path = this.generateComponentPath(this.path);
-      console.log('=== BaseBlock initialize', this.path, this.content, this.model);
+      console.log(
+        "=== BaseBlock initialize",
+        this.path,
+        this.content,
+        this.model,
+      );
       await this.initializeBlock();
       this.initialized = true;
     } catch (error) {
-      console.error('Initialization error:', error);
+      console.error("Initialization error:", error);
       this.error = `Initialization failed: ${
         error instanceof Error ? error.message : String(error)
       }`;
@@ -72,22 +63,21 @@ export abstract class BaseBlock extends LitElement {
   }
 
   protected async initializeContent() {
-      this.content = await contentStore.get(this.contentId);
+    this.content = await contentStore.get(this.contentId);
   }
 
   protected async initializeModel() {
-    if (this.content && this.modelStore) {
+    if (this.content) {
       this.model = await this.getModel();
     }
 
     if (!this.model) {
-      throw new Error('Failed to initialize model');
+      throw new Error("Failed to initialize model");
     }
   }
 
   private subscribeToContent() {
     this.unsubscribeFromContent();
-    // Subscription logic here
   }
 
   private unsubscribeFromContent() {
@@ -101,23 +91,24 @@ export abstract class BaseBlock extends LitElement {
     if (!this.content) return;
     try {
       const updatedContent = await contentStore.update(this.contentId, updater);
+
       if (updatedContent) {
         this.content = updatedContent;
       }
     } catch (error) {
-      console.error('Failed to update content:', error);
-      this.error = 'Failed to update content';
+      console.error("Failed to update content:", error);
+      this.error = "Failed to update content";
     }
   }
 
   protected async getModel(): Promise<Model | undefined> {
-    if (!this.content || !this.modelStore) return undefined;
+    if (!this.content) return undefined;
 
     const { modelInfo } = this.content;
     if (this.content.modelDefinition) return this.content.modelDefinition;
     if (!modelInfo.ref) return undefined;
 
-    return this.modelStore.getDefinition(modelInfo.ref, modelInfo.type);
+    return modelStore.getDefinition(modelInfo.ref, modelInfo.type);
   }
 
   protected updated(changedProperties: PropertyValues) {
@@ -128,6 +119,7 @@ export abstract class BaseBlock extends LitElement {
     if (this.error) {
       return html`<div class="error">${this.error}</div>`;
     }
+
     if (!this.content || !this.model) {
       return html`<div>Loading...</div>`;
     }
@@ -142,7 +134,7 @@ export abstract class BaseBlock extends LitElement {
 
   protected renderPath() {
     return html`
-      <h-breadcrumbs 
+      <h-breadcrumbs
         .path=${this.path}
         @breadcrumb-clicked=${this.handleBreadcrumbClick}
       ></h-breadcrumbs>
@@ -152,12 +144,11 @@ export abstract class BaseBlock extends LitElement {
   private handleBreadcrumbClick(e: CustomEvent) {
     const clickedPath = e.detail.path;
     this.dispatchEvent(
-      new CustomEvent('path-clicked', {
+      new CustomEvent("path-clicked", {
         detail: { path: clickedPath },
         bubbles: true,
         composed: true,
-      })
+      }),
     );
   }
-
 }

@@ -1,7 +1,7 @@
-import { LitElement, html, css } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { LitElement, html, css } from "lit";
+import { customElement, property } from "lit/decorators.js";
 
-@customElement('h-block')
+@customElement("h-block")
 export class Block extends LitElement {
   @property({ type: String }) name: string;
 
@@ -21,7 +21,7 @@ export class Block extends LitElement {
 
   constructor() {
     super();
-    this.name = 'World';
+    this.name = "World";
   }
 
   render() {

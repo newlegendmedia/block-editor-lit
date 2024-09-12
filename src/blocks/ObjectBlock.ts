@@ -23,14 +23,23 @@ export class ObjectBlock extends KeyedCompositeBlock {
 				flex-direction: column;
 				gap: var(--spacing-small);
 			}
+			.property-content {
+				flex: 1;
+			}
 			.property-item {
 				display: flex;
 				align-items: flex-start;
 				gap: var(--spacing-small);
+				margin-top: var(--spacing-small);
 			}
 			.property-label {
 				font-weight: bold;
-				min-width: 120px;
+				font-size: 14px;
+				width: 90px;
+				margin-top: 6px;
+			}
+			label {
+				font-size: 13px;
 			}
 		`,
 	];
@@ -93,7 +102,7 @@ export class ObjectBlock extends KeyedCompositeBlock {
 		if (this.inlineChildren && isElement(property)) {
 			return this.createInlineChildComponent(property, childKey, this.path);
 		} else {
-			return this.createStandardChildComponent(property, childKey, this.path);
+			return await this.createStandardChildComponent(property, childKey, this.path);
 		}
 	}
 
@@ -107,7 +116,11 @@ export class ObjectBlock extends KeyedCompositeBlock {
 		);
 	}
 
-	private async createStandardChildComponent(_property: Model, childKey: string, parentPath: string) {
+	private async createStandardChildComponent(
+		_property: Model,
+		childKey: string,
+		parentPath: string
+	) {
 		const childContentId = (this.content?.content as KeyedCompositeContent)?.[childKey];
 
 		if (!childContentId) {
@@ -116,7 +129,6 @@ export class ObjectBlock extends KeyedCompositeBlock {
 		}
 		return ComponentFactory.createComponent(childContentId, parentPath);
 	}
-
 
 	protected renderContent(): TemplateResult {
 		if (!this.content || !this.model || !(this.model as ObjectModel).properties) {
@@ -167,6 +179,7 @@ export class ObjectBlock extends KeyedCompositeBlock {
 		const { id, value } = customEvent.detail;
 		if (id.startsWith('inline:')) {
 			const [, parentId, childKey] = id.split(':');
+
 			if (parentId === this.contentId) {
 				await this.updateContent((content) => ({
 					...content,

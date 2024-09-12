@@ -1,10 +1,10 @@
-import { LitElement, html, css } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { LitElement, html, css } from "lit";
+import { customElement, property } from "lit/decorators.js";
 
-@customElement('h-button')
+@customElement("h-button")
 export class HatchButton extends LitElement {
-  @property({ type: String }) label = 'Button';
-  @property({ type: String }) icon = '';
+  @property({ type: String }) label = "Button";
+  @property({ type: String }) icon = "";
   @property({ type: Boolean }) editMode = false;
 
   static styles = css`
@@ -40,36 +40,39 @@ export class HatchButton extends LitElement {
       <button @click=${this._handleClick}>
         ${this.editMode
           ? html`
-              <span class="icon editable" @click=${this._editIcon}>${this.icon}</span>
-              <span class="label editable" @click=${this._editLabel}>${this.label}</span>
+              <span class="icon editable" @click=${this._editIcon}
+                >${this.icon}</span
+              >
+              <span class="label editable" @click=${this._editLabel}
+                >${this.label}</span
+              >
             `
           : html`
               <span class="icon">${this.icon}</span>
               <span class="label">${this.label}</span>
-            `
-        }
+            `}
       </button>
     `;
   }
 
   _handleClick(_e: Event) {
     if (!this.editMode) {
-      this.dispatchEvent(new CustomEvent('button-click', {
-        bubbles: true,
-        composed: true
-      }));
+      this.dispatchEvent(
+        new CustomEvent("button-click", {
+          bubbles: true,
+          composed: true,
+        }),
+      );
     }
   }
 
   _editIcon(e: Event) {
     e.stopPropagation();
     // Implement icon editing logic here
-    
   }
 
   _editLabel(e: Event) {
     e.stopPropagation();
     // Implement label editing logic here
-    
   }
 }

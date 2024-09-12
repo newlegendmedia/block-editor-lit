@@ -1,7 +1,7 @@
-import { Tree } from '../tree/Tree';
-import { Resource } from './Resource';
-import { StorageAdapter } from './StorageAdapter';
-import { SubscriptionManager } from './SubscriptionManager';
+import { Tree } from "../tree/Tree";
+import { Resource } from "./Resource";
+import { StorageAdapter } from "./StorageAdapter";
+import { SubscriptionManager } from "./SubscriptionManager";
 
 export class ResourceStore<K, T extends Resource> {
   protected tree: Tree<K, T>;
@@ -16,25 +16,29 @@ export class ResourceStore<K, T extends Resource> {
 
   async get(id: K): Promise<T | undefined> {
     let item = this.tree.get(id)?.item;
+
     if (!item) {
       item = await this.storage.get(id as string);
+
       if (item) {
         this.tree.add(item, item.parentId as K | undefined, item.id as K);
       }
     }
     return item;
   }
-  
+
   async set(item: T, parentId?: K): Promise<void> {
     const existingItem = await this.get(item.id as K);
+
     if (existingItem) {
       item = { ...existingItem, ...item };
     }
 
     await this.storage.set(item);
-    
+
     // Use the improved Tree.add method
     const node = this.tree.add(item, parentId, item.id as K);
+
     if (!node) {
       console.error(`Failed to add/update item ${item.id} in the tree.`);
     }
@@ -42,7 +46,7 @@ export class ResourceStore<K, T extends Resource> {
     this.subscriptions.notify(item.id as K, item);
     this.subscriptions.notifyAll();
   }
-  
+
   async delete(id: K): Promise<void> {
     await this.storage.delete(id as string);
     this.tree.remove(id);
@@ -60,7 +64,7 @@ export class ResourceStore<K, T extends Resource> {
 
   subscribeToAll(callback: () => void): () => void {
     return this.subscriptions.subscribeToAll(callback);
-  }  
+  }
 
   unsubscribeFromAll(callback: () => void): void {
     this.subscriptions.unsubscribeFromAll(callback);
@@ -78,15 +82,15 @@ export class ResourceStore<K, T extends Resource> {
   }
 
   async getMany(ids: K[]): Promise<(T | undefined)[]> {
-    return Promise.all(ids.map(id => this.get(id)));
+    return Promise.all(ids.map((id) => this.get(id)));
   }
 
   async setMany(items: T[]): Promise<void> {
-    await Promise.all(items.map(item => this.set(item)));
+    await Promise.all(items.map((item) => this.set(item)));
   }
 
   async deleteMany(ids: K[]): Promise<void> {
-    await Promise.all(ids.map(id => this.delete(id)));
+    await Promise.all(ids.map((id) => this.delete(id)));
   }
 
   // Method to check if a resource exists
@@ -98,7 +102,10 @@ export class ResourceStore<K, T extends Resource> {
   // Method to clear all resources
   async clear(): Promise<void> {
     await this.storage.clear();
-    this.tree = new Tree<K, T>(this.tree.getRootId(), this.tree.get(this.tree.getRootId())!.item);
+    this.tree = new Tree<K, T>(
+      this.tree.getRootId(),
+      this.tree.get(this.tree.getRootId())!.item,
+    );
     this.subscriptions.notifyAll();
   }
 

@@ -1,9 +1,11 @@
 // SchemaStorage.ts
 
-import { ModelSchema } from './ModelStore';
+import { ModelSchema } from "./ModelStore";
 
 export class SchemaStorage {
-  static async loadSchema(schemaName: string): Promise<ModelSchema | undefined> {
+  static async loadSchema(
+    schemaName: string,
+  ): Promise<ModelSchema | undefined> {
     const schemaJson = localStorage.getItem(`schema:${schemaName}`);
     return schemaJson ? JSON.parse(schemaJson) : undefined;
   }

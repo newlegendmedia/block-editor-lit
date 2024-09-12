@@ -1,14 +1,14 @@
 // MirrorBlock.ts
 
-import { html, css, TemplateResult } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
-import { BaseBlock } from './BaseBlock';
-import { contentStore } from '../store';
-import { Content } from '../content/content';
+import { html, css, TemplateResult } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
+import { BaseBlock } from "./BaseBlock";
+import { contentStore } from "../store";
+import { Content } from "../content/content";
 
-@customElement('mirror-block')
+@customElement("mirror-block")
 export class MirrorBlock extends BaseBlock {
-  @property({ type: String }) referencedContentId: string = '';
+  @property({ type: String }) referencedContentId: string = "";
   @state() private mirroredContent: Content | undefined = undefined;
 
   static styles = [
@@ -19,7 +19,7 @@ export class MirrorBlock extends BaseBlock {
         padding: var(--spacing-medium);
         margin-top: var(--spacing-small);
       }
-    `
+    `,
   ];
 
   async connectedCallback() {
@@ -37,14 +37,22 @@ export class MirrorBlock extends BaseBlock {
 
   async initializeContent() {
     try {
-      const referencedContent = await contentStore.getContent(this.referencedContentId);
+      const referencedContent = await contentStore.getContent(
+        this.referencedContentId,
+      );
+
       if (referencedContent) {
-        this.mirroredContent = { ...referencedContent, id: `mirror:${referencedContent.id}` };
+        this.mirroredContent = {
+          ...referencedContent,
+          id: `mirror:${referencedContent.id}`,
+        };
         this.content = this.mirroredContent;
         this.model = this.getModel();
         this.requestUpdate();
       } else {
-        console.error(`MirrorBlock: Referenced content not found for ID ${this.referencedContentId}`);
+        console.error(
+          `MirrorBlock: Referenced content not found for ID ${this.referencedContentId}`,
+        );
       }
     } catch (error) {
       console.error(`MirrorBlock: Error initializing content:`, error);
@@ -66,7 +74,7 @@ export class MirrorBlock extends BaseBlock {
           this.model = undefined;
           this.requestUpdate();
         }
-      }
+      },
     );
   }
 
@@ -84,9 +92,7 @@ export class MirrorBlock extends BaseBlock {
     return html`
       <div>
         <h3>Mirrored Content (Original ID: ${this.referencedContentId})</h3>
-        <div class="mirror-content">
-          ${this.renderMirroredContent()}
-        </div>
+        <div class="mirror-content">${this.renderMirroredContent()}</div>
       </div>
     `;
   }
@@ -97,9 +103,7 @@ export class MirrorBlock extends BaseBlock {
     }
 
     // You can customize this part to render the mirrored content as needed
-    return html`
-      <pre>${JSON.stringify(this.mirroredContent, null, 2)}</pre>
-    `;
+    return html` <pre>${JSON.stringify(this.mirroredContent, null, 2)}</pre> `;
   }
 
   protected getModel() {

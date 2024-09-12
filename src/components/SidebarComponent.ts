@@ -1,10 +1,10 @@
-import { LitElement, html, css } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
-import './DocumentsViewer';
-import './ContentStoreViewer';
-import './ModelStoreViewer';
+import { LitElement, html, css } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import "./DocumentsViewer";
+import "./ContentStoreViewer";
+import "./ModelStoreViewer";
 
-@customElement('sidebar-component')
+@customElement("sidebar-component")
 export class SidebarComponent extends LitElement {
   @state() private isContentStoreViewerVisible: boolean = false;
   @state() private isModelStoreViewerVisible: boolean = false;
@@ -32,30 +32,36 @@ export class SidebarComponent extends LitElement {
         @document-deleted=${this.propagateEvent}
       ></documents-viewer>
       <button @click=${this.toggleContentStoreViewer}>
-        ${this.isContentStoreViewerVisible ? 'Hide' : 'Show'} Content Store
+        ${this.isContentStoreViewerVisible ? "Hide" : "Show"} Content Store
       </button>
-      ${this.isContentStoreViewerVisible ? html`
-        <div class="store-viewer-container">
-          <content-store-viewer></content-store-viewer>
-        </div>
-      ` : ''}
+      ${this.isContentStoreViewerVisible
+        ? html`
+            <div class="store-viewer-container">
+              <content-store-viewer></content-store-viewer>
+            </div>
+          `
+        : ""}
       <button @click=${this.toggleModelStoreViewer}>
-        ${this.isModelStoreViewerVisible ? 'Hide' : 'Show'} Model Store
+        ${this.isModelStoreViewerVisible ? "Hide" : "Show"} Model Store
       </button>
-      ${this.isModelStoreViewerVisible ? html`
-        <div class="store-viewer-container">
-          <model-store-viewer></model-store-viewer>
-        </div>
-      ` : ''}
+      ${this.isModelStoreViewerVisible
+        ? html`
+            <div class="store-viewer-container">
+              <model-store-viewer></model-store-viewer>
+            </div>
+          `
+        : ""}
     `;
   }
 
   private propagateEvent(e: CustomEvent) {
-    this.dispatchEvent(new CustomEvent(e.type, {
-      detail: e.detail,
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent(e.type, {
+        detail: e.detail,
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   private toggleContentStoreViewer() {

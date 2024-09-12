@@ -1,211 +1,238 @@
-import { LitElement, html, css } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
-import { DocumentId } from '../content/content';
-import { loadDefaultSchema } from '../modelstore/loadDefaultSchema';
-import './DocumentComponent';
-import './SidebarComponent';
-import './PathRenderer';
-import './Breadcrumbs';
-import { documentManager } from '../store';
+import { LitElement, html, css } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { DocumentId } from "../content/content";
+import { loadDefaultSchema } from "../modelstore/loadDefaultSchema";
+import "./DocumentComponent";
+import "./SidebarComponent";
+import "./PathRenderer";
+import "./Breadcrumbs";
+import { documentManager } from "../store";
 
-@customElement('app-component')
+@customElement("app-component")
 export class AppComponent extends LitElement {
-	@state() private activeDocumentId: DocumentId | null = null;
-	@state() private isSidebarOpen: boolean = true;
-	@state() private isDarkMode: boolean = false;
-	@state() private currentPath: string | null = null;
-	@state() private pathRenderError: string | null = null;
-	@state() private isLoading: boolean = false;
+  @state() private activeDocumentId: DocumentId | null = null;
+  @state() private isSidebarOpen: boolean = true;
+  @state() private isDarkMode: boolean = false;
+  @state() private currentPath: string | null = null;
+  @state() private pathRenderError: string | null = null;
+  @state() private isLoading: boolean = false;
 
-	static styles = css`
-		:host {
-			display: flex;
-			height: 100vh;
-			overflow: hidden;
-			color: var(--text-color);
-			background-color: var(--background-color);
-		}
-		.sidebar {
-			width: 350px;
-			overflow-y: auto;
-			background-color: var(--sidebar-bg-color);
-			transition: transform 0.3s ease-in-out;
-		}
-		.sidebar.closed {
-			transform: translateX(-250px);
-		}
-		.main-content {
-			flex-grow: 1;
-			overflow-y: auto;
-			padding: 20px;
-		}
-		.toggle-sidebar {
-			position: fixed;
-			top: 10px;
-			left: 10px;
-			z-index: 1000;
-		}
-		.theme-toggle {
-			position: fixed;
-			top: 10px;
-			right: 10px;
-			z-index: 1000;
-		}
-	`;
+  static styles = css`
+    :host {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      color: var(--text-color);
+      background-color: var(--background-color);
+    }
+    .sidebar {
+      width: 350px;
+      overflow-y: auto;
+      background-color: var(--sidebar-bg-color);
+      transition: transform 0.3s ease-in-out;
+    }
+    .sidebar.closed {
+      transform: translateX(-250px);
+    }
+    .main-content {
+      flex-grow: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    .toggle-sidebar {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+    }
+  `;
 
-	constructor() {
-		super();
-		this.addEventListener('toggle-sidebar', this.toggleSidebar as EventListener);
-		this.addEventListener('toggle-theme', this.toggleTheme as EventListener);
-		this.addEventListener('path-clicked', this.handlePathClick as EventListener);
-		this.addEventListener('breadcrumb-clicked', this.handleBreadcrumbClickWrapper as EventListener);
-		this.addEventListener('document-opened', this.handleDocumentOpened as EventListener);
-		this.addEventListener('document-closed', this.handleDocumentClosed as EventListener);
-		this.addEventListener('document-deleted', this.handleDocumentDeleted as EventListener);
-		this.addEventListener('document-id-only', ((e: Event) => {
-			const customEvent = e as CustomEvent<{ documentId: string }>;
-		  this.handleDocumentIdOnly(customEvent.detail.documentId);
-		}) as EventListener);
-	  }
+  constructor() {
+    super();
+    this.addEventListener(
+      "toggle-sidebar",
+      this.toggleSidebar as EventListener,
+    );
+    this.addEventListener("toggle-theme", this.toggleTheme as EventListener);
+    this.addEventListener(
+      "path-clicked",
+      this.handlePathClick as EventListener,
+    );
+    this.addEventListener(
+      "breadcrumb-clicked",
+      this.handleBreadcrumbClickWrapper as EventListener,
+    );
+    this.addEventListener(
+      "document-opened",
+      this.handleDocumentOpened as EventListener,
+    );
+    this.addEventListener(
+      "document-closed",
+      this.handleDocumentClosed as EventListener,
+    );
+    this.addEventListener(
+      "document-deleted",
+      this.handleDocumentDeleted as EventListener,
+    );
+    this.addEventListener("document-id-only", ((e: Event) => {
+      const customEvent = e as CustomEvent<{ documentId: string }>;
+      this.handleDocumentIdOnly(customEvent.detail.documentId);
+    }) as EventListener);
+  }
 
-	async connectedCallback() {
-		super.connectedCallback();
-		await this.initializeApp();
-		this.applyTheme();
-	}
+  async connectedCallback() {
+    super.connectedCallback();
+    await this.initializeApp();
+    this.applyTheme();
+  }
 
-	private async initializeApp() {
-		try {
-			this.isLoading = true;
-			await loadDefaultSchema();
-		} catch (error) {
-			console.error('Failed to initialize the app:', error);
-		} finally {
-			this.isLoading = false;
-		}
-	}
+  private async initializeApp() {
+    try {
+      this.isLoading = true;
+      await loadDefaultSchema();
+    } catch (error) {
+      console.error("Failed to initialize the app:", error);
+    } finally {
+      this.isLoading = false;
+    }
+  }
 
-	private handleDocumentOpened(event: CustomEvent) {
-		this.activeDocumentId = event.detail.documentId;
-		this.currentPath = null;
-		this.requestUpdate();
-	}
+  private handleDocumentOpened(event: CustomEvent) {
+    this.activeDocumentId = event.detail.documentId;
+    this.currentPath = null;
+    this.requestUpdate();
+  }
 
-	private handleDocumentClosed(event: CustomEvent) {
-		if (this.activeDocumentId === event.detail.documentId) {
-			this.activeDocumentId = null;
-			this.currentPath = null;
-		}
-		this.requestUpdate();
-	}
+  private handleDocumentClosed(event: CustomEvent) {
+    if (this.activeDocumentId === event.detail.documentId) {
+      this.activeDocumentId = null;
+      this.currentPath = null;
+    }
+    this.requestUpdate();
+  }
 
-	private handleDocumentDeleted(event: CustomEvent) {
-		if (this.activeDocumentId === event.detail.documentId) {
-			this.activeDocumentId = null;
-			this.currentPath = null;
-		}
-		this.requestUpdate();
-	}
-	
-	private toggleSidebar() {
-		this.isSidebarOpen = !this.isSidebarOpen;
-	}
+  private handleDocumentDeleted(event: CustomEvent) {
+    if (this.activeDocumentId === event.detail.documentId) {
+      this.activeDocumentId = null;
+      this.currentPath = null;
+    }
+    this.requestUpdate();
+  }
 
-	private toggleTheme() {
-		this.isDarkMode = !this.isDarkMode;
-		this.applyTheme();
-	}
+  private toggleSidebar() {
+    this.isSidebarOpen = !this.isSidebarOpen;
+  }
 
-	private applyTheme() {
-		document.body.classList.toggle('dark-theme', this.isDarkMode);
-	}
+  private toggleTheme() {
+    this.isDarkMode = !this.isDarkMode;
+    this.applyTheme();
+  }
 
-	private handleBreadcrumbClickWrapper(event: CustomEvent): void {
-		this.handleBreadcrumbClick(event).catch(error => {
-		  console.error('Error handling breadcrumb click:', error);
-		});
-	}
+  private applyTheme() {
+    document.body.classList.toggle("dark-theme", this.isDarkMode);
+  }
 
-	private async handleBreadcrumbClick(event: CustomEvent) {
-		const clickedPath = event.detail.path;
-	
-		const pathParts = clickedPath.split('.');
-		if (pathParts.length === 1 && pathParts[0].startsWith('DOC-')) {
-		  // If the clicked path is a document ID, handle it as a document-id-only event
-		  await this.handleDocumentIdOnly(pathParts[0]);
-		} else {
-		  // Otherwise, update the current path and render the corresponding content
-		  this.currentPath = clickedPath;
-		  this.activeDocumentId = null; // Reset active document when navigating to a sub-path
-		  this.pathRenderError = null;
-		}
-		this.requestUpdate();
-	  }
-	
-	  private handlePathClick(event: CustomEvent) {
-		  this.currentPath = event.detail.path;
-		this.pathRenderError = null;
-		this.requestUpdate();
-	  }
-	
-	  private async handleDocumentIdOnly(documentId: string) {
-		this.isLoading = true;
-		try {
-		  const document = await documentManager.getDocument(documentId);
-		  if (document) {
-			this.activeDocumentId = documentId;
-			this.currentPath = documentId;
-		  } else {
-			console.error(`Document not found for ID: ${documentId}`);
-			this.pathRenderError = `Document not found for ID: ${documentId}`;
-		  }
-		} catch (error) {
-		  console.error('Error loading document:', error);
-		  this.pathRenderError = `Error loading document: ${error}`;
-		} finally {
-		  this.isLoading = false;
-		  this.requestUpdate();
-		}
-	  }
+  private handleBreadcrumbClickWrapper(event: CustomEvent): void {
+    this.handleBreadcrumbClick(event).catch((error) => {
+      console.error("Error handling breadcrumb click:", error);
+    });
+  }
 
-	render() {
-		return html`
-		  <button class="toggle-sidebar" @click=${this.toggleSidebar}>
-			${this.isSidebarOpen ? '←' : '→'}
-		  </button>
-		  <button class="theme-toggle" @click=${this.toggleTheme}>
-			${this.isDarkMode ? '☀️' : '🌙'}
-		  </button>
-		  <div class="sidebar ${this.isSidebarOpen ? '' : 'closed'}">
-			<sidebar-component></sidebar-component>
-		  </div>
-		  <div class="main-content">
-			${this.isLoading ? html`<div>Loading...</div>` : this.renderMainContent()}
-		  </div>
-		`;
-	  }
-	
-	  private renderMainContent() {
-		if (this.activeDocumentId) {
-		  return html`
-			<h-breadcrumbs .path=${this.currentPath || this.activeDocumentId}></h-breadcrumbs>
-			<document-component .documentId=${this.activeDocumentId}></document-component>
-		  `;
-		} else if (this.currentPath) {
-		  return html`
-			<h-breadcrumbs .path=${this.currentPath}></h-breadcrumbs>
-			<path-renderer
-			  .path=${this.currentPath}
-			  @render-error=${(e: CustomEvent) => {
-				this.pathRenderError = e.detail.error;
-			  }}
-			></path-renderer>
-			${this.pathRenderError
-			  ? html`<div class="error">Error rendering path: ${this.pathRenderError}</div>`
-			  : ''}
-		  `;
-		} else {
-		  return html`<p>Select or create a document to begin.</p>`;
-		}
-	  }
-	}
+  private async handleBreadcrumbClick(event: CustomEvent) {
+    const clickedPath = event.detail.path;
+
+    const pathParts = clickedPath.split(".");
+    if (pathParts.length === 1 && pathParts[0].startsWith("DOC-")) {
+      // If the clicked path is a document ID, handle it as a document-id-only event
+      await this.handleDocumentIdOnly(pathParts[0]);
+    } else {
+      // Otherwise, update the current path and render the corresponding content
+      this.currentPath = clickedPath;
+      this.activeDocumentId = null; // Reset active document when navigating to a sub-path
+      this.pathRenderError = null;
+    }
+    this.requestUpdate();
+  }
+
+  private handlePathClick(event: CustomEvent) {
+    this.currentPath = event.detail.path;
+    this.pathRenderError = null;
+    this.requestUpdate();
+  }
+
+  private async handleDocumentIdOnly(documentId: string) {
+    this.isLoading = true;
+    try {
+      const document = await documentManager.getDocument(documentId);
+
+      if (document) {
+        this.activeDocumentId = documentId;
+        this.currentPath = documentId;
+      } else {
+        console.error(`Document not found for ID: ${documentId}`);
+        this.pathRenderError = `Document not found for ID: ${documentId}`;
+      }
+    } catch (error) {
+      console.error("Error loading document:", error);
+      this.pathRenderError = `Error loading document: ${error}`;
+    } finally {
+      this.isLoading = false;
+      this.requestUpdate();
+    }
+  }
+
+  render() {
+    return html`
+      <button class="toggle-sidebar" @click=${this.toggleSidebar}>
+        ${this.isSidebarOpen ? "←" : "→"}
+      </button>
+      <button class="theme-toggle" @click=${this.toggleTheme}>
+        ${this.isDarkMode ? "☀️" : "🌙"}
+      </button>
+      <div class="sidebar ${this.isSidebarOpen ? "" : "closed"}">
+        <sidebar-component></sidebar-component>
+      </div>
+      <div class="main-content">
+        ${this.isLoading
+          ? html`<div>Loading...</div>`
+          : this.renderMainContent()}
+      </div>
+    `;
+  }
+
+  private renderMainContent() {
+    if (this.activeDocumentId) {
+      return html`
+        <h-breadcrumbs
+          .path=${this.currentPath || this.activeDocumentId}
+        ></h-breadcrumbs>
+        <document-component
+          .documentId=${this.activeDocumentId}
+        ></document-component>
+      `;
+    } else if (this.currentPath) {
+      return html`
+        <h-breadcrumbs .path=${this.currentPath}></h-breadcrumbs>
+        <path-renderer
+          .path=${this.currentPath}
+          @render-error=${(e: CustomEvent) => {
+            this.pathRenderError = e.detail.error;
+          }}
+        ></path-renderer>
+        ${this.pathRenderError
+          ? html`<div class="error">
+              Error rendering path: ${this.pathRenderError}
+            </div>`
+          : ""}
+      `;
+    } else {
+      return html`<p>Select or create a document to begin.</p>`;
+    }
+  }
+}

@@ -1,14 +1,15 @@
 // subscriptionManager.ts
 
 // Import necessary types from content.ts
-import { Content, ContentId } from '../content/content';
+import { Content, ContentId } from "../content/content";
 
 // Define subscriber types
-type ContentSubscriber = (content: Content | undefined ) => void;
+type ContentSubscriber = (content: Content | undefined) => void;
 type GlobalSubscriber = () => void;
 
 export class SubscriptionManager {
-  private contentSubscriptions: Map<ContentId, Set<ContentSubscriber>> = new Map();
+  private contentSubscriptions: Map<ContentId, Set<ContentSubscriber>> =
+    new Map();
   private globalSubscribers: Set<GlobalSubscriber> = new Set();
 
   /**
@@ -24,8 +25,10 @@ export class SubscriptionManager {
     this.contentSubscriptions.get(id)!.add(callback);
     return () => {
       const subscribers = this.contentSubscriptions.get(id);
+
       if (subscribers) {
         subscribers.delete(callback);
+
         if (subscribers.size === 0) {
           this.contentSubscriptions.delete(id);
         }
@@ -51,20 +54,20 @@ export class SubscriptionManager {
   notifyContentChange(id: ContentId, content: Content | undefined): void {
     queueMicrotask(() => {
       // Notify content-specific subscribers
-      this.contentSubscriptions.get(id)?.forEach(callback => {
+      this.contentSubscriptions.get(id)?.forEach((callback) => {
         try {
           callback(content);
         } catch (error) {
-          console.error('Error in content subscriber:', error);
+          console.error("Error in content subscriber:", error);
         }
       });
 
       // Notify global subscribers
-      this.globalSubscribers.forEach(callback => {
+      this.globalSubscribers.forEach((callback) => {
         try {
           callback();
         } catch (error) {
-          console.error('Error in global subscriber:', error);
+          console.error("Error in global subscriber:", error);
         }
       });
     });

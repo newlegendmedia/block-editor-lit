@@ -24,10 +24,10 @@ export class SubscriptionManager<K, T> {
   }
 
   notify(id: K, item: T | null): void {
-    this.subscribers.get(id)?.forEach(callback => callback(item));
+    this.subscribers.get(id)?.forEach((callback) => callback(item));
   }
 
   notifyAll(): void {
-    this.globalSubscribers.forEach(callback => callback());
+    this.globalSubscribers.forEach((callback) => callback());
   }
 }

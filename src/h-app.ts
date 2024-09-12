@@ -1,7 +1,7 @@
-import { LitElement, html, css } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { LitElement, html, css } from "lit";
+import { customElement, property } from "lit/decorators.js";
 
-@customElement('h-app')
+@customElement("h-app")
 export class AppLayout extends LitElement {
   static styles = css`
     :host {
@@ -56,11 +56,13 @@ export class AppLayout extends LitElement {
       <div class="topbar">
         <slot name="topbar"></slot>
       </div>
-      ${this.sidebarOpen ? html`
-        <div class="sidebar">
-          <slot name="sidebar"></slot>
-        </div>
-      ` : ''}
+      ${this.sidebarOpen
+        ? html`
+            <div class="sidebar">
+              <slot name="sidebar"></slot>
+            </div>
+          `
+        : ""}
       <div class="main-content">
         <slot name="main"></slot>
       </div>
@@ -78,11 +80,11 @@ export class AppLayout extends LitElement {
 
   setupFullSizeLayout() {
     // Ensure the body and html elements don't introduce extra space
-    document.body.style.margin = '0';
-    document.body.style.padding = '0';
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.margin = '0';
-    document.documentElement.style.padding = '0';
-    document.documentElement.style.overflow = 'hidden';
+    document.body.style.margin = "0";
+    document.body.style.padding = "0";
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.margin = "0";
+    document.documentElement.style.padding = "0";
+    document.documentElement.style.overflow = "hidden";
   }
 }

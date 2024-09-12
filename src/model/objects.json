@@ -22,7 +22,7 @@
         },  
         { "type": "element", "key": "dateElement1", "name": "Created On", "ref": "dateElement" },
         { "type": "element", "key": "dateElement2", "name": "Last Updated", "ref": "dateElement" },
-        { "type": "element", "key": "textInput1", "name": "Tags", "base": "text" },
+        { "type": "element", "key": "tags1", "name": "Tags", "ref": "tags" },
         { "type": "group", "key": "page2", "name": "content", "editable": true, "ref": "page" }
       ]
     },
