@@ -19,19 +19,20 @@ export class DocumentManager {
     }
 
     const rootContent = await contentStore.create(
-      { type: modelType, key: modelKey },
-      model,
-      { title },
-    );
+			{ type: modelType, key: modelKey },
+			model,
+			{ title },
+			'root'
+		);
 
-    const document: Document = {
-      id: generateId("DOC") as DocumentId,
-      title,
-      rootContent: rootContent.id,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      isActive: false,
-    };
+		const document: Document = {
+			id: generateId('DOC') as DocumentId,
+			title,
+			rootContent: rootContent.id,
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+			isActive: false,
+		};
 
     this.documents.set(document.id, document);
 
@@ -68,9 +69,9 @@ export class DocumentManager {
     const document = this.documents.get(id);
 
     if (document) {
-      await this.deactivateDocument(id);
-      await contentStore.remove(document.rootContent);
-    }
+			await this.deactivateDocument(id);
+			//      await contentStore.remove(document.rootContent);
+		}
   }
 
   async deleteDocument(id: DocumentId): Promise<void> {

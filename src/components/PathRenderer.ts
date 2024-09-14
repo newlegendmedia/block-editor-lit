@@ -110,7 +110,6 @@ class PathController implements ReactiveController {
         if (!childId) {
           throw new Error(`Child content not found for key: ${part}`);
         } else {
-          console.log(`Found child content for key: ${part}`, childId);
         }
 
         if (childId.startsWith("inline:")) {
@@ -159,7 +158,6 @@ class PathController implements ReactiveController {
     content: Content,
     pathPart: string,
   ): Promise<ContentId | undefined> {
-    console.log("getChildId", content, pathPart);
     const model = await this.getModelForBlock(content);
 
     if (!model) {

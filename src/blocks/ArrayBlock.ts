@@ -1,18 +1,14 @@
-// ArrayBlock.ts
 import { html, css, TemplateResult } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
+import { customElement } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { until } from 'lit/directives/until.js';
 import { IndexedCompositeBlock } from './IndexedCompositeBlock';
 import { ComponentFactory } from '../util/ComponentFactory';
 import { ArrayModel, Model } from '../model/model';
-import { ContentId } from '../content/content';
-import { contentStore } from '../resourcestore';
+import { CompositeContent, ContentId } from '../content/content';
 
 @customElement('array-block')
 export class ArrayBlock extends IndexedCompositeBlock {
-	@state() private childTypes: Map<ContentId, string> = new Map();
-
 	static styles = [
 		css`
 			.array-content {
@@ -30,19 +26,17 @@ export class ArrayBlock extends IndexedCompositeBlock {
 		`,
 	];
 
-	protected async initializeBlock() {
-		await super.initializeBlock();
-		await this.updateChildTypes();
+	protected async addChildBlock(itemType: Model): Promise<ContentId> {
+		const newChildId = await super.addChildBlock(itemType);
+		this.requestUpdate();
+		return newChildId;
 	}
 
-	private async updateChildTypes() {
-		const childTypePromises = (this.childBlocks as ContentId[]).map(async (childId) => {
-			const childContent = await contentStore.get(childId);
-			return [childId, childContent?.modelInfo.key || 'unknown'] as [ContentId, string];
-		});
-		const childTypes = await Promise.all(childTypePromises);
-		this.childTypes = new Map(childTypes);
-		this.requestUpdate();
+	private renderChildComponent(
+		childComponentPromise: Promise<TemplateResult>,
+		placeholder: string
+	): TemplateResult {
+		return html` ${until(childComponentPromise, html`<span>${placeholder}</span>`)} `;
 	}
 
 	protected renderContent(): TemplateResult {
@@ -50,44 +44,32 @@ export class ArrayBlock extends IndexedCompositeBlock {
 			return html`<div>Loading...</div>`;
 		}
 
-		const arrayModel = this.model as ArrayModel;
-		const childBlocks = Array.isArray(this.childBlocks) ? this.childBlocks : [];
+		const model = this.model as ArrayModel;
+		const children = (this.content as CompositeContent).children || [];
 
 		return html`
 			<div>
-				<h3>${arrayModel.name || 'Array'}</h3>
+				<h3>${model.name || 'Array'}</h3>
 				<div class="array-content">
 					${repeat(
-						childBlocks,
+						children,
 						(childId) => childId,
 						(childId, _index) => html`
 							<div class="array-item">
-								${until(
+								${this.renderChildComponent(
 									ComponentFactory.createComponent(childId, this.path),
-									html`<span>Loading child component...</span>`,
-									html`<span>Error loading component</span>`
+									'Loading child component...'
 								)}
 							</div>
 						`
 					)}
 				</div>
-				${arrayModel.repeatable
-					? html`<button @click=${() => this.addChildBlock(arrayModel.itemType)}>
-							Add ${arrayModel.itemType.name || arrayModel.itemType.key}
+				${model.repeatable
+					? html`<button @click=${() => this.addChildBlock(model.itemType)}>
+							Add ${model.itemType.name || model.itemType.key}
 						</button>`
 					: ''}
 			</div>
 		`;
-	}
-
-	protected async addChildBlock(itemType: Model): Promise<ContentId> {
-		const newChildId = await super.addChildBlock(itemType);
-		await this.updateChildTypes();
-		return newChildId;
-	}
-
-	protected async removeChildBlock(index: number): Promise<void> {
-		await super.removeChildBlock(index);
-		await this.updateChildTypes();
 	}
 }

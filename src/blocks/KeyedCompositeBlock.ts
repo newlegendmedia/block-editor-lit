@@ -1,194 +1,119 @@
-import { CompositeBlock, KeyedChildren } from "./CompositeBlock";
-import {
-  Content,
-  CompositeContent,
-  KeyedCompositeContent,
-} from "../content/content";
-import {
-  CompositeModel,
-  isCompositeModel,
-  isElement,
-  Model,
-} from "../model/model";
-import { contentStore } from "../resourcestore";
-import { ContentFactory } from "../store/ContentFactory";
+import { BaseBlock } from './BaseBlock';
+import { Content, CompositeContent, KeyedCompositeContent } from '../content/content';
+import { CompositeModel, Model } from '../model/model';
+import { contentStore } from '../resourcestore';
+import { ContentFactory } from '../store/ContentFactory';
 
-export abstract class KeyedCompositeBlock extends CompositeBlock<"keyed"> {
-  protected inlineChildren: boolean = false;
+export abstract class KeyedCompositeBlock extends BaseBlock {
+	protected inlineChildren: boolean = false;
 
-  protected abstract getModelProperties(): Model[];
-  protected abstract getDefaultValue(prop: Model): any;
+	protected abstract getModelProperties(): Model[];
+	protected abstract getDefaultValue(prop: Model): any;
 
-  protected syncChildrenWithContent(): void {
-    if (!this.content) return;
+	protected async initializeBlock() {
+		await super.initializeBlock();
+		await this.initializeChildBlocks();
+	}
 
-    const compositeContent = this.content as CompositeContent;
-    const keyedContent: KeyedCompositeContent = {};
+	protected async initializeChildBlocks(): Promise<void> {
+		this.inlineChildren = (this.model as CompositeModel).inlineChildren || false;
+		await this.initializeChildren();
+	}
 
-    for (const [key, value] of Object.entries(this.childBlocks)) {
-      keyedContent[key] = value;
-    }
+	private async initializeChildren(): Promise<void> {
+		const initialContent: KeyedCompositeContent = {};
+		const compositeContent = this.content as CompositeContent;
 
-    compositeContent.content = keyedContent;
-    compositeContent.children = this.inlineChildren
-      ? []
-      : Object.values(this.childBlocks as KeyedChildren);
-  }
+		if (!Array.isArray(compositeContent.children)) {
+			compositeContent.children = [];
+		}
 
-  protected initializeIndexedChildren(): Promise<void> {
-    throw new Error("Keyed composites do not support indexed children");
-  }
+		const updatedContent = this.getUpdatedContent(compositeContent);
 
-  protected async initializeChildBlocks(): Promise<void> {
-    if (!this.content || !this.model) return;
+		console.log(
+			'initializeChildren props and updatedContent',
+			this.getModelProperties(),
+			updatedContent
+		);
 
-    this.inlineChildren =
-      (this.model as CompositeModel).inlineChildren || false;
+		for (const prop of this.getModelProperties()) {
+			if (!prop.key) continue;
 
-    if (this.inlineChildren) {
-      await this.initializeInlineChildren();
-    } else {
-      await this.initializeKeyedChildren();
-    }
+			const existingValue = updatedContent[prop.key];
 
-    await this.updateChildStructure();
-  }
+			if (this.inlineChildren) {
+				initialContent[prop.key] = existingValue ?? this.getDefaultValue(prop);
+			} else {
+				let childContentId = existingValue;
 
-  private async initializeInlineChildren(): Promise<void> {
-    if (!this.model || !isCompositeModel(this.model)) return;
+				if (!childContentId) {
+					const childContent = await this.initializeChildContent(prop);
+					childContentId = childContent.id;
+					compositeContent.children.push(childContentId);
+					updatedContent[prop.key] = childContentId;
+				}
+			}
+		}
 
-    const initialContent: KeyedCompositeContent = {};
+		await this.updateContent((currentContent) => ({
+			...currentContent,
+			content: this.inlineChildren ? initialContent : updatedContent,
+			children: this.inlineChildren ? [] : compositeContent.children,
+		}));
+	}
 
-    for (const prop of this.getModelProperties()) {
-      if (prop.key) {
-        if (isElement(prop)) {
-          const existingValue = (
-            this.content?.content as KeyedCompositeContent
-          )?.[prop.key];
-          initialContent[prop.key] =
-            existingValue !== undefined
-              ? existingValue
-              : this.getDefaultValue(prop);
-        } else {
-          const childContent = await this.initializeNonElementChild(prop);
-          initialContent[prop.key] = childContent.id;
-        }
-      }
-    }
+	private getUpdatedContent(compositeContent: CompositeContent): KeyedCompositeContent {
+		return typeof compositeContent.content === 'string'
+			? JSON.parse(compositeContent.content)
+			: (compositeContent.content as KeyedCompositeContent) || {};
+	}
 
-    await this.updateContent((content) => ({
-      ...content,
-      content: initialContent,
-      children: [],
-    }));
+	private async initializeChildContent(prop: Model): Promise<Content> {
+		const existingChildId = (this.content?.content as KeyedCompositeContent)?.[prop.key!];
 
-    this.childBlocks = initialContent;
-  }
+		if (existingChildId) {
+			const existingContent = await contentStore.get(existingChildId);
+			if (existingContent) return existingContent;
+		}
 
-  protected async initializeKeyedChildren(): Promise<void> {
-    const compositeContent = this.content as CompositeContent;
-    const childProperties = this.getModelProperties();
-    this.childBlocks = {} as KeyedChildren;
+		const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(prop);
+		if (!modelDefinition) throw new Error('Model definition not found');
 
-    if (!Array.isArray(compositeContent.children)) {
-      compositeContent.children = [];
-    }
+		return contentStore.create(
+			modelInfo,
+			modelDefinition,
+			content as KeyedCompositeContent,
+			this.contentId
+		);
+	}
 
-    let updatedContent: KeyedCompositeContent =
-      typeof compositeContent.content === "string"
-        ? JSON.parse(compositeContent.content)
-        : (compositeContent.content as KeyedCompositeContent);
+	protected async removeChildBlock(key: string): Promise<void> {
+		if (!this.content) return;
 
-    for (const prop of childProperties) {
-      if (prop.key) {
-        let childContentId = updatedContent[prop.key];
+		const contentData = this.content.content as KeyedCompositeContent;
+		const childId = contentData[key];
 
-        if (!childContentId) {
-          const { modelInfo, modelDefinition, content } =
-            ContentFactory.createContentFromModel(prop);
-          if (!modelDefinition) throw new Error("Model definition not found");
-          const childContent = await contentStore.create(
-            modelInfo,
-            modelDefinition,
-            content,
-            this.contentId,
-          );
-          childContentId = childContent.id;
-          compositeContent.children.push(childContentId);
-        }
+		delete contentData[key];
 
-        (this.childBlocks as KeyedChildren)[prop.key] = childContentId;
-        updatedContent[prop.key] = childContentId;
-      }
-    }
+		if (!this.inlineChildren && childId) {
+			await contentStore.delete(childId);
+			const updatedContent = this.content as CompositeContent;
+			updatedContent.children = updatedContent.children.filter((id) => id !== childId);
+		}
 
-    await this.updateContent(
-      (currentContent: Content): CompositeContent => ({
-        ...currentContent,
-        content: updatedContent,
-        children: compositeContent.children,
-      }),
-    );
-  }
+		await this.updateContent((currentContent) => ({
+			...currentContent,
+			content: contentData,
+		}));
+	}
 
-  private async initializeNonElementChild(prop: Model): Promise<Content> {
-    const existingChildId = (this.content?.content as KeyedCompositeContent)?.[
-      prop.key!
-    ];
+	protected getChildPath(childKey: string): string {
+		return `${this.path}.${childKey}`;
+	}
 
-    if (existingChildId) {
-      const existingContent = await contentStore.get(existingChildId);
-
-      if (existingContent) {
-        return existingContent;
-      }
-    }
-    const { modelInfo, modelDefinition, content } =
-      ContentFactory.createContentFromModel(prop);
-    if (!modelDefinition) throw new Error("Model definition not found");
-    return await contentStore.create(
-      modelInfo,
-      modelDefinition,
-      content as KeyedCompositeContent,
-      this.contentId,
-    );
-  }
-
-  protected async removeChildBlock(key: string): Promise<void> {
-    if (this.inlineChildren) {
-      delete (this.childBlocks as Record<string, any>)[key];
-      await this.updateChildStructure();
-      return;
-    }
-
-    const childId = (this.childBlocks as KeyedChildren)[key];
-
-    if (childId) {
-      delete (this.childBlocks as KeyedChildren)[key];
-      await this.updateContent((currentContent) => {
-        const updatedContent = currentContent as CompositeContent;
-        delete (updatedContent.content as KeyedCompositeContent)[key];
-        updatedContent.children = updatedContent.children.filter(
-          (id) => id !== childId,
-        );
-        return updatedContent;
-      });
-      await this.updateChildStructure();
-      await contentStore.delete(childId);
-    }
-  }
-
-  protected getChildPath(childKey: string): string {
-    return `${this.path}.${childKey}`;
-  }
-
-  protected getChildBlockId(childKey: string): string | undefined {
-    if (this.inlineChildren) {
-      const childContent = (this.content?.content as KeyedCompositeContent)?.[
-        childKey
-      ];
-      return typeof childContent === "string" ? childContent : undefined;
-    }
-    return this.childBlocks[childKey as string];
-  }
+	protected getChildBlockId(childKey: string): string | undefined {
+		const contentData = this.content?.content as KeyedCompositeContent;
+		const childContent = contentData?.[childKey];
+		return this.inlineChildren && typeof childContent !== 'string' ? undefined : childContent;
+	}
 }

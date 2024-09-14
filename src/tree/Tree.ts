@@ -70,9 +70,8 @@ export class Tree<K, Item> {
     this.nodes.set(nodeId, node);
 
     if (!parentId) {
-      return this.root.addChild(node);
-    }
-    const nodesCopy = new Map(this.nodes);
+			return this.root.addChild(node);
+		}
     return this.nodes.get(parentId)?.addChild(node);
   }
 

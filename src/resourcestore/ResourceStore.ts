@@ -3,6 +3,17 @@ import { Resource } from "./Resource";
 import { StorageAdapter } from "./StorageAdapter";
 import { SubscriptionManager } from "./SubscriptionManager";
 
+// define an interface for the ResourceStore class
+export interface ResourceStore<K, T extends Resource> {
+  get(id: K): Promise<T | undefined>;
+  set(item: T, parentId?: K): Promise<void>;
+  delete(id: K): Promise<void>;
+  subscribe(id: K, callback: (item: T | null) => void): void;
+  unsubscribe(id: K, callback: (item: T | null) => void): void;
+  subscribeToAll(callback: () => void): () => void;
+  unsubscribeFromAll(callback: () => void): void;
+}
+
 export class ResourceStore<K, T extends Resource> {
   protected tree: Tree<K, T>;
   private storage: StorageAdapter<T>;

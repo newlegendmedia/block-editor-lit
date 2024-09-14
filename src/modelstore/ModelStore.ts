@@ -1,249 +1,232 @@
 import { ResourceStore } from "../resourcestore/ResourceStore";
-import { Model, ModelType } from "../model/model";
-import { StorageAdapter } from "../resourcestore/StorageAdapter";
-import { DEFAULT_SCHEMA_NAME } from "./constants";
-import { SchemaStorage } from "./SchemaStorage";
-import { isModelReference, isObject, isArray, isGroup } from "../model/model";
-import { HierarchicalItem } from "../tree/HierarchicalItem";
-import { ModelSchema } from "../model/model";
+import { Model, ModelType, ElementModel } from '../model/model';
+import { StorageAdapter } from '../resourcestore/StorageAdapter';
+import { DEFAULT_SCHEMA_NAME } from './constants';
+import { SchemaStorage } from './SchemaStorage';
+import { isModelReference, isObject, isArray, isGroup } from '../model/model';
+import { HierarchicalItem } from '../tree/HierarchicalItem';
+import { ModelSchema } from '../model/model';
+
+function deepClone<T>(obj: T): T {
+	return JSON.parse(JSON.stringify(obj));
+}
 
 export class ModelStore extends ResourceStore<string, Model> {
-  private schemas: Map<string, ModelSchema> = new Map();
+	private schemas: Map<string, ModelSchema> = new Map();
 
-  constructor(storage: StorageAdapter<Model>) {
-    const rootModel: Model = { id: "root", type: "root", key: "root" };
-    super(storage, "root", rootModel);
-  }
+	constructor(storage: StorageAdapter<Model>) {
+		const rootModel: Model = { id: 'root', type: 'root', key: 'root' };
+		super(storage, 'root', rootModel);
+	}
 
-  async getDefinition(
-    key: string,
-    type: ModelType,
-    schemaName: string = DEFAULT_SCHEMA_NAME,
-  ): Promise<Model | undefined> {
-    return this.getModel(key, type, schemaName);
-  }
+	async getDefinition(
+		key: string,
+		type: ModelType,
+		schemaName: string = DEFAULT_SCHEMA_NAME
+	): Promise<Model | undefined> {
+		return this.getModel(key, type, schemaName);
+	}
 
-  async getModel(
-    path: string,
-    type: ModelType,
-    schemaName: string = DEFAULT_SCHEMA_NAME,
-  ): Promise<Model | undefined> {
-    const existingModel = this.tree.get(path)?.item;
+	async getModel(
+		path: string,
+		type: ModelType,
+		schemaName: string = DEFAULT_SCHEMA_NAME
+	): Promise<Model | undefined> {
+		const existingModel = this.tree.get(path)?.item;
 
-    if (existingModel) {
-      console.log("=== getModel existingModel", path, existingModel);
-      return existingModel;
-    }
-    console.log("=== getModel get model from Schema", path);
+		if (existingModel) {
+			return existingModel;
+		}
 
-    const schema = this.schemas.get(schemaName);
+		const schema = this.schemas.get(schemaName);
 
-    if (!schema) {
-      console.warn(`Schema not found: ${schemaName}`);
-      return undefined;
-    }
+		if (!schema) {
+			console.warn(`Schema not found: ${schemaName}`);
+			return undefined;
+		}
 
-    const rawModel = this.findModelInSchema(schema, type, path);
+		const rawModel = this.findModelInSchema(schema, type, path);
 
-    if (!rawModel) {
-      console.warn(`Model not found in schema: ${type}  ${path}`);
-      return undefined;
-    }
+		if (!rawModel) {
+			console.warn(`Model not found in schema: ${type}  ${path}`);
+			return undefined;
+		}
 
-    const resolvedModel = await this.resolveStructure(
-      rawModel,
-      schemaName,
-      path,
-    );
+		const resolvedModel = await this.resolveStructure(rawModel, schemaName, path);
 
-    this.subscriptions.notifyAll();
+		this.subscriptions.notifyAll();
 
-    return resolvedModel;
-  }
+		return resolvedModel;
+	}
 
-  async getModelfromSchema(
-    path: string,
-    type: ModelType,
-    schemaName: string = DEFAULT_SCHEMA_NAME,
-  ): Promise<Model | undefined> {
-    const schema = this.schemas.get(schemaName);
+	async getModelfromSchema(
+		path: string,
+		type: ModelType,
+		schemaName: string = DEFAULT_SCHEMA_NAME
+	): Promise<Model | undefined> {
+		const schema = this.schemas.get(schemaName);
 
-    if (!schema) {
-      console.warn(`Schema not found: ${schemaName}`);
-      return undefined;
-    }
+		if (!schema) {
+			console.warn(`Schema not found: ${schemaName}`);
+			return undefined;
+		}
 
-    const rawModel = this.findModelInSchema(schema, type, path);
+		const rawModel = this.findModelInSchema(schema, type, path);
 
-    if (!rawModel) {
-      console.warn(`Model not found in schema: ${type}.${path}`);
-      return undefined;
-    }
+		if (!rawModel) {
+			console.warn(`Model not found in schema: ${type}.${path}`);
+			return undefined;
+		}
 
-    return rawModel;
-  }
+		return rawModel;
+	}
 
-  private findModelInSchema(
-    schema: ModelSchema,
-    type: ModelType,
-    key: string,
-  ): Model | undefined {
-    return schema.models[type]?.[key];
-  }
+	private findModelInSchema(schema: ModelSchema, type: ModelType, key: string): Model | undefined {
+		return schema.models[type]?.[key];
+	}
 
-  private async resolveStructure(
-    model: Model,
-    schemaName: string,
-    currentPath: string,
-    parentPath: string = "",
-  ): Promise<Model> {
-    let resolvedModel = { ...model };
+	private async resolveStructure(
+		model: Model,
+		schemaName: string,
+		currentPath: string,
+		parentPath: string = ''
+	): Promise<Model> {
+		let resolvedModel = deepClone(model);
 
-    if (isModelReference(model) && model.ref) {
-      const referencedModel = await this.getModelfromSchema(
-        model.ref,
-        model.type,
-        schemaName,
-      );
+		if (isModelReference(model) && model.ref) {
+			const referencedModel = await this.getModelfromSchema(model.ref, model.type, schemaName);
 
-      if (!referencedModel) {
-        console.warn(`Failed to resolve reference: ${model.ref}`);
-        return resolvedModel;
-      }
-      delete model.ref;
-      resolvedModel = { ...referencedModel, ...model };
-      return this.resolveStructure(
-        resolvedModel,
-        schemaName,
-        currentPath,
-        parentPath,
-      );
-    }
+			if (!referencedModel) {
+				console.warn(`Failed to resolve reference: ${model.ref}`);
+				return resolvedModel;
+			}
+			delete model.ref;
+			resolvedModel = deepClone({ ...referencedModel, ...model });
+			return this.resolveStructure(resolvedModel, schemaName, currentPath, parentPath);
+		}
 
-    resolvedModel.path = currentPath;
-    this.tree.add(resolvedModel, parentPath, currentPath);
+		resolvedModel.path = currentPath;
 
-    if (isObject(resolvedModel)) {
-      resolvedModel = await this.resolveObjectModel(
-        resolvedModel,
-        schemaName,
-        currentPath,
-      );
-    } else if (isArray(resolvedModel)) {
-      resolvedModel = await this.resolveArrayModel(
-        resolvedModel,
-        schemaName,
-        currentPath,
-      );
-    } else if (isGroup(resolvedModel)) {
-      resolvedModel = await this.resolveGroupModel(
-        resolvedModel,
-        schemaName,
-        currentPath,
-      );
-    }
+		if (isObject(resolvedModel)) {
+			resolvedModel = await this.resolveObjectModel(resolvedModel, schemaName, currentPath);
+		} else if (isArray(resolvedModel)) {
+			resolvedModel = await this.resolveArrayModel(resolvedModel, schemaName, currentPath);
+		} else if (isGroup(resolvedModel)) {
+			resolvedModel = await this.resolveGroupModel(resolvedModel, schemaName, currentPath);
+		}
 
-    return resolvedModel;
-  }
+		this.tree.add(resolvedModel, parentPath, currentPath);
 
-  private async resolveObjectModel(
-    model: Model,
-    schemaName: string,
-    currentPath: string,
-  ): Promise<Model> {
-    if (!isObject(model)) return model;
+		return resolvedModel;
+	}
 
-    const resolvedProperties = [];
+	private async resolveObjectModel(
+		model: Model,
+		schemaName: string,
+		currentPath: string
+	): Promise<Model> {
+		if (!isObject(model)) return model;
 
-    for (const property of model.properties) {
-      const propertyPath = `${currentPath}.${property.key}`;
-      const resolvedProperty = await this.resolveStructure(
-        property,
-        schemaName,
-        propertyPath,
-        currentPath,
-      );
-      resolvedProperties.push(resolvedProperty);
-    }
-    return { ...model, properties: resolvedProperties };
-  }
+		const resolvedProperties = [];
 
-  private async resolveArrayModel(
-    model: Model,
-    schemaName: string,
-    currentPath: string,
-  ): Promise<Model> {
-    if (!isArray(model)) return model;
+		for (const property of model.properties) {
+			const propertyPath = `${currentPath}.${property.key}`;
+			const resolvedProperty = await this.resolveStructure(
+				property,
+				schemaName,
+				propertyPath,
+				currentPath
+			);
+			resolvedProperties.push(resolvedProperty);
+		}
+		if (resolvedProperties) {
+			resolvedProperties.forEach((prop) => {
+				if (prop.type === 'element' && !(prop as ElementModel).base) {
+					console.warn('ModelStore - Element model missing base type', model, prop);
+				}
+			});
+		}
 
-    const itemTypePath = `${currentPath}.itemType`;
-    const resolvedItemType = await this.resolveStructure(
-      model.itemType,
-      schemaName,
-      itemTypePath,
-      currentPath,
-    );
-    return { ...model, itemType: resolvedItemType };
-  }
+		const resolvedModel = { ...model, properties: resolvedProperties };
+		return resolvedModel;
+	}
 
-  private async resolveGroupModel(
-    model: Model,
-    schemaName: string,
-    currentPath: string,
-  ): Promise<Model> {
-    if (!isGroup(model)) return model;
+	private async resolveArrayModel(
+		model: Model,
+		schemaName: string,
+		currentPath: string
+	): Promise<Model> {
+		if (!isArray(model)) return model;
 
-    if (Array.isArray(model.itemTypes)) {
-      const resolvedItemTypes = [];
+		const itemTypePath = `${currentPath}.itemType`;
+		const resolvedItemType = await this.resolveStructure(
+			model.itemType,
+			schemaName,
+			itemTypePath,
+			currentPath
+		);
+		return { ...model, itemType: resolvedItemType };
+	}
 
-      for (let i = 0; i < model.itemTypes.length; i++) {
-        const item = model.itemTypes[i];
-        const resolvedItem = await this.resolveStructure(
-          item,
-          schemaName,
-          `${currentPath}.itemTypes[${i}]`,
-          currentPath,
-        );
-        resolvedItemTypes.push(resolvedItem);
-      }
-      return { ...model, itemTypes: resolvedItemTypes };
-    } else {
-      const resolvedItemTypes = await this.resolveStructure(
-        model.itemTypes,
-        schemaName,
-        `${currentPath}.itemTypes`,
-        currentPath,
-      );
-      return { ...model, itemTypes: resolvedItemTypes };
-    }
-  }
+	private async resolveGroupModel(
+		model: Model,
+		schemaName: string,
+		currentPath: string
+	): Promise<Model> {
+		if (!isGroup(model)) return model;
 
-  async loadSchema(schemaName: string): Promise<void> {
-    const schema = await SchemaStorage.loadSchema(schemaName);
+		if (Array.isArray(model.itemTypes)) {
+			const resolvedItemTypes = [];
 
-    if (schema) {
-      this.schemas.set(schemaName, schema);
-    }
-  }
+			for (let i = 0; i < model.itemTypes.length; i++) {
+				const item = model.itemTypes[i];
+				const resolvedItem = await this.resolveStructure(
+					item,
+					schemaName,
+					`${currentPath}.itemTypes[${i}]`,
+					currentPath
+				);
+				resolvedItemTypes.push(resolvedItem);
+			}
+			return { ...model, itemTypes: resolvedItemTypes };
+		} else {
+			const resolvedItemTypes = await this.resolveStructure(
+				model.itemTypes,
+				schemaName,
+				`${currentPath}.itemTypes`,
+				currentPath
+			);
+			return { ...model, itemTypes: resolvedItemTypes };
+		}
+	}
 
-  remove(path: string): void {
-    this.tree.remove(path);
-  }
+	async loadSchema(schemaName: string): Promise<void> {
+		const schema = await SchemaStorage.loadSchema(schemaName);
 
-  async getAll(): Promise<Model[]> {
-    return await super.getAll();
-  }
+		if (schema) {
+			this.schemas.set(schemaName, schema);
+		}
+	}
 
-  async getAllHierarchical(): Promise<HierarchicalItem<Model>> {
-    return this.tree.getAllHierarchical();
-  }
+	remove(path: string): void {
+		this.tree.remove(path);
+	}
 
-  subscribeAll(callback: () => void): () => void {
-    return super.subscribeToAll(callback);
-  }
+	async getAll(): Promise<Model[]> {
+		return await super.getAll();
+	}
 
-  protected getParentId(_item: Model): string | undefined {
-    // Implement based on your model structure
-    // For example, you might use a convention like `${item.type}.${item.key}`
-    return undefined;
-  }
+	async getAllHierarchical(): Promise<HierarchicalItem<Model>> {
+		return this.tree.getAllHierarchical();
+	}
+
+	subscribeAll(callback: () => void): () => void {
+		return super.subscribeToAll(callback);
+	}
+
+	protected getParentId(_item: Model): string | undefined {
+		// Implement based on your model structure
+		// For example, you might use a convention like `${item.type}.${item.key}`
+		return undefined;
+	}
 }
