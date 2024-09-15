@@ -9,6 +9,7 @@ import '../components/Breadcrumbs';
 export abstract class BaseBlock extends LitElement {
 	@property({ type: String }) contentId: ContentId = '';
 	@property({ type: String }) path: string = '';
+	@property({ type: String }) modelKey: string = '';
 	@state() protected content?: Content;
 	@state() protected model?: Model;
 	@state() protected error: string | null = null;
@@ -16,37 +17,53 @@ export abstract class BaseBlock extends LitElement {
 	async connectedCallback() {
 		super.connectedCallback();
 		await this.initialize();
-		await this.initializeBlock();
 	}
 
 	protected async initialize() {
-		await this.initContent();
-		await this.initModel();
-		//		this.initPath(this.path);
+		try {
+			await this.initContent();
+			this.initPath(this.path);
+			await this.initModel();
+			await this.initializeBlock();
+		} catch (error) {
+			console.error('Initialization error:', error);
+			this.error = `Initialization failed: ${
+				error instanceof Error ? error.message : String(error)
+			}`;
+		}
 	}
 
 	protected async initContent() {
-		console.log('BaseBlock.initContent getting ', this.contentId);
 		this.content = await contentStore.get(this.contentId);
-		console.log('BaseBlock.initContent', this.contentId, this.content);
-	}
-
-	protected async initModel() {
-		this.model = this.content?.modelDefinition || undefined;
-		this.initPath(this.path);
-		// remove the doc id from the start of the path
-		const path = this.path.split('.').slice(1).join('.');
-		const m = await modelStore.get(path);
-		console.log('BaseBlock.initModel', this.path, m);
 	}
 
 	protected initPath(path: string) {
-		console.log('BaseBlock.initPath', path);
-		this.path = `${path}.${this.model?.key}`;
+		let key = this.content ? this.content.modelInfo.key : '';
+		this.path = `${path}.${key}`;
+	}
+
+	protected async initModel() {
+		if (!this.content) {
+			throw new Error('Content not initialized');
+		}
+
+		// Remove the document ID from the start of the path
+		const pathParts = this.path.split('.').slice(1);
+
+		// For each part of the path, remove any index prefix (e.g., "0:page" becomes "page")
+		const modelPath = pathParts
+			.map((part) => (part.includes(':') ? part.split(':')[1] : part))
+			.join('.');
+
+		const modelType = this.content.modelInfo.type;
+		this.model = await modelStore.getModel(modelPath, modelType);
+
+		if (!this.model) {
+			throw new Error(`Model not found for path: ${modelPath}`);
+		}
 	}
 
 	protected async initializeBlock() {
-		console.log('BaseBlock.initializeBlock complete');
 		// This method is intentionally left empty in the base class
 	}
 
@@ -54,7 +71,7 @@ export abstract class BaseBlock extends LitElement {
 		this.content = await contentStore.update(this.contentId, updater);
 	}
 
-	protected render() {
+	render() {
 		if (this.error) {
 			return html`<div class="error">${this.error}</div>`;
 		}

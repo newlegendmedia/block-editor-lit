@@ -55,13 +55,16 @@ export class GroupBlock extends IndexedCompositeBlock {
 					${repeat(
 						children,
 						(childId) => childId,
-						(childId, _index) => html`
+						(childId, index) => html`
 							<div class="group-item">
 								${until(
 									ComponentFactory.createComponent(childId, this.path),
 									html`<span>Loading child component...</span>`,
 									html`<span>Error loading component...</span>`
 								)}
+								<button class="remove-button" @click=${() => this.removeChildBlock(index)}>
+									Remove
+								</button>
 							</div>
 						`
 					)}

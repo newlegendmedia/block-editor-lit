@@ -100,7 +100,7 @@ export class AppComponent extends LitElement {
             ${this.darkModeIcon()}
           </button>
 
-          <div class="${classMap(this.sidebarClasses())}">
+          <div class="sidebar ${classMap(this.sidebarClasses())}">
             <sidebar-component></sidebar-component>
           </div>
 

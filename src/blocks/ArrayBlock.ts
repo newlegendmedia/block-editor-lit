@@ -54,12 +54,15 @@ export class ArrayBlock extends IndexedCompositeBlock {
 					${repeat(
 						children,
 						(childId) => childId,
-						(childId, _index) => html`
+						(childId, index) => html`
 							<div class="array-item">
 								${this.renderChildComponent(
 									ComponentFactory.createComponent(childId, this.path),
 									'Loading child component...'
 								)}
+								<button class="remove-button" @click=${() => this.removeChildBlock(index)}>
+									Remove
+								</button>
 							</div>
 						`
 					)}

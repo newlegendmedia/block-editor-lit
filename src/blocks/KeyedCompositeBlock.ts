@@ -30,12 +30,6 @@ export abstract class KeyedCompositeBlock extends BaseBlock {
 
 		const updatedContent = this.getUpdatedContent(compositeContent);
 
-		console.log(
-			'initializeChildren props and updatedContent',
-			this.getModelProperties(),
-			updatedContent
-		);
-
 		for (const prop of this.getModelProperties()) {
 			if (!prop.key) continue;
 

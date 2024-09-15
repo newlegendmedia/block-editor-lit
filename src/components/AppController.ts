@@ -40,7 +40,6 @@ export class AppController {
 	};
 
 	handleDocumentOpened = (event: CustomEvent) => {
-		console.log('Document opened:', event.detail.documentId);
 		this.setState({
 			activeDocumentId: event.detail.documentId,
 			currentPath: null,

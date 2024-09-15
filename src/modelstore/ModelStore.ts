@@ -1,5 +1,5 @@
-import { ResourceStore } from "../resourcestore/ResourceStore";
-import { Model, ModelType, ElementModel } from '../model/model';
+import { ResourceStore } from '../resourcestore/ResourceStore';
+import { Model, ModelType } from '../model/model';
 import { StorageAdapter } from '../resourcestore/StorageAdapter';
 import { DEFAULT_SCHEMA_NAME } from './constants';
 import { SchemaStorage } from './SchemaStorage';
@@ -107,6 +107,9 @@ export class ModelStore extends ResourceStore<string, Model> {
 
 		resolvedModel.path = currentPath;
 
+		// Add the model to the tree before processing its children
+		this.tree.add(resolvedModel, parentPath, currentPath);
+
 		if (isObject(resolvedModel)) {
 			resolvedModel = await this.resolveObjectModel(resolvedModel, schemaName, currentPath);
 		} else if (isArray(resolvedModel)) {
@@ -115,7 +118,8 @@ export class ModelStore extends ResourceStore<string, Model> {
 			resolvedModel = await this.resolveGroupModel(resolvedModel, schemaName, currentPath);
 		}
 
-		this.tree.add(resolvedModel, parentPath, currentPath);
+		// Update the model in the tree after processing
+		this.tree.replace(currentPath, resolvedModel);
 
 		return resolvedModel;
 	}
@@ -139,16 +143,8 @@ export class ModelStore extends ResourceStore<string, Model> {
 			);
 			resolvedProperties.push(resolvedProperty);
 		}
-		if (resolvedProperties) {
-			resolvedProperties.forEach((prop) => {
-				if (prop.type === 'element' && !(prop as ElementModel).base) {
-					console.warn('ModelStore - Element model missing base type', model, prop);
-				}
-			});
-		}
 
-		const resolvedModel = { ...model, properties: resolvedProperties };
-		return resolvedModel;
+		return { ...model, properties: resolvedProperties };
 	}
 
 	private async resolveArrayModel(
@@ -158,7 +154,7 @@ export class ModelStore extends ResourceStore<string, Model> {
 	): Promise<Model> {
 		if (!isArray(model)) return model;
 
-		const itemTypePath = `${currentPath}.itemType`;
+		const itemTypePath = `${currentPath}.${model.itemType.key}`;
 		const resolvedItemType = await this.resolveStructure(
 			model.itemType,
 			schemaName,
@@ -180,20 +176,17 @@ export class ModelStore extends ResourceStore<string, Model> {
 
 			for (let i = 0; i < model.itemTypes.length; i++) {
 				const item = model.itemTypes[i];
-				const resolvedItem = await this.resolveStructure(
-					item,
-					schemaName,
-					`${currentPath}.itemTypes[${i}]`,
-					currentPath
-				);
+				const itemPath = `${currentPath}.${item.key}`;
+				const resolvedItem = await this.resolveStructure(item, schemaName, itemPath, currentPath);
 				resolvedItemTypes.push(resolvedItem);
 			}
 			return { ...model, itemTypes: resolvedItemTypes };
 		} else {
+			const itemPath = `${currentPath}.${model.itemTypes.key}`;
 			const resolvedItemTypes = await this.resolveStructure(
 				model.itemTypes,
 				schemaName,
-				`${currentPath}.itemTypes`,
+				itemPath,
 				currentPath
 			);
 			return { ...model, itemTypes: resolvedItemTypes };

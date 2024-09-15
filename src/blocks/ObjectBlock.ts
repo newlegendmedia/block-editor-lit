@@ -92,7 +92,6 @@ export class ObjectBlock extends KeyedCompositeBlock {
 	}
 
 	protected renderContent(): TemplateResult<1> {
-		console.log('InitializeBlock?? Rendering content', this.content, this.model);
 		if (!this.content || !this.model || !(this.model as ObjectModel).properties) {
 			return html`<div>Object Loading...</div>`;
 		}
@@ -135,7 +134,6 @@ export class ObjectBlock extends KeyedCompositeBlock {
 
 	private async createChildComponent(property: Model): Promise<TemplateResult> {
 		const childKey = property.key!;
-		console.log(`Creating child component for ${childKey}`);
 		try {
 			if (this.inlineChildren && isElement(property)) {
 				return await this.createInlineChildComponent(property, childKey, this.path);

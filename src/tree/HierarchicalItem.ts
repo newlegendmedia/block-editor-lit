@@ -1,3 +1,4 @@
 export type HierarchicalItem<T> = T & {
-  children: HierarchicalItem<T>[];
+	id: string | number;
+	children: HierarchicalItem<T>[];
 };
