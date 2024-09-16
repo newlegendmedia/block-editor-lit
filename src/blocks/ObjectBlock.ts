@@ -84,7 +84,7 @@ export class ObjectBlock extends KeyedCompositeBlock {
 		await Promise.all(componentPromises);
 	}
 
-	protected render(): TemplateResult<1> {
+	render(): TemplateResult<1> {
 		if (!this.isInitialized) {
 			return html`<div>Initializing object...</div>`;
 		}
