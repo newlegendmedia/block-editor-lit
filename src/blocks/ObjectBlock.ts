@@ -3,7 +3,7 @@ import { customElement, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { until } from 'lit/directives/until.js';
 import { KeyedCompositeBlock } from './KeyedCompositeBlock';
-import { ComponentFactory } from '../util/ComponentFactory';
+import { BlockFactory } from './BlockFactory';
 import { ObjectModel, Model, isElement, ElementModel } from '../model/model';
 import { KeyedCompositeContent } from '../content/content';
 
@@ -153,16 +153,16 @@ export class ObjectBlock extends KeyedCompositeBlock {
 	): Promise<TemplateResult> {
 		const contentData = this.content?.content as KeyedCompositeContent;
 		const value = contentData?.[childKey];
-		return await ComponentFactory.createComponent(
-			`inline:${this.contentId}:${childKey}`,
+		return await BlockFactory.createComponent(
 			parentPath,
-			property,
+			`inline:${this.content?.id}:${childKey}`,
+			property.type,
 			value
 		);
 	}
 
 	private async createStandardChildComponent(
-		_property: Model,
+		property: Model,
 		childKey: string,
 		parentPath: string
 	): Promise<TemplateResult> {
@@ -173,7 +173,7 @@ export class ObjectBlock extends KeyedCompositeBlock {
 			console.warn(`No content found for child key: ${childKey}`, this.content);
 			return html`<div>No content for ${childKey}</div>`;
 		}
-		return await ComponentFactory.createComponent(childContentId, parentPath);
+		return await BlockFactory.createComponent(parentPath, childKey, property.type);
 	}
 
 	protected useInlineChildren(): boolean {

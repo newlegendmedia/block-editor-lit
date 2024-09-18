@@ -1,15 +1,13 @@
-import { ResourceStore } from '../resourcestore/ResourceStore';
-import { Model, ModelType } from '../model/model';
-import { StorageAdapter } from '../resourcestore/StorageAdapter';
-import { DEFAULT_SCHEMA_NAME } from './constants';
+import { ResourceStore } from '../resource/ResourceStore';
+import { Model, ModelType } from './model';
+import { StorageAdapter } from '../storage/StorageAdapter';
+import { DEFAULT_SCHEMA_NAME } from './SchemaStorage';
 import { SchemaStorage } from './SchemaStorage';
-import { isModelReference, isObject, isArray, isGroup } from '../model/model';
+import { isModelReference, isObject, isArray, isGroup } from './model';
 import { HierarchicalItem } from '../tree/HierarchicalItem';
-import { ModelSchema } from '../model/model';
-
-function deepClone<T>(obj: T): T {
-	return JSON.parse(JSON.stringify(obj));
-}
+import { ModelSchema } from './model';
+import { deepClone } from '../util/deepClone';
+import { IndexedDBAdapter } from '../storage/IndexedDBAdapter';
 
 export class ModelStore extends ResourceStore<string, Model> {
 	private schemas: Map<string, ModelSchema> = new Map();
@@ -32,21 +30,19 @@ export class ModelStore extends ResourceStore<string, Model> {
 		type: ModelType,
 		schemaName: string = DEFAULT_SCHEMA_NAME
 	): Promise<Model | undefined> {
-		const existingModel = this.tree.get(path)?.item;
+		const existingModel = await this.get(path);
 
 		if (existingModel) {
 			return existingModel;
 		}
 
 		const schema = this.schemas.get(schemaName);
-
 		if (!schema) {
 			console.warn(`Schema not found: ${schemaName}`);
 			return undefined;
 		}
 
 		const rawModel = this.findModelInSchema(schema, type, path);
-
 		if (!rawModel) {
 			console.warn(`Model not found in schema: ${type}  ${path}`);
 			return undefined;
@@ -59,7 +55,7 @@ export class ModelStore extends ResourceStore<string, Model> {
 		return resolvedModel;
 	}
 
-	async getModelfromSchema(
+	private async getModelfromSchema(
 		path: string,
 		type: ModelType,
 		schemaName: string = DEFAULT_SCHEMA_NAME
@@ -223,3 +219,9 @@ export class ModelStore extends ResourceStore<string, Model> {
 		return undefined;
 	}
 }
+
+// Create a singleton instance of IndexedDBAdapter for ModelStore
+const modelStorageAdapter = new IndexedDBAdapter<Model>('model-store', 1);
+
+// Create a singleton instance of ModelStore
+export const modelStore = new ModelStore(modelStorageAdapter);

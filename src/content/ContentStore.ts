@@ -1,14 +1,10 @@
-import { ResourceStore } from "./ResourceStore";
-import {
-  Content,
-  ContentId,
-  ModelInfo,
-  isCompositeContent,
-} from "../content/content";
-import { Model } from "../model/model";
-import { StorageAdapter } from "./StorageAdapter";
-import { generateId } from "../util/generateId";
-import { HierarchicalItem } from "../tree/HierarchicalItem";
+import { ResourceStore } from '../resource/ResourceStore';
+import { Content, ContentId, ModelInfo } from './content';
+import { Model } from '../model/model';
+import { StorageAdapter } from '../storage/StorageAdapter';
+import { generateId } from '../util/generateId';
+import { HierarchicalItem } from '../tree/HierarchicalItem';
+import { IndexedDBAdapter } from '../storage/IndexedDBAdapter';
 
 export class ContentStore extends ResourceStore<ContentId, Content> {
 	private pathMap: Map<string, ContentId> = new Map();
@@ -29,6 +25,7 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 	}
 
 	async getByPath(path: string): Promise<Content | undefined> {
+		console.log('ContentStore.getByPath', path, this.pathMap);
 		const id = this.pathMap.get(path);
 		return id ? this.get(id) : undefined;
 	}
@@ -89,13 +86,16 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		modelInfo: ModelInfo,
 		modelDefinition: Model,
 		content: any,
-		parentId: ContentId = this.rootContentId
+		parentId: ContentId = this.rootContentId,
+		path?: string
 	): Promise<Content> {
 		const id = generateId(
 			modelInfo.type ? modelInfo.type.slice(0, 3).toUpperCase() : ''
 		) as ContentId;
 		const newContent: Content = { id, modelInfo, modelDefinition, content };
-		await this.addCompositeContent(newContent, parentId);
+
+		await this.addCompositeContent(newContent, parentId, path);
+
 		return newContent;
 	}
 
@@ -115,23 +115,30 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		return undefined;
 	}
 
-	async addCompositeContent(content: Content, parentId?: ContentId, path?: string): Promise<void> {
+	private async addCompositeContent(
+		content: Content,
+		parentId?: ContentId,
+		path?: string
+	): Promise<void> {
 		await this.set(content, parentId, path);
 
-		if (isCompositeContent(content) && Array.isArray(content.children)) {
+		if (path) {
+			console.log('ContentStore.addCompositeContent set pathmap', path, content.id);
+			this.pathMap.set(path, content.id);
+		}
+
+		// Handle nested content if it's a composite type
+		if ('children' in content && Array.isArray(content.children)) {
 			for (const childId of content.children) {
 				const childContent = await this.get(childId);
-
 				if (childContent) {
-					const childPath = this.generatePath(path, childContent.modelInfo.key);
+					const childPath = path
+						? `${path}.${childContent.modelInfo.key}`
+						: childContent.modelInfo.key;
 					await this.addCompositeContent(childContent, content.id, childPath);
 				}
 			}
 		}
-	}
-
-	private generatePath(parentPath: string | undefined, key: string): string {
-		return parentPath ? `${parentPath}.${key}` : key;
 	}
 
 	async getAll(): Promise<Content[]> {
@@ -160,3 +167,9 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		return node?.parentId as ContentId | undefined;
 	}
 }
+
+// Create a singleton instance of IndexedDBAdapter
+const storageAdapter = new IndexedDBAdapter<Content>('content-store', 1);
+
+// Create a singleton instance of ContentStore
+export const contentStore = new ContentStore(storageAdapter);

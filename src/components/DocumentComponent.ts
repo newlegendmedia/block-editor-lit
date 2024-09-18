@@ -1,49 +1,33 @@
 import { LitElement, html, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { ComponentFactory } from "../util/ComponentFactory";
-import { contentStore } from "../resourcestore";
-import { documentManager } from "../store";
-import { Document, Content } from "../content/content";
+import { BlockFactory } from '../blocks/BlockFactory';
+import { contentStore } from '../content/ContentStore';
+import { documentManager } from '../components/DocumentManager';
+import { Document, Content } from '../content/content';
 
-@customElement("document-component")
+@customElement('document-component')
 export class DocumentComponent extends LitElement {
-  @property({ type: String }) documentId!: string;
-  @state() private document: Document | undefined = undefined;
-  @state() private rootContent: Content | undefined = undefined;
-  @state() private rootComponent: TemplateResult | undefined = undefined;
+	@property({ type: String }) documentId!: string;
+	@state() private document: Document | undefined = undefined;
+	@state() private rootContent: Content | undefined = undefined;
+	@state() private rootComponent: TemplateResult | undefined = undefined;
 
-  async connectedCallback() {
-    super.connectedCallback();
-    await this.loadDocument();
-  }
+	async connectedCallback() {
+		super.connectedCallback();
+		await this.loadDocument();
+	}
 
-  async loadDocument() {
+	async loadDocument() {
 		try {
 			this.document = await documentManager.getDocument(this.documentId);
-			console.log(
-				'DocumentComponent.loadDocument creating component - docId & doc',
-				this.documentId,
-				this.document
-			);
-
 			if (this.document) {
 				this.rootContent = await contentStore.get(this.document.rootContent);
-
+				console.log('Document', this.rootContent);
 				if (this.rootContent) {
-					// Use the document ID as the initial path
-					console.log(
-						'DocumentComponent.loadDocument creating component - docId & rootContent',
+					this.rootComponent = await BlockFactory.createComponent(
 						this.documentId,
-						this.rootContent
-					);
-					console.log(
-						'Creating component with doc id & root content ID:',
-						this.documentId,
-						this.rootContent.id
-					);
-					this.rootComponent = await ComponentFactory.createComponent(
-						this.rootContent.id,
-						this.documentId // Pass the document ID as the initial path
+						this.rootContent.modelInfo.key,
+						this.rootContent.modelInfo.type
 					);
 				}
 			}
@@ -53,15 +37,15 @@ export class DocumentComponent extends LitElement {
 		//    this.requestUpdate();
 	}
 
-  render() {
-    if (!this.document || !this.rootContent) {
-      return html`<div>Loading document...</div>`;
-    }
+	render() {
+		if (!this.document || !this.rootContent) {
+			return html`<div>Loading document...</div>`;
+		}
 
-    return html`
+		return html`
 			<h1>${this.document.title}</h1>
 			<div>${this.documentId} ${this.rootContent.id}</div>
 			${this.rootComponent ?? html`<div>Error: Root component not loaded</div>`}
 		`;
-  }
+	}
 }

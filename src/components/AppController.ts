@@ -1,7 +1,7 @@
 // AppController.ts
 import { LitElement, html } from 'lit';
-import { documentManager } from '../store';
-import { loadDefaultSchema } from '../modelstore/loadDefaultSchema';
+import { documentManager } from './DocumentManager';
+import { SchemaStorage } from '../model/SchemaStorage';
 import { AppState, initialState } from './AppState';
 
 export class AppController {
@@ -21,7 +21,7 @@ export class AppController {
 	async initializeApp() {
 		try {
 			this.setState({ isLoading: true });
-			await loadDefaultSchema();
+			await SchemaStorage.loadDefaultSchema();
 		} catch (error) {
 			console.error('Failed to initialize the app:', error);
 		} finally {
@@ -73,19 +73,25 @@ export class AppController {
 
 	handleBreadcrumbClick = async (event: CustomEvent) => {
 		const clickedPath = event.detail.path;
-		const pathParts = clickedPath.split('.');
-		if (pathParts.length === 1 && pathParts[0].startsWith('DOC-')) {
-			await this.handleDocumentIdOnly(pathParts[0]);
-		} else {
-			this.setState({
-				currentPath: clickedPath,
-				activeDocumentId: null,
-				pathRenderError: null,
-			});
-		}
+		this.setState({
+			currentPath: clickedPath,
+			activeDocumentId: null,
+			pathRenderError: null,
+		});
 	};
 
-	handleDocumentIdOnly = async (documentId: string) => {
+	// handleDocumentIdOnly = async (event: CustomEvent) => {
+	// 	const documentId = event.detail.documentId;
+	// 	// Load the document and update the app state
+	// 	await this.loadDocument(documentId);
+	// 	this.setState({
+	// 		activeDocumentId: documentId,
+	// 		currentPath: documentId,
+	// 	});
+	// };
+
+	handleDocumentIdOnly = async (event: CustomEvent) => {
+		const documentId = event.detail.documentId;
 		this.setState({ isLoading: true });
 		try {
 			const document = await documentManager.getDocument(documentId);
@@ -111,7 +117,6 @@ export class AppController {
 	};
 
 	renderMainContent() {
-		html`Active - ${this.state.activeDocumentId}`;
 		if (this.state.activeDocumentId) {
 			return html`
 				<h-breadcrumbs

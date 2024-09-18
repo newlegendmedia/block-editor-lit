@@ -1,10 +1,10 @@
 // ElementBlock.ts
 
-import { html, css, TemplateResult } from "lit";
-import { customElement, property } from "lit/decorators.js";
-import { BaseBlock } from "./BaseBlock";
-import { ElementModel, AtomType, Model } from "../model/model";
-import { Content } from "../content/content";
+import { html, css, TemplateResult } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+import { BaseBlock } from './BaseBlock';
+import { ElementModel, AtomType, Model } from '../model/model';
+import { Content } from '../content/content';
 
 @customElement('element-block')
 export class ElementBlock extends BaseBlock {
@@ -41,7 +41,7 @@ export class ElementBlock extends BaseBlock {
 
 	private createInlineContent(): Content {
 		return {
-			id: `inline:${this.contentId}`,
+			id: `inline:${this.content?.id}`,
 			modelInfo: {
 				type: 'element',
 				key: this.inlineModel?.key || 'inline-element',
@@ -84,6 +84,7 @@ export class ElementBlock extends BaseBlock {
 			case AtomType.Datetime:
 				return this.renderDatetimeElement(content);
 			default:
+				console.warn(`Unsupported element type: ${model.base}`, model);
 				return html`<div>Unsupported element type: ${model.base}</div>`;
 		}
 	}
@@ -112,7 +113,7 @@ export class ElementBlock extends BaseBlock {
 			this.content = { ...this.content!, content: value };
 			this.dispatchEvent(
 				new CustomEvent('element-updated', {
-					detail: { id: this.contentId, value: value },
+					detail: { id: this.content.id, value: value },
 					bubbles: true,
 					composed: true,
 				})

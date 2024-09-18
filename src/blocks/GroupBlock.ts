@@ -3,7 +3,7 @@ import { customElement, state } from 'lit/decorators.js';
 import { until } from 'lit/directives/until.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { IndexedCompositeBlock } from './IndexedCompositeBlock';
-import { ComponentFactory } from '../util/ComponentFactory';
+import { BlockFactory } from './BlockFactory';
 import { GroupModel, Model } from '../model/model';
 import { ContentId, CompositeContent } from '../content/content';
 
@@ -40,6 +40,13 @@ export class GroupBlock extends IndexedCompositeBlock {
 		`,
 	];
 
+	private renderChildComponent(
+		childComponentPromise: Promise<TemplateResult>,
+		placeholder: string
+	): TemplateResult {
+		return html` ${until(childComponentPromise, html`<span>${placeholder}</span>`)} `;
+	}
+
 	protected renderContent(): TemplateResult {
 		if (!this.content || !this.model) {
 			return html`<div>Group Loading...</div>`;
@@ -55,12 +62,11 @@ export class GroupBlock extends IndexedCompositeBlock {
 					${repeat(
 						children,
 						(childId) => childId,
-						(childId, index) => html`
+						(_childId, index) => html`
 							<div class="group-item">
-								${until(
-									ComponentFactory.createComponent(childId, this.path),
-									html`<span>Loading child component...</span>`,
-									html`<span>Error loading component...</span>`
+								${this.renderChildComponent(
+									BlockFactory.createComponent(this.path, children[index], 'element'),
+									'Loading child component...'
 								)}
 								<button class="remove-button" @click=${() => this.removeChildBlock(index)}>
 									Remove

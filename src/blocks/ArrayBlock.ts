@@ -3,7 +3,7 @@ import { customElement } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { until } from 'lit/directives/until.js';
 import { IndexedCompositeBlock } from './IndexedCompositeBlock';
-import { ComponentFactory } from '../util/ComponentFactory';
+import { BlockFactory } from './BlockFactory';
 import { ArrayModel, Model } from '../model/model';
 import { CompositeContent, ContentId } from '../content/content';
 
@@ -27,9 +27,9 @@ export class ArrayBlock extends IndexedCompositeBlock {
 	];
 
 	protected async addChildBlock(itemType: Model): Promise<ContentId> {
-		const newChildId = await super.addChildBlock(itemType);
+		const contentId = await super.addChildBlock(itemType);
 		this.requestUpdate();
-		return newChildId;
+		return contentId;
 	}
 
 	private renderChildComponent(
@@ -54,10 +54,10 @@ export class ArrayBlock extends IndexedCompositeBlock {
 					${repeat(
 						children,
 						(childId) => childId,
-						(childId, index) => html`
+						(_childId, index) => html`
 							<div class="array-item">
 								${this.renderChildComponent(
-									ComponentFactory.createComponent(childId, this.path),
+									BlockFactory.createComponent(this.path, children[index], model.itemType.type),
 									'Loading child component...'
 								)}
 								<button class="remove-button" @click=${() => this.removeChildBlock(index)}>

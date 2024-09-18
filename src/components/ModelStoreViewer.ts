@@ -1,6 +1,6 @@
 import { LitElement, html, css, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { modelStore } from "../modelstore/ModelStoreInstance";
+import { modelStore } from '../model/ModelStore';
 import { Model } from "../model/model";
 import { HierarchicalItem } from "../tree/HierarchicalItem";
 

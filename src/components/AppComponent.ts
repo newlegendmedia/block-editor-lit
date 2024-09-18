@@ -90,7 +90,7 @@ export class AppComponent extends LitElement {
 
 	render() {
 		return this.state.isLoading
-			? html`<div>Loading...</div>`
+			? html`<div>App Loading...</div>`
 			: html`
           <button class="toggle-sidebar" @click=${this.controller.toggleSidebar}>
             ${this.sidebarIcon()}

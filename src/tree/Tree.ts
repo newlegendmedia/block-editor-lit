@@ -1,6 +1,6 @@
-import { TreeNode } from "./TreeNode";
-import { generateId } from "../util/generateId";
-import { HierarchicalItem } from "./HierarchicalItem";
+import { TreeNode } from './TreeNode';
+import { generateId } from '../util/generateId';
+import { HierarchicalItem } from './HierarchicalItem';
 
 export class Tree<K, Item> {
 	private nodes: Map<K, TreeNode<K, Item>>;
@@ -23,17 +23,16 @@ export class Tree<K, Item> {
 		return items;
 	}
 
-	// In your Tree class
 	getAllHierarchical(): HierarchicalItem<Item> {
-		const buildHierarchy = (node: TreeNode<K, Item>): HierarchicalItem<Item> => {
+		const buildHierarchy = (node: TreeNode<string, Item>): HierarchicalItem<Item> => {
 			return {
 				...node.item,
 				id: node.id,
-				children: node.children.map((child) => buildHierarchy(child as TreeNode<K, Item>)),
+				children: node.children.map((child) => buildHierarchy(child as TreeNode<string, Item>)),
 			};
 		};
 
-		return buildHierarchy(this.root);
+		return buildHierarchy(this.root as TreeNode<string, Item>);
 	}
 
 	getRootId(): K {

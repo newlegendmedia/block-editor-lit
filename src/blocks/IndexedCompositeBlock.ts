@@ -1,18 +1,29 @@
 import { BaseBlock } from './BaseBlock';
 import { ContentId, CompositeContent } from '../content/content';
-import { isCompositeModel, Model } from '../model/model';
-import { contentStore } from '../resourcestore';
-import { ContentFactory } from '../store/ContentFactory';
+import { Model } from '../model/model';
+import { contentStore } from '../content/ContentStore';
+import { ContentFactory } from '../content/ContentFactory';
 
 export abstract class IndexedCompositeBlock extends BaseBlock {
 	protected async addChildBlock(itemType: Model): Promise<ContentId> {
+		if (!this.content || !this.model) {
+			return 'Failed to add child block - no content or model for parent';
+		}
 		const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(itemType);
 
 		if (!modelDefinition) {
 			return 'Model not Found';
 		}
+		if (!content) {
+			return 'Failed to create child content';
+		}
 
-		const newIndex = (this.content as CompositeContent).children?.length || 0;
+		const compositeContent = this.content as CompositeContent;
+		if (!compositeContent.children) {
+			compositeContent.children = [];
+		}
+
+		const newIndex = compositeContent.children?.length || 0;
 		const originalKey = modelInfo.key;
 		modelInfo.key = `${newIndex}:${originalKey}`;
 
@@ -20,21 +31,24 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 			modelInfo,
 			modelDefinition,
 			content,
-			this.contentId
+			this.content.id,
+			this.getChildPath(modelInfo.key)
 		);
 
-		if (isCompositeModel(itemType)) {
-			await contentStore.update(newChildContent.id, (content) => ({
-				...content,
-				children: [],
-			}));
-		}
+		compositeContent.children.push(modelInfo.key);
 
-		await this.updateContent((currentContent) => {
-			const updatedContent = currentContent as CompositeContent;
-			updatedContent.children = [...(updatedContent.children || []), newChildContent.id];
-			return updatedContent;
-		});
+		// if (isCompositeModel(itemType)) {
+		// 	await contentStore.update(newChildContent.id, (content) => ({
+		// 		...content,
+		// 		children: [],
+		// 	}));
+		// }
+
+		// await this.updateContent((currentContent) => {
+		// 	const updatedContent = currentContent as CompositeContent;
+		// 	updatedContent.children = [...(updatedContent.children || []), newChildContent.id];
+		// 	return updatedContent;
+		// });
 
 		return newChildContent.id;
 	}

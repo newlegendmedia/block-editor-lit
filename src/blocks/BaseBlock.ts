@@ -1,18 +1,20 @@
 import { LitElement, html } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { Content, ContentId } from '../content/content';
+import { Content } from '../content/content';
 import { Model } from '../model/model';
-import { contentStore } from '../resourcestore/';
-import { modelStore } from '../modelstore/ModelStoreInstance';
+import { contentStore } from '../content/ContentStore';
 import '../components/Breadcrumbs';
 
 export abstract class BaseBlock extends LitElement {
-	@property({ type: String }) contentId: ContentId = '';
+	@property({ type: Object }) content: Content | undefined = undefined;
+	@property({ type: Object }) model: Model | undefined = undefined;
 	@property({ type: String }) path: string = '';
-	@property({ type: String }) modelKey: string = '';
-	@state() protected content?: Content;
-	@state() protected model?: Model;
+	@property({ type: String }) key: string = '';
 	@state() protected error: string | null = null;
+
+	constructor() {
+		super();
+	}
 
 	async connectedCallback() {
 		super.connectedCallback();
@@ -34,41 +36,30 @@ export abstract class BaseBlock extends LitElement {
 	}
 
 	protected async initContent() {
-		this.content = await contentStore.get(this.contentId);
+		// Noop
 	}
 
-	protected initPath(path: string) {
-		let key = this.content ? this.content.modelInfo.key : '';
-		this.path = `${path}.${key}`;
+	protected initPath(_path: string) {
+		// Noop
 	}
 
 	protected async initModel() {
-		if (!this.content) {
-			throw new Error('Content not initialized');
-		}
-
-		// Remove the document ID from the start of the path
-		const pathParts = this.path.split('.').slice(1);
-
-		// For each part of the path, remove any index prefix (e.g., "0:page" becomes "page")
-		const modelPath = pathParts
-			.map((part) => (part.includes(':') ? part.split(':')[1] : part))
-			.join('.');
-
-		const modelType = this.content.modelInfo.type;
-		this.model = await modelStore.getModel(modelPath, modelType);
-
-		if (!this.model) {
-			throw new Error(`Model not found for path: ${modelPath}`);
-		}
+		// Noop
 	}
 
 	protected async initializeBlock() {
-		// This method is intentionally left empty in the base class
+		// Noop
 	}
 
 	protected async updateContent(updater: (content: Content) => Content) {
-		this.content = await contentStore.update(this.contentId, updater);
+		if (!this.content) {
+			throw new Error('Content not found');
+		}
+		const content = await contentStore.update(this.content.id, updater);
+		if (!content) {
+			throw new Error('Failed to update content');
+		}
+		this.content = content;
 	}
 
 	render() {
@@ -81,12 +72,27 @@ export abstract class BaseBlock extends LitElement {
 		}
 		return html`
 			${this.renderPath()}
-			<div style="font-size:11px; margin-bottom:5px;">${this.contentId}</div>
+			<div style="font-size:11px; margin-bottom:5px;">${this.content.id}</div>
 			<div>${this.renderContent()}</div>
 		`;
 	}
 
 	protected abstract renderContent(): unknown;
+
+	protected getChildPath(childKey: string): string {
+		// if first part of path is a document id (starts with DOC-), remove that part even if its the only part meaning there are no dots
+		let path = this.path;
+		if (path.startsWith('DOC-')) {
+			const parts = path.split('.');
+			if (parts.length === 1) {
+				path = '';
+			} else {
+				path = parts.slice(1).join('.');
+			}
+		}
+
+		return `${path}.${childKey}`;
+	}
 
 	protected renderPath() {
 		return html`
