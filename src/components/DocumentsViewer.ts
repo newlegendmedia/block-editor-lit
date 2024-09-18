@@ -58,10 +58,14 @@ export class DocumentsViewer extends LitElement {
 		return html`
 			<div>
 				<h3>Documents</h3>
-				<ul class="document-list">
-					${this.documents.map((doc) => this.renderDocumentItem(doc))}
-				</ul>
-				<button @click=${this.createNewDocument}>New Document</button>
+				${this.isLoading
+					? html`<p>Loading...</p>`
+					: html`
+							<ul class="document-list">
+								${this.documents.map((doc) => this.renderDocumentItem(doc))}
+							</ul>
+							<button @click=${this.createNewDocument}>New Document</button>
+						`}
 			</div>
 		`;
 	}
