@@ -5,6 +5,7 @@ import { contentStore } from '../content/ContentStore';
 import { ContentFactory } from '../content/ContentFactory';
 
 export abstract class IndexedCompositeBlock extends BaseBlock {
+
 	protected async addChildBlock(itemType: Model): Promise<ContentId> {
 		if (!this.content || !this.model) {
 			return 'Failed to add child block - no content or model for parent';

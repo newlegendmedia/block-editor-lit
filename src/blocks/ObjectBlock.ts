@@ -4,8 +4,9 @@ import { repeat } from 'lit/directives/repeat.js';
 import { until } from 'lit/directives/until.js';
 import { KeyedCompositeBlock } from './KeyedCompositeBlock';
 import { BlockFactory } from './BlockFactory';
-import { ObjectModel, Model, isElement, ElementModel } from '../model/model';
+import { ObjectModel, Model, isElement } from '../model/model';
 import { KeyedCompositeContent } from '../content/content';
+import { contentStore } from '../content/ContentStore';
 
 @customElement('object-block')
 export class ObjectBlock extends KeyedCompositeBlock {
@@ -44,25 +45,6 @@ export class ObjectBlock extends KeyedCompositeBlock {
 		return (this.model as ObjectModel)?.properties || [];
 	}
 
-	protected getDefaultValue(prop: Model): any {
-		if (isElement(prop)) {
-			const elementModel = prop as ElementModel;
-			switch (elementModel.base) {
-				case 'boolean':
-					return false;
-				case 'number':
-					return 0;
-				case 'datetime':
-					return new Date().toISOString();
-				case 'text':
-					return '';
-				default:
-					return null;
-			}
-		}
-		return null;
-	}
-
 	protected async initializeBlock() {
 		await super.initializeBlock();
 		this.inlineChildren = this.useInlineChildren();
@@ -77,7 +59,7 @@ export class ObjectBlock extends KeyedCompositeBlock {
 		const componentPromises = objectModel.properties.map(async (prop) => {
 			if (!prop.key) return;
 			const childKey = prop.key;
-			const childComponent = await this.createChildComponent(prop);
+			const childComponent = await this.createChildComponent(prop, childKey);
 			this.childComponents.set(childKey, Promise.resolve(childComponent));
 		});
 
@@ -132,8 +114,7 @@ export class ObjectBlock extends KeyedCompositeBlock {
 		`;
 	}
 
-	private async createChildComponent(property: Model): Promise<TemplateResult> {
-		const childKey = property.key!;
+	private async createChildComponent(property: Model, childKey: string): Promise<TemplateResult> {
 		try {
 			if (this.inlineChildren && isElement(property)) {
 				return await this.createInlineChildComponent(property, childKey, this.path);
@@ -166,14 +147,28 @@ export class ObjectBlock extends KeyedCompositeBlock {
 		childKey: string,
 		parentPath: string
 	): Promise<TemplateResult> {
-		const contentData = this.content?.content;
-		const childContentId = (contentData as { [key: string]: any })?.[childKey];
+		// Let BlockFactory create or retrieve the content
+		const component = await BlockFactory.createComponent(parentPath, childKey, property.type);
 
-		if (!childContentId) {
-			console.warn(`No content found for child key: ${childKey}`, this.content);
-			return html`<div>No content for ${childKey}</div>`;
+		// After BlockFactory creates the component, update this.content
+		await this.updateChildContentReference(childKey);
+
+		return component;
+	}
+
+	private async updateChildContentReference(childKey: string): Promise<void> {
+		if (!this.content) return;
+
+		const childPath = this.getChildPath(childKey);
+		const childContent = await contentStore.getByPath(childPath);
+
+		if (childContent) {
+			await this.updateContent((currentContent) => {
+				const updatedContent = { ...currentContent };
+				(updatedContent.content as KeyedCompositeContent)[childKey] = childContent.id;
+				return updatedContent;
+			});
 		}
-		return await BlockFactory.createComponent(parentPath, childKey, property.type);
 	}
 
 	protected useInlineChildren(): boolean {

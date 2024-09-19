@@ -14,6 +14,7 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		const rootContent: Content = {
 			id: 'root' as ContentId,
 			modelInfo: { type: 'root', key: 'root' },
+			modelDefinition: { id: 'root', type: 'root', key: 'root' },
 			content: {},
 		};
 		super(storageAdapter, 'root' as ContentId, rootContent);
@@ -80,6 +81,23 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		// Notify subscribers
 		this.subscriptions.notify(id as string, null);
 		this.subscriptions.notifyAll();
+	}
+
+	async add(content: Content, parentPath: string, path: string): Promise<Content> {
+		const parentId = this.pathMap.get(parentPath);
+		if (!parentId) {
+			throw new Error(`Parent content not found at path ${parentPath}`);
+		}
+
+		if (!content.modelDefinition) throw new Error('Model definition is required to add content');
+
+		return await this.create(
+			content.modelInfo,
+			content.modelDefinition,
+			content.content,
+			parentId,
+			path
+		);
 	}
 
 	async create(

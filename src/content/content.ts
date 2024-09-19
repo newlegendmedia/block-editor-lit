@@ -18,7 +18,7 @@ export type IndexedCompositeContent = ContentId[];
 export type Content<T = unknown> = {
 	id: ContentId;
 	modelInfo: ModelInfo;
-	modelDefinition?: Model;
+	modelDefinition: Model;
 	content: T;
 };
 

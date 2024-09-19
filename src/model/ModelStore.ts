@@ -27,13 +27,18 @@ export class ModelStore extends ResourceStore<string, Model> {
 
 	async getModel(
 		path: string,
-		type: ModelType,
+		type?: ModelType,
 		schemaName: string = DEFAULT_SCHEMA_NAME
 	): Promise<Model | undefined> {
 		const existingModel = await this.get(path);
 
 		if (existingModel) {
 			return existingModel;
+		}
+
+		if (!type) {
+			console.warn(`Model type not specified: ${path}`);
+			return undefined;
 		}
 
 		const schema = this.schemas.get(schemaName);

@@ -10,6 +10,8 @@ import './ObjectBlock';
 import './ArrayBlock';
 import './ElementBlock';
 import './GroupBlock';
+import { ContentFactory } from '../content/ContentFactory';
+import { generateId } from '../util/generateId';
 
 function replaceColonParts(path: string): string {
 	// Split the path into parts using the dot as the delimiter
@@ -53,23 +55,26 @@ export class BlockFactory {
 					path = parts.slice(1).join('.');
 				}
 			}
-
+			const parentPath = path;
 			const contentPath = path ? `${path}.${key}` : key;
-
-			const content = await contentStore.getByPath(contentPath);
-			if (!content) {
-				console.error(`BlockFactory: Content not found for path - ${contentPath}`);
-				return html`<div>Error: Content not found ${contentPath} - full path ${fullPath}</div>`;
-			}
-
-			// if the path has colons in any off its parts, replace the part withe the text after the colon
-			// this path firstpart.2:anotherpart.key will become this path firstpart.anotherpart.key
 			const modelPath = replaceColonParts(contentPath);
 
-			const model = await modelStore.getModel(modelPath, content.modelInfo.type);
+			console.log(`BlockFactory: Paths: ${fullPath} ${parentPath} ${contentPath} ${modelPath}`);
+
+			const model = await modelStore.getModel(modelPath, type);
 			if (!model) {
 				console.error(`BlockFactory: Model not found for ${fullPath}`);
 				return html`<div>Error: Model not found ${fullPath} ${key}</div>`;
+			}
+
+			let content = await contentStore.getByPath(contentPath);
+			if (!content) {
+				const defaultContent = ContentFactory.createContentFromModel(model);
+				content = {
+					id: generateId('CONTENT'),
+					...defaultContent,
+				};
+				content = await contentStore.add(content, parentPath, contentPath);
 			}
 
 			// Create the appropriate block based on content type

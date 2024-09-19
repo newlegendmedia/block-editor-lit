@@ -1,6 +1,6 @@
 import { Tree } from "../tree/Tree";
 import { Resource } from "./Resource";
-import { StorageAdapter } from "./StorageAdapter";
+import { StorageAdapter } from '../storage/StorageAdapter';
 import { SubscriptionManager } from "./SubscriptionManager";
 import { deepClone } from '../util/deepClone';
 
