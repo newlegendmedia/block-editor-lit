@@ -117,9 +117,9 @@ export class ObjectBlock extends KeyedCompositeBlock {
 	private async createChildComponent(property: Model, childKey: string): Promise<TemplateResult> {
 		try {
 			if (this.inlineChildren && isElement(property)) {
-				return await this.createInlineChildComponent(property, childKey, this.path);
+				return await this.createInlineChildComponent(property, childKey, this.path.toString());
 			} else {
-				return await this.createStandardChildComponent(property, childKey, this.path);
+				return await this.createStandardChildComponent(property, childKey, this.path.toString());
 			}
 		} catch (error) {
 			console.error(`Error creating child component for ${childKey}:`, error);

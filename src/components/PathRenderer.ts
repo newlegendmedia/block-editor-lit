@@ -2,6 +2,7 @@ import { LitElement, html, TemplateResult } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { until } from 'lit/directives/until.js';
 import { BlockFactory } from '../blocks/BlockFactory';
+import { ContentPath } from '../content/ContentPath';
 
 @customElement('path-renderer')
 export class PathRenderer extends LitElement {
@@ -27,36 +28,31 @@ export class PathRenderer extends LitElement {
 		}
 
 		try {
-			const pathParts = this.path.split('.');
-			const documentId = pathParts[0];
+			console.log(`Target - Rendering content for path: ${this.path}`);
+			const contentPath = new ContentPath(this.path);
+			console.log('Target - Content path:', contentPath.toString(), contentPath.pathSegments);
 
 			// If only document ID is provided, dispatch the document-id-only event
-			if (pathParts.length === 1 && documentId.startsWith('DOC-')) {
-				console.log(`Dispatching document-id-only event for document: ${documentId}`);
+			if (contentPath.pathSegments.length === 1) {
+				console.log(`Dispatching document-id-only event for document: ${contentPath.document}`);
 				this.dispatchEvent(
 					new CustomEvent('document-id-only', {
-						detail: { documentId },
+						detail: { documentId: contentPath.document },
 						bubbles: true,
 						composed: true,
 					})
 				);
-				return html`<div>Loading document ${documentId}...</div>`;
+				return html`<div>Loading document ${contentPath.document}...</div>`;
 			}
 
-			// For nested paths, remove the document ID if present
-			const contentPathParts = documentId.startsWith('DOC-') ? pathParts.slice(1) : pathParts;
+			console.log('Target2 - Content path:', contentPath);
 
-			// The last part is the key, and everything before it is the parent path
-			const key = contentPathParts[contentPathParts.length - 1];
-			const parentPath = contentPathParts.slice(0, -1).join('.');
+			const key = contentPath.key;
+			const parentPath = contentPath.parentPath.toString();
 
-			// If parentPath is empty, it means we're at the root of the document
-			const fullParentPath = parentPath ? `${documentId}.${parentPath}` : documentId;
+			console.log(`Rendering component for parent path: ${parentPath}, key: ${key}`);
 
-			console.log(`Rendering component for parent path: ${fullParentPath}, key: ${key}`);
-
-			// Use the parent path for component creation, and the last part as the key
-			const component = await BlockFactory.createComponent(fullParentPath, key, 'element');
+			const component = await BlockFactory.createComponent(parentPath, key, 'element');
 
 			if (!component) {
 				throw new Error(`Failed to create component for path: ${this.path}`);

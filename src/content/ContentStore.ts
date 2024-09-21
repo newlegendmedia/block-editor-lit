@@ -5,6 +5,8 @@ import { StorageAdapter } from '../storage/StorageAdapter';
 import { generateId } from '../util/generateId';
 import { HierarchicalItem } from '../tree/HierarchicalItem';
 import { IndexedDBAdapter } from '../storage/IndexedDBAdapter';
+import { ContentPath } from './ContentPath';
+import { ContentFactory } from './ContentFactory';
 
 export class ContentStore extends ResourceStore<ContentId, Content> {
 	private pathMap: Map<string, ContentId> = new Map();
@@ -26,9 +28,22 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 	}
 
 	async getByPath(path: string): Promise<Content | undefined> {
-		console.log('ContentStore.getByPath', path, this.pathMap);
 		const id = this.pathMap.get(path);
 		return id ? this.get(id) : undefined;
+	}
+
+	async getOrCreateByPath(path: string, model: Model): Promise<Content> {
+		let content = await contentStore.getByPath(path);
+		if (!content) {
+			const defaultContent = ContentFactory.createContentFromModel(model);
+			content = {
+				id: generateId('CONTENT'),
+				...defaultContent,
+			};
+			const contentPath = new ContentPath(path);
+			content = await contentStore.add(content, contentPath.parentPath, contentPath.path);
+		}
+		return content;
 	}
 
 	async set(content: Content, parentId?: ContentId, path?: string): Promise<void> {
@@ -48,9 +63,9 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		}
 
 		// Update pathMap
-
 		if (path) {
-			this.pathMap.set(path, content.id);
+			const contentPath = new ContentPath(path);
+			this.pathMap.set(contentPath.toString(), content.id);
 		}
 
 		// Update storage
@@ -84,7 +99,8 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 	}
 
 	async add(content: Content, parentPath: string, path: string): Promise<Content> {
-		const parentId = this.pathMap.get(parentPath);
+		const parentContentPath = new ContentPath(parentPath);
+		const parentId = this.pathMap.get(parentContentPath.toString());
 		if (!parentId) {
 			throw new Error(`Parent content not found at path ${parentPath}`);
 		}
@@ -117,6 +133,32 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		return newContent;
 	}
 
+	private async addCompositeContent(
+		content: Content,
+		parentId?: ContentId,
+		path?: string
+	): Promise<void> {
+		await this.set(content, parentId, path);
+
+		if (path) {
+			const contentPath = new ContentPath(path);
+			this.pathMap.set(contentPath.toString(), content.id);
+		}
+
+		// Handle nested content if it's a composite type
+		if ('children' in content && Array.isArray(content.children)) {
+			for (const childId of content.children) {
+				const childContent = await this.get(childId);
+				if (childContent) {
+					const childPath = path
+						? new ContentPath(path, childContent.modelInfo.key).toString()
+						: ContentPath.fromDocumentId(childContent.modelInfo.key).toString();
+					await this.addCompositeContent(childContent, content.id, childPath);
+				}
+			}
+		}
+	}
+
 	async update(
 		id: ContentId,
 		updater: (content: Content) => Content
@@ -127,35 +169,24 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 			const updatedContent = updater(content);
 			const parentNode = this.tree.parent(id as string);
 			const path = this.getPathForContent(id);
-			await this.set(updatedContent, parentNode?.id as ContentId, path);
+			if (!path) {
+				console.warn(`Content path not found for ID ${id}`);
+				return undefined;
+			}
+			const oldPath = new ContentPath(path);
+			const newPath = new ContentPath(oldPath.parentPath, updatedContent.modelInfo.key);
+
+			await this.set(updatedContent, parentNode?.id as ContentId, newPath.toString());
 			return updatedContent;
 		}
 		return undefined;
 	}
 
-	private async addCompositeContent(
-		content: Content,
-		parentId?: ContentId,
-		path?: string
-	): Promise<void> {
-		await this.set(content, parentId, path);
-
-		if (path) {
-			console.log('ContentStore.addCompositeContent set pathmap', path, content.id);
-			this.pathMap.set(path, content.id);
-		}
-
-		// Handle nested content if it's a composite type
-		if ('children' in content && Array.isArray(content.children)) {
-			for (const childId of content.children) {
-				const childContent = await this.get(childId);
-				if (childContent) {
-					const childPath = path
-						? `${path}.${childContent.modelInfo.key}`
-						: childContent.modelInfo.key;
-					await this.addCompositeContent(childContent, content.id, childPath);
-				}
-			}
+	async updatePath(oldPath: string, newPath: string): Promise<void> {
+		const contentId = this.pathMap.get(oldPath);
+		if (contentId) {
+			this.pathMap.delete(oldPath);
+			this.pathMap.set(newPath, contentId);
 		}
 	}
 

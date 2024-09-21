@@ -1,8 +1,9 @@
-import { Document, DocumentId, ContentId } from "../content/content";
+import { Document, DocumentId, ContentId } from '../content/content';
 import { contentStore } from '../content/ContentStore';
 import { generateId } from '../util/generateId';
 import { modelStore } from '../model/ModelStore';
 import { ModelType } from '../model/model';
+import { ContentPath } from '../content/ContentPath';
 
 export class DocumentManager {
 	private documents: Map<DocumentId, Document> = new Map();
@@ -18,16 +19,19 @@ export class DocumentManager {
 			throw new Error(`${modelKey} model not found`);
 		}
 
+		const documentId = generateId('DOC') as DocumentId;
+		const rootContentPath = ContentPath.fromDocumentId(documentId, modelKey);
+
 		const rootContent = await contentStore.create(
 			{ type: modelType, key: modelKey },
 			model,
 			{ title },
 			'root',
-			modelKey
+			rootContentPath.toString()
 		);
 
 		const document: Document = {
-			id: generateId('DOC') as DocumentId,
+			id: documentId,
 			title,
 			rootContent: rootContent.id,
 			createdAt: new Date().toISOString(),
@@ -71,7 +75,6 @@ export class DocumentManager {
 
 		if (document) {
 			await this.deactivateDocument(id);
-			//      await contentStore.remove(document.rootContent);
 		}
 	}
 
@@ -95,6 +98,13 @@ export class DocumentManager {
 			}
 			await contentStore.delete(contentId);
 		}
+	}
+
+	getContentPath(documentId: DocumentId, ...segments: string[]): string {
+		const path = ContentPath.fromDocumentId(documentId);
+		return segments
+			.reduce((p, segment) => p.appendSegment({ type: 'key', value: segment }), path)
+			.toString();
 	}
 }
 

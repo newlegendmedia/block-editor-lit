@@ -20,6 +20,7 @@ export class AppComponent extends LitElement {
 			overflow: hidden;
 			color: var(--text-color);
 			background-color: var(--background-color);
+			margin: 0;
 		}
 		.sidebar {
 			width: 350px;
@@ -34,6 +35,7 @@ export class AppComponent extends LitElement {
 			flex-grow: 1;
 			overflow-y: auto;
 			padding: 20px;
+			max-width: 640px;
 		}
 		.toggle-sidebar {
 			position: fixed;

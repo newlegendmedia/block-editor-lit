@@ -82,6 +82,15 @@ export class ModelStore extends ResourceStore<string, Model> {
 		return rawModel;
 	}
 
+	async updatePath(oldPath: string, newPath: string): Promise<void> {
+		const model = this.tree.get(oldPath);
+		if (model) {
+			this.tree.remove(oldPath);
+			let parentId = model.parentId === null ? undefined : model.parentId;
+			this.tree.add(model.item, parentId, newPath);
+		}
+	}
+
 	private findModelInSchema(schema: ModelSchema, type: ModelType, key: string): Model | undefined {
 		return schema.models[type]?.[key];
 	}

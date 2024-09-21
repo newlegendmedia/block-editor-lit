@@ -6,12 +6,14 @@ import { IndexedCompositeBlock } from './IndexedCompositeBlock';
 import { BlockFactory } from './BlockFactory';
 import { GroupModel, Model } from '../model/model';
 import { ContentId, CompositeContent } from '../content/content';
+import { BaseBlock } from './BaseBlock';
 
 @customElement('group-block')
 export class GroupBlock extends IndexedCompositeBlock {
 	@state() private showSlashMenu: boolean = false;
 
 	static styles = [
+		BaseBlock.blockStyles,
 		css`
 			.group-content {
 				display: flex;
@@ -65,7 +67,7 @@ export class GroupBlock extends IndexedCompositeBlock {
 						(_childId, index) => html`
 							<div class="group-item">
 								${this.renderChildComponent(
-									BlockFactory.createComponent(this.path, children[index], 'element'),
+									BlockFactory.createComponent(this.path.toString(), children[index], 'element'),
 									'Loading child component...'
 								)}
 								<button class="remove-button" @click=${() => this.removeChildBlock(index)}>
@@ -106,6 +108,8 @@ export class GroupBlock extends IndexedCompositeBlock {
 
 	protected async addChildBlock(itemType: Model): Promise<ContentId> {
 		this.showSlashMenu = false;
-		return await super.addChildBlock(itemType);
+		const childId = await super.addChildBlock(itemType);
+		this.requestUpdate();
+		return childId;
 	}
 }

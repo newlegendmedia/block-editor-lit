@@ -5,8 +5,15 @@
   --primary-color: #66b6c4;
   --secondary-color: #6c757d;
   --background-color: #f8f9fa;
+  --input-bg-color: #f4f5f6;
   --text-color: #333333;
-
+  --link-color: #f466cc;
+    --link-color-selected: #b43d92;
+    --button-alt-bg-color: #d9e2e6;
+    --button-alt-text-color: #121416;
+    --button-alt-hover-bg-color: #d1dce2;
+    --button-alt-border-color: #5c5c59;
+    
   /* Typography */
   --font-family: Arial, sans-serif;
   --font-size-base: 16px;
@@ -20,6 +27,7 @@
 
   /* Border */
   --border-color: #dee2e6;
+  --border-radius: 2px;
 
  /* Sidebar specific variables */
  --sidebar-bg-color: #f0f0f0;
@@ -36,8 +44,11 @@
   --primary-color: #026288;
   --secondary-color: #545b62;
   --background-color: #2a2d2f;
-  --text-color: #f2f3f4;
-  --border-color: #495057;
+  --input-bg-color: #2f3233;
+    --text-color: #e4e5e6;
+    --link-color: #b43d92;
+    --link-color-selected: #d959b4;
+    --border-color: #3b3e3f;
 
   /* Sidebar specific variables for dark theme */
   --sidebar-bg-color: #26292b;
@@ -47,14 +58,24 @@
   --button-bg-color: #0056b3;
   --button-text-color: #f2f3f4;
   --button-hover-bg-color: #003d80;
+  --button-alt-bg-color: #cacac7;
+    --button-alt-text-color: #161612;
+    --button-alt-hover-bg-color: #f2f3ed;
+    --button-alt-border-color: #989a90;
 }
 
 /* Global styles */
 body {
+  margin: 0;
   font-family: var(--font-family);
   font-size: var(--font-size-base);
   color: var(--text-color);
   background-color: var(--background-color);
+  box-sizing: border-box;
+  }
+  
+  body * {
+    box-sizing: border-box;
 }
 
 /* Utility classes */
@@ -68,7 +89,7 @@ body {
   background-color: var(--primary-color);
   color: white;
   border: none;
-  padding: var(--spacing-small) var(--spacing-medium);
+  padding: var(--spacing-xsmall) var(--spacing-small);
   cursor: pointer;
   border-radius: var(--border-radius);
 }

@@ -13,6 +13,7 @@ export class ElementBlock extends BaseBlock {
 	@property({ type: Object }) inlineValue: any = null;
 
 	static styles = [
+		BaseBlock.blockStyles,
 		css`
 			input {
 				width: 100%;
@@ -20,8 +21,14 @@ export class ElementBlock extends BaseBlock {
 				margin: 5px 0;
 				border: 1px solid var(--border-color);
 				border-radius: var(--border-radius);
-				background-color: var(--background-color);
+				background-color: var(--input-bg-color);
 				color: var(--text-color);
+				box-shadow: none;
+				outline: none;
+			}
+			input:focus {
+				outline: 1px solid var(--primary-color); /* Customize the outline */
+				box-shadow: 0 0 5px var(--primary-color); /* Add a glowing effect */
 			}
 			label {
 				font-weight: bold;
@@ -31,7 +38,7 @@ export class ElementBlock extends BaseBlock {
 	];
 
 	async connectedCallback() {
-		if (this.isInline) {
+		if (this.isInline && this.inlineModel) {
 			// For inline elements, create a temporary content object
 			this.content = this.createInlineContent();
 			this.model = this.inlineModel;
@@ -40,21 +47,23 @@ export class ElementBlock extends BaseBlock {
 	}
 
 	private createInlineContent(): Content {
+		if (!this.inlineModel) {
+			throw new Error('Inline model not found');
+		}
 		return {
 			id: `inline:${this.content?.id}`,
 			modelInfo: {
 				type: 'element',
 				key: this.inlineModel?.key || 'inline-element',
 			},
+			modelDefinition: this.inlineModel,
 			content: this.inlineValue,
 		};
 	}
 
 	protected async initializeModel() {
-		if (this.isInline) {
+		if (this.isInline && this.inlineModel) {
 			this.model = this.inlineModel;
-		} else {
-			await super.initModel();
 		}
 	}
 

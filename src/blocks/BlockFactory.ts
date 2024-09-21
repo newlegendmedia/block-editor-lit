@@ -4,34 +4,15 @@ import { contentStore } from '../content/ContentStore';
 import { Model, ModelType } from '../model/model';
 import { Content } from '../content/content';
 import { modelStore } from '../model/ModelStore';
+import { ContentPath } from '../content/ContentPath.ts';
 
 // Import your block components
 import './ObjectBlock';
 import './ArrayBlock';
 import './ElementBlock';
 import './GroupBlock';
-import { ContentFactory } from '../content/ContentFactory';
-import { generateId } from '../util/generateId';
-
-function replaceColonParts(path: string): string {
-	// Split the path into parts using the dot as the delimiter
-	const parts = path.split('.');
-
-	// Iterate over each part
-	const newParts = parts.map((part) => {
-		// Check if the part contains a colon
-		const colonIndex = part.indexOf(':');
-		if (colonIndex !== -1) {
-			// Replace the part with the text after the colon
-			return part.substring(colonIndex + 1);
-		}
-		// Return the part as is if no colon is found
-		return part;
-	});
-
-	// Join the parts back together using the dot as the delimiter
-	return newParts.join('.');
-}
+// import { ContentFactory } from '../content/ContentFactory';
+// import { generateId } from '../util/generateId';
 
 export class BlockFactory {
 	static async createComponent(
@@ -42,51 +23,33 @@ export class BlockFactory {
 		_inlineModel?: Model
 	): Promise<TemplateResult> {
 		try {
-			console.log(`BlockFactory: Creating component for key ${key}`, path, type);
-
-			const fullPath = path ? `${path}.${key}` : key;
-
-			// if first part of path is a document id (starts with DOC-), remove that part even if its the only part meaning there are no dots
-			if (path.startsWith('DOC-')) {
-				const parts = path.split('.');
-				if (parts.length === 1) {
-					path = '';
-				} else {
-					path = parts.slice(1).join('.');
-				}
-			}
-			const parentPath = path;
-			const contentPath = path ? `${path}.${key}` : key;
-			const modelPath = replaceColonParts(contentPath);
-
-			console.log(`BlockFactory: Paths: ${fullPath} ${parentPath} ${contentPath} ${modelPath}`);
+			const blockPath = new ContentPath(path, key);
+			const contentPath = blockPath.path;
+			const modelPath = blockPath.simplePath;
 
 			const model = await modelStore.getModel(modelPath, type);
 			if (!model) {
-				console.error(`BlockFactory: Model not found for ${fullPath}`);
-				return html`<div>Error: Model not found ${fullPath} ${key}</div>`;
+				console.error(`BlockFactory: Model not found for ${modelPath}`);
+				return html`<div>Error: Model not found ${modelPath}</div>`;
 			}
 
-			let content = await contentStore.getByPath(contentPath);
+			console.log(`BlockFactory: Creating component for ${key} of type ${type}`, contentPath);
+			let content = await contentStore.getOrCreateByPath(contentPath, model);
 			if (!content) {
-				const defaultContent = ContentFactory.createContentFromModel(model);
-				content = {
-					id: generateId('CONTENT'),
-					...defaultContent,
-				};
-				content = await contentStore.add(content, parentPath, contentPath);
+				console.error(`BlockFactory: Content not found for ${contentPath}`);
+				return html`<div>Error: Content not found ${contentPath}</div>`;
 			}
 
 			// Create the appropriate block based on content type
 			switch (content.modelInfo.type) {
 				case 'object':
-					return this.createObjectBlock(content, model, fullPath, key);
+					return this.createObjectBlock(content, model, blockPath);
 				case 'array':
-					return this.createArrayBlock(content, model, fullPath, key);
+					return this.createArrayBlock(content, model, blockPath);
 				case 'element':
-					return this.createElementBlock(content, model, fullPath, key);
+					return this.createElementBlock(content, model, blockPath);
 				case 'group':
-					return this.createGroupBlock(content, model, fullPath, key);
+					return this.createGroupBlock(content, model, blockPath);
 				default:
 					console.warn(`BlockFactory: Unknown content type: ${content.modelInfo.type}`);
 					return html`<div>Unknown content type: ${content.modelInfo.type}</div>`;
@@ -119,44 +82,34 @@ export class BlockFactory {
 	private static createObjectBlock(
 		content: Content,
 		model: Model,
-		path: string,
-		key: string
+		path: ContentPath
 	): TemplateResult {
-		return html`
-			<object-block .content=${content} .model=${model} .path=${path} .key=${key}></object-block>
-		`;
+		return html` <object-block .content=${content} .model=${model} .path=${path}></object-block> `;
 	}
 
 	private static createArrayBlock(
 		content: Content,
 		model: Model,
-		path: string,
-		key: string
+		path: ContentPath
 	): TemplateResult {
-		return html`
-			<array-block .content=${content} .model=${model} .path=${path} .key=${key}></array-block>
-		`;
+		return html` <array-block .content=${content} .model=${model} .path=${path}></array-block> `;
 	}
 
 	private static createElementBlock(
 		content: Content,
 		model: Model,
-		path: string,
-		key: string
+		path: ContentPath
 	): TemplateResult {
 		return html`
-			<element-block .content=${content} .model=${model} .path=${path} .key=${key}></element-block>
+			<element-block .content=${content} .model=${model} .path=${path}></element-block>
 		`;
 	}
 
 	private static createGroupBlock(
 		content: Content,
 		model: Model,
-		path: string,
-		key: string
+		path: ContentPath
 	): TemplateResult {
-		return html`
-			<group-block .content=${content} .model=${model} .path=${path} .key=${key}></group-block>
-		`;
+		return html` <group-block .content=${content} .model=${model} .path=${path}></group-block> `;
 	}
 }

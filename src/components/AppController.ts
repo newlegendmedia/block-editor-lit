@@ -3,6 +3,7 @@ import { LitElement, html } from 'lit';
 import { documentManager } from './DocumentManager';
 import { SchemaStorage } from '../model/SchemaStorage';
 import { AppState, initialState } from './AppState';
+import { ContentPath } from '../content/ContentPath';
 
 export class AppController {
 	private host: LitElement;
@@ -20,6 +21,7 @@ export class AppController {
 
 	async initializeApp() {
 		try {
+			this.toggleTheme();
 			this.setState({ isLoading: true });
 			await SchemaStorage.loadDefaultSchema();
 		} catch (error) {
@@ -42,7 +44,7 @@ export class AppController {
 	handleDocumentOpened = (event: CustomEvent) => {
 		this.setState({
 			activeDocumentId: event.detail.documentId,
-			currentPath: null,
+			currentPath: new ContentPath(event.detail.documentId).toString(),
 		});
 	};
 
@@ -72,9 +74,9 @@ export class AppController {
 	};
 
 	handleBreadcrumbClick = async (event: CustomEvent) => {
-		const clickedPath = event.detail.path;
+		const clickedPath = new ContentPath(event.detail.path);
 		this.setState({
-			currentPath: clickedPath,
+			currentPath: clickedPath.path,
 			activeDocumentId: null,
 			pathRenderError: null,
 		});
@@ -96,9 +98,10 @@ export class AppController {
 		try {
 			const document = await documentManager.getDocument(documentId);
 			if (document) {
+				const contentPath = ContentPath.fromDocumentId(documentId);
 				this.setState({
 					activeDocumentId: documentId,
-					currentPath: documentId,
+					currentPath: contentPath.toString(),
 				});
 			} else {
 				console.error(`Document not found for ID: ${documentId}`);
@@ -117,16 +120,15 @@ export class AppController {
 	};
 
 	renderMainContent() {
+		const currentPath = this.state.currentPath ? new ContentPath(this.state.currentPath) : null;
 		if (this.state.activeDocumentId) {
 			return html`
-				<h-breadcrumbs
-					.path=${this.state.currentPath || this.state.activeDocumentId}
-				></h-breadcrumbs>
+				<h-breadcrumbs .path=${currentPath || this.state.activeDocumentId}></h-breadcrumbs>
 				<document-component .documentId=${this.state.activeDocumentId}></document-component>
 			`;
 		} else if (this.state.currentPath) {
 			return html`
-				<h-breadcrumbs .path=${this.state.currentPath}></h-breadcrumbs>
+				<h-breadcrumbs .path=${currentPath}></h-breadcrumbs>
 				<path-renderer
 					.path=${this.state.currentPath}
 					@render-error=${(e: CustomEvent) => {

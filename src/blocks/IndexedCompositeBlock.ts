@@ -5,19 +5,8 @@ import { contentStore } from '../content/ContentStore';
 import { ContentFactory } from '../content/ContentFactory';
 
 export abstract class IndexedCompositeBlock extends BaseBlock {
-
 	protected async addChildBlock(itemType: Model): Promise<ContentId> {
-		if (!this.content || !this.model) {
-			return 'Failed to add child block - no content or model for parent';
-		}
 		const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(itemType);
-
-		if (!modelDefinition) {
-			return 'Model not Found';
-		}
-		if (!content) {
-			return 'Failed to create child content';
-		}
 
 		const compositeContent = this.content as CompositeContent;
 		if (!compositeContent.children) {
@@ -36,7 +25,7 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 			this.getChildPath(modelInfo.key)
 		);
 
-		compositeContent.children.push(modelInfo.key);
+		compositeContent.children.push(newChildContent.id);
 
 		// if (isCompositeModel(itemType)) {
 		// 	await contentStore.update(newChildContent.id, (content) => ({
@@ -56,38 +45,27 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 
 	protected async removeChildBlock(index: number): Promise<void> {
 		const compositeContent = this.content as CompositeContent;
+		if (!compositeContent.children || index < 0 || index >= compositeContent.children.length) {
+			return;
+		}
 
-		const childId = compositeContent.children?.[index];
+		const childId = compositeContent.children[index];
 		if (!childId) return;
 
+		// Remove the child from the content
+		console.log('JJ Removing childId - index', childId, index, compositeContent.children);
+		compositeContent.children.splice(index, 1);
+		console.log('JJ children after', compositeContent.children);
+
+		// Update the content in the store
 		await this.updateContent((currentContent) => {
-			const updatedContent = currentContent as CompositeContent;
-			updatedContent.children = updatedContent.children?.filter((_, idx) => idx !== index);
-			return updatedContent;
+			return {
+				...currentContent,
+				children: compositeContent.children,
+			};
 		});
 
+		// Delete the child content
 		await contentStore.delete(childId);
-
-		// Update the keys of remaining children
-		await this.updateChildrenKeys();
-	}
-
-	private async updateChildrenKeys(): Promise<void> {
-		const compositeContent = this.content as CompositeContent;
-		if (!compositeContent.children) return;
-
-		for (let i = 0; i < compositeContent.children.length; i++) {
-			const childId = compositeContent.children[i];
-			await contentStore.update(childId, (childContent) => {
-				const originalKey = childContent.modelInfo.key.split(':')[1] || childContent.modelInfo.key;
-				return {
-					...childContent,
-					modelInfo: {
-						...childContent.modelInfo,
-						key: `${i}:${originalKey}`,
-					},
-				};
-			});
-		}
 	}
 }

@@ -22,14 +22,13 @@ export class DocumentComponent extends LitElement {
 			this.document = await documentManager.getDocument(this.documentId);
 			if (this.document) {
 				this.rootContent = await contentStore.get(this.document.rootContent);
-				console.log('Document', this.rootContent);
-				if (this.rootContent) {
-					this.rootComponent = await BlockFactory.createComponent(
-						this.documentId,
-						this.rootContent.modelInfo.key,
-						this.rootContent.modelInfo.type
-					);
-				}
+if (this.rootContent) {
+	this.rootComponent = await BlockFactory.createComponent(
+		this.documentId,
+		this.rootContent.modelInfo.key,
+		this.rootContent.modelInfo.type
+	);
+}
 			}
 		} catch (error) {
 			console.error('Error loading document:', error);
