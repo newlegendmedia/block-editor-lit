@@ -35,7 +35,7 @@ export class AppComponent extends LitElement {
 			flex-grow: 1;
 			overflow-y: auto;
 			padding: 20px;
-			max-width: 640px;
+			max-width: 800px;
 		}
 		.toggle-sidebar {
 			position: fixed;

@@ -29,6 +29,7 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 
 	async get(id: ContentId): Promise<Content | undefined> {
 		const content = await super.get(id);
+		console.log(`ContentStore get:`, id, content);
 		return content;
 	}
 
@@ -38,6 +39,7 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 	}
 
 	async getOrCreateByPath(path: string, model: Model): Promise<Content> {
+		console.log(`ContentStore getOrCreateByPath:`, path, model);
 		let content = await contentStore.getByPath(path);
 		if (!content) {
 			const defaultContent = ContentFactory.createContentFromModel(model);
@@ -205,7 +207,9 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 	}
 
 	async getAllHierarchical(): Promise<HierarchicalItem<Content>> {
-		return this.tree.getAllHierarchical();
+		const result = this.tree.getAllHierarchical();
+		console.log(`ContentStore getAllHierarchical:`, result);
+		return result;
 	}
 
 	subscribeAll(callback: () => void): () => void {
