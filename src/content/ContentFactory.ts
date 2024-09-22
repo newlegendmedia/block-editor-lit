@@ -1,4 +1,11 @@
-import { ModelInfo, Content, ElementContent, CompositeContent } from './content';
+import {
+	ModelInfo,
+	Content,
+	ElementContent,
+	CompositeContent,
+	KeyedCompositeChildren,
+	IndexedCompositeChildren,
+} from './content';
 import {
 	AtomType,
 	ObjectModel,
@@ -70,7 +77,7 @@ export class ContentFactory {
 		modelInfo: Content['modelInfo']
 	): Omit<CompositeContent, 'id'> {
 		const childContent: Record<string, string> = {};
-		const children: string[] = [];
+		const children: KeyedCompositeChildren = {};
 
 		return {
 			modelInfo,
@@ -86,7 +93,7 @@ export class ContentFactory {
 		return {
 			modelInfo,
 			content: [],
-			children: [],
+			children: [] as IndexedCompositeChildren,
 		};
 	}
 
@@ -97,7 +104,7 @@ export class ContentFactory {
 		return {
 			modelInfo,
 			content: [],
-			children: [],
+			children: [] as IndexedCompositeChildren,
 		};
 	}
 }

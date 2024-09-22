@@ -36,7 +36,6 @@ export class BlockFactory {
 			}
 
 			let content = await contentStore.getOrCreateByPath(cPath.toString(), model);
-			console.log('BlockFactory: Content:', content, model);
 			if (!content) {
 				console.error(`BlockFactory: Content not found for ${cPath}`);
 				return html`<div>Error: Content not found ${cPath}</div>`;

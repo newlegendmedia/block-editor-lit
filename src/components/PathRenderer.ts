@@ -28,13 +28,11 @@ export class PathRenderer extends LitElement {
 		}
 
 		try {
-			console.log(`Target - Rendering content for path: ${this.path}`);
 			const contentPath = new ContentPath(this.path);
 			console.log('Target - Content path:', contentPath.toString(), contentPath.pathSegments);
 
 			// If only document ID is provided, dispatch the document-id-only event
 			if (contentPath.pathSegments.length === 1) {
-				console.log(`Dispatching document-id-only event for document: ${contentPath.document}`);
 				this.dispatchEvent(
 					new CustomEvent('document-id-only', {
 						detail: { documentId: contentPath.document },
@@ -45,12 +43,8 @@ export class PathRenderer extends LitElement {
 				return html`<div>Loading document ${contentPath.document}...</div>`;
 			}
 
-			console.log('Target2 - Content path:', contentPath);
-
 			const key = contentPath.key;
 			const parentPath = contentPath.parentPath.toString();
-
-			console.log(`Rendering component for parent path: ${parentPath}, key: ${key}`);
 
 			const component = await BlockFactory.createComponent(parentPath, key, parentPath, key);
 

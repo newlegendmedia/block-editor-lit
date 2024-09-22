@@ -7,7 +7,7 @@ import { ContentPath } from '../content/ContentPath';
 import '../components/Breadcrumbs';
 
 export abstract class BaseBlock extends LitElement {
-	@property({ type: Object }) content!: Content;
+	@property({ type: Object }) content!: Content<any>;
 	@property({ type: Object }) model!: Model;
 	@property({ type: Object }) contentPath!: ContentPath;
 	@property({ type: Object }) modelPath!: ContentPath;
@@ -32,6 +32,12 @@ export abstract class BaseBlock extends LitElement {
 		}
 		button:hover {
 			background-color: var(--button-alt-hover-bg-color);
+		}
+		.block-topbar {
+			padding: var(--spacing-xsmall) 0;
+			display: flex;
+			flex-direction: row;
+			justify-content: space-between;
 		}
 	`;
 
@@ -60,6 +66,7 @@ export abstract class BaseBlock extends LitElement {
 			throw new Error('Content not found');
 		}
 		const content = await contentStore.update(this.content.id, updater);
+
 		if (!content) {
 			//			throw new Error('Failed to update content');
 			console.warn('Failed to update content', this.content.id);
@@ -78,9 +85,13 @@ export abstract class BaseBlock extends LitElement {
 		}
 
 		return html`
-			${this.renderPath()}
-			<div style="font-size:11px; margin-bottom:5px;">${this.content.id}</div>
-			<div>${this.renderContent()}</div>
+			<div class="block">
+				<div class="block-topbar">
+					${this.renderPath()}
+					<div style="font-size:11px; margin-bottom:5px;">${this.content.id}</div>
+				</div>
+				<div>${this.renderContent()}</div>
+			</div>
 		`;
 	}
 

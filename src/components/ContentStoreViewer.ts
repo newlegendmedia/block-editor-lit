@@ -203,9 +203,15 @@ export class ContentStoreViewer extends LitElement {
 		return html`
 			<div class="level-wrap">
 				${this.renderContent(hierarchicalItem)}
-				${hierarchicalItem.children.map((child) =>
-					this.renderHierarchicalContents(child, level + 1)
-				)}
+				${hierarchicalItem.children
+					? html`
+							<div style="margin-left: 20px;">
+								${(hierarchicalItem.children as HierarchicalItem<Content>[]).map((child) =>
+									this.renderHierarchicalContents(child, level + 1)
+								)}
+							</div>
+						`
+					: ''}
 			</div>
 		`;
 	}
@@ -231,34 +237,57 @@ export class ContentStoreViewer extends LitElement {
 		if (!this.contentsHierarchy) {
 			return html`<div>No hierarchy data available</div>`;
 		}
-		return this.renderTreeNode(this.contentsHierarchy);
+		return this.renderTreeNode(this.contentsHierarchy as HierarchicalItem<Content>);
 	}
 
-	private renderTreeNode(node: HierarchicalItem<Content>): TemplateResult {
-		const hasChildren = node.children && node.children.length > 0;
+	private renderTreeNode(node: HierarchicalItem<Content> | ContentReference): TemplateResult {
+		const isContentReference = 'type' in node && !('modelInfo' in node);
+		const nodeId = isContentReference ? node.id : (node as HierarchicalItem<Content>).id;
+		const nodeType = isContentReference ? node.type : (node as Content).modelInfo.type;
+		const nodeKey = isContentReference ? node.key : (node as Content).modelInfo.key;
+		const hasChildren =
+			!isContentReference && 'children' in node && node.children && node.children.length > 0;
 		const nodeIcon = hasChildren ? '📁' : '📄';
+
 		return html`
 			<div class="tree-node">
 				<div class="tree-node-content">
 					<span class="tree-node-icon">${nodeIcon}</span>
-					<span class="tree-node-text" @click=${() => this.toggleNodeDetails(node.id)}>
-						(${node.modelInfo.key} | ${node.modelInfo.type})
+					<span class="tree-node-text" @click=${() => this.toggleNodeDetails(nodeId)}>
+						(${nodeKey} | ${nodeType})
 					</span>
 				</div>
-				<div class="tree-node-details" id="details-${node.id}" style="display: none;">
-					${this.renderContentDetails(node)}
+				<div class="tree-node-details" id="details-${nodeId}" style="display: none;">
+					${isContentReference
+						? this.renderContentReferenceDetails(node)
+						: this.renderContentDetails(node as Content)}
 				</div>
-				${hasChildren ? node.children.map((child) => this.renderTreeNode(child)) : ''}
+				${hasChildren
+					? (node as HierarchicalItem<Content>).children.map((child) =>
+							this.renderTreeNode(child as HierarchicalItem<Content> | ContentReference)
+						)
+					: ''}
 			</div>
 		`;
 	}
 
-	private toggleNodeDetails(nodeId: string) {
-		const detailsElement = this.shadowRoot?.getElementById(`details-${nodeId}`);
-
-		if (detailsElement) {
-			detailsElement.style.display = detailsElement.style.display === 'none' ? 'block' : 'none';
-		}
+	private renderContentReferenceDetails(contentRef: ContentReference): TemplateResult {
+		return html`
+			<ul class="property-list">
+				<li class="property-item">
+					<span class="property-key">id:</span>
+					<span class="property-value">${contentRef.id}</span>
+				</li>
+				<li class="property-item">
+					<span class="property-key">key:</span>
+					<span class="property-value">${contentRef.key}</span>
+				</li>
+				<li class="property-item">
+					<span class="property-key">type:</span>
+					<span class="property-value">${contentRef.type}</span>
+				</li>
+			</ul>
+		`;
 	}
 
 	private renderContent(content: Content): TemplateResult {
@@ -291,9 +320,30 @@ export class ContentStoreViewer extends LitElement {
 
 	private renderValue(value: any): string {
 		if (typeof value === 'object' && value !== null) {
-			return JSON.stringify(value);
+			if (Array.isArray(value)) {
+				// Handle arrays (like children array of ContentReferences)
+				return JSON.stringify(
+					value.map((item) => {
+						if (typeof item === 'object' && 'id' in item && 'key' in item && 'type' in item) {
+							// This is likely a ContentReference
+							return `{id: ${item.id}, key: ${item.key}, type: ${item.type}}`;
+						}
+						return JSON.stringify(item);
+					})
+				);
+			} else {
+				return JSON.stringify(value);
+			}
 		} else {
 			return String(value);
+		}
+	}
+
+	private toggleNodeDetails(nodeId: string) {
+		const detailsElement = this.shadowRoot?.getElementById(`details-${nodeId}`);
+
+		if (detailsElement) {
+			detailsElement.style.display = detailsElement.style.display === 'none' ? 'block' : 'none';
 		}
 	}
 }

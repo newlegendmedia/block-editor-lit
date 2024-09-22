@@ -9,14 +9,13 @@ export class Breadcrumbs extends LitElement {
 	static styles = css`
 		:host {
 			display: block;
-			margin-bottom: 5px;
 			font-size: 14px;
 		}
 		.breadcrumbs-container {
 			display: flex;
 			flex-wrap: wrap;
 			align-items: center;
-			padding: 5px;
+			padding: 2px 0;
 			background-color: var(--background-color);
 			border-radius: var(--border-radius);
 		}
@@ -40,24 +39,24 @@ export class Breadcrumbs extends LitElement {
 		const segments = this.path.pathSegments;
 
 		return html`
-	<div class="breadcrumbs-container">
-		${segments.map((segment, index) => {
-			const currentPath = this.path.getSubPath(index);
-			const isLast = index === segments.length - 1;
-			const isDocumentId = index === 0;
-			const displayText = isDocumentId ? 'document' : this.path.serializeSegment(segment);
+			<div class="breadcrumbs-container">
+				${segments.map((segment, index) => {
+					const currentPath = this.path.getSubPath(index);
+					const isLast = index === segments.length - 1;
+					const isDocumentId = index === 0;
+					const displayText = isDocumentId ? 'document' : this.path.serializeSegment(segment);
 
-			return html`
-				${index > 0 ? html`<span class="separator">/</span>` : ''}
-				<span
-					class=${isLast ? 'current' : 'breadcrumb'}
-					@click=${() => this.handleClick(currentPath)}
-					>${displayText}</span
-				>
-			`;
-		})}
-	</div>
-`;
+					return html`
+						${index > 0 ? html`<span class="separator">/</span>` : ''}
+						<span
+							class=${isLast ? 'current' : 'breadcrumb'}
+							@click=${() => this.handleClick(currentPath)}
+							>${displayText}</span
+						>
+					`;
+				})}
+			</div>
+		`;
 	}
 
 	private handleClick(path: string) {

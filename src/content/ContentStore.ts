@@ -1,5 +1,11 @@
 import { ResourceStore } from '../resource/ResourceStore';
-import { Content, ContentId, ModelInfo } from './content';
+import {
+	Content,
+	ContentId,
+	ModelInfo,
+	isCompositeContent,
+	KeyedCompositeChildren,
+} from './content';
 import { Model } from '../model/model';
 import { StorageAdapter } from '../storage/StorageAdapter';
 import { generateId } from '../util/generateId';
@@ -39,10 +45,8 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 				id: generateId('CONTENT'),
 				...defaultContent,
 			};
-			console.log('Creating default content:', content, model);
 			const contentPath = new ContentPath(path);
 			content = await contentStore.add(content, contentPath.parentPath, contentPath.path);
-			console.log('Added default content to store:', content, model);
 		}
 		return content;
 	}
@@ -59,6 +63,18 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 				existingNode.parentId = parentId as string;
 			}
 		} else {
+			// Ensure we're only storing ContentReference objects for children
+			if (isCompositeContent(content) && Array.isArray(content.children)) {
+				content = {
+					...content,
+					children: content.children.map((child) => ({
+						id: child.id,
+						key: child.key,
+						type: child.type,
+					})),
+				};
+			}
+
 			// Add new node
 			this.tree.add(content, parentId as string | undefined, content.id as string);
 		}
@@ -139,12 +155,13 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		}
 
 		// Handle nested content if it's a composite type
-		if ('children' in content && Array.isArray(content.children)) {
-			for (const childId of content.children) {
-				const childContent = await this.get(childId);
+		if ('children' in content && content.children) {
+			const childrenEntries = Object.entries(content.children as KeyedCompositeChildren);
+			for (const [childKey, childRef] of childrenEntries) {
+				const childContent = await this.get(childRef.id);
 				if (childContent) {
 					const childPath = path
-						? new ContentPath(path, childId).toString()
+						? new ContentPath(path, childKey).toString()
 						: ContentPath.fromDocumentId(childContent.modelInfo.key).toString();
 					await this.addCompositeContent(childContent, content.id, childPath);
 				}
