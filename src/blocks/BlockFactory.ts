@@ -16,46 +16,51 @@ import './GroupBlock';
 
 export class BlockFactory {
 	static async createComponent(
-		path: string,
-		key: string,
-		type: ModelType,
+		contentPath: string,
+		contentKey: string,
+		modelPath: string,
+		modelKey: string,
+		type?: ModelType,
 		_inlineValue?: any,
 		_inlineModel?: Model
 	): Promise<TemplateResult> {
 		try {
-			const blockPath = new ContentPath(path, key);
-			const contentPath = blockPath.path;
-			const modelPath = blockPath.simplePath;
+			//			const blockPath = new ContentPath(path, key);
+			const cPath = new ContentPath(contentPath, contentKey);
+			const mPath = new ContentPath(modelPath, modelKey);
 
-			const model = await modelStore.getModel(modelPath, type);
+			const model = await modelStore.getModel(mPath.simplePath, type);
 			if (!model) {
-				console.error(`BlockFactory: Model not found for ${modelPath}`);
-				return html`<div>Error: Model not found ${modelPath}</div>`;
+				console.error(`BlockFactory: Model not found for ${mPath.toString()}`);
+				return html`<div>Error: Model not found ${mPath.toString()}</div>`;
 			}
 
-			console.log(`BlockFactory: Creating component for ${key} of type ${type}`, contentPath);
-			let content = await contentStore.getOrCreateByPath(contentPath, model);
+			let content = await contentStore.getOrCreateByPath(cPath.toString(), model);
+			console.log('BlockFactory: Content:', content, model);
 			if (!content) {
-				console.error(`BlockFactory: Content not found for ${contentPath}`);
-				return html`<div>Error: Content not found ${contentPath}</div>`;
+				console.error(`BlockFactory: Content not found for ${cPath}`);
+				return html`<div>Error: Content not found ${cPath}</div>`;
 			}
 
 			// Create the appropriate block based on content type
 			switch (content.modelInfo.type) {
 				case 'object':
-					return this.createObjectBlock(content, model, blockPath);
+					return this.createObjectBlock(content, model, cPath, mPath);
 				case 'array':
-					return this.createArrayBlock(content, model, blockPath);
+					return this.createArrayBlock(content, model, cPath, mPath);
 				case 'element':
-					return this.createElementBlock(content, model, blockPath);
+					return this.createElementBlock(content, model, cPath, mPath);
 				case 'group':
-					return this.createGroupBlock(content, model, blockPath);
+					return this.createGroupBlock(content, model, cPath, mPath);
 				default:
 					console.warn(`BlockFactory: Unknown content type: ${content.modelInfo.type}`);
 					return html`<div>Unknown content type: ${content.modelInfo.type}</div>`;
 			}
 		} catch (error) {
-			console.error(`BlockFactory: Error creating component for ID ${key}:`, error);
+			console.error(
+				`BlockFactory: Error creating component for ID ${modelKey} ${contentKey}:`,
+				error
+			);
 			return html`<div>Error: Failed to create component</div>`;
 		}
 	}
@@ -82,34 +87,64 @@ export class BlockFactory {
 	private static createObjectBlock(
 		content: Content,
 		model: Model,
-		path: ContentPath
+		contentPath: ContentPath,
+		modelPath: ContentPath
 	): TemplateResult {
-		return html` <object-block .content=${content} .model=${model} .path=${path}></object-block> `;
+		return html`
+			<object-block
+				.content=${content}
+				.model=${model}
+				.contentPath=${contentPath}
+				.modelPath=${modelPath}
+			></object-block>
+		`;
 	}
 
 	private static createArrayBlock(
 		content: Content,
 		model: Model,
-		path: ContentPath
+		contentPath: ContentPath,
+		modelPath: ContentPath
 	): TemplateResult {
-		return html` <array-block .content=${content} .model=${model} .path=${path}></array-block> `;
+		return html`
+			<array-block
+				.content=${content}
+				.model=${model}
+				.contentPath=${contentPath}
+				.modelPath=${modelPath}
+			></array-block>
+		`;
 	}
 
 	private static createElementBlock(
 		content: Content,
 		model: Model,
-		path: ContentPath
+		contentPath: ContentPath,
+		modelPath: ContentPath
 	): TemplateResult {
 		return html`
-			<element-block .content=${content} .model=${model} .path=${path}></element-block>
+			<element-block
+				.content=${content}
+				.model=${model}
+				.contentPath=${contentPath}
+				.modelPath=${modelPath}
+			></element-block>
 		`;
 	}
 
 	private static createGroupBlock(
 		content: Content,
 		model: Model,
-		path: ContentPath
+		contentPath: ContentPath,
+		modelPath: ContentPath
 	): TemplateResult {
-		return html` <group-block .content=${content} .model=${model} .path=${path}></group-block> `;
+		return html`
+			<group-block
+				.content=${content}
+				.model=${model}
+				.contentPath=${contentPath}
+				.modelPath=${modelPath}
+			></group-block>
+		`;
 	}
 }

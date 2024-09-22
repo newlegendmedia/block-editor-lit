@@ -1,5 +1,5 @@
-import { LitElement, html, TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { LitElement, html, TemplateResult } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
 import { BlockFactory } from '../blocks/BlockFactory';
 import { contentStore } from '../content/ContentStore';
 import { documentManager } from '../components/DocumentManager';
@@ -22,13 +22,15 @@ export class DocumentComponent extends LitElement {
 			this.document = await documentManager.getDocument(this.documentId);
 			if (this.document) {
 				this.rootContent = await contentStore.get(this.document.rootContent);
-if (this.rootContent) {
-	this.rootComponent = await BlockFactory.createComponent(
-		this.documentId,
-		this.rootContent.modelInfo.key,
-		this.rootContent.modelInfo.type
-	);
-}
+				if (this.rootContent) {
+					this.rootComponent = await BlockFactory.createComponent(
+						this.documentId,
+						this.rootContent.modelInfo.key,
+						this.documentId,
+						this.rootContent.modelInfo.key,
+						this.rootContent.modelInfo.type
+					);
+				}
 			}
 		} catch (error) {
 			console.error('Error loading document:', error);

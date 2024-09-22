@@ -9,7 +9,8 @@ import '../components/Breadcrumbs';
 export abstract class BaseBlock extends LitElement {
 	@property({ type: Object }) content!: Content;
 	@property({ type: Object }) model!: Model;
-	@property({ type: Object }) path!: ContentPath;
+	@property({ type: Object }) contentPath!: ContentPath;
+	@property({ type: Object }) modelPath!: ContentPath;
 	@state() protected error: string | null = null;
 
 	static blockStyles = css`
@@ -86,16 +87,16 @@ export abstract class BaseBlock extends LitElement {
 	protected abstract renderContent(): unknown;
 
 	protected getChildPath(childKey: string): string {
-		if (!this.path) {
+		if (!this.contentPath) {
 			throw new Error('Content path not initialized');
 		}
-		return new ContentPath(this.path.toString(), childKey).toString();
+		return new ContentPath(this.contentPath.toString(), childKey).toString();
 	}
 
 	protected renderPath() {
 		return html`
 			<h-breadcrumbs
-				.path=${this.path}
+				.path=${this.modelPath}
 				@breadcrumb-clicked=${this.handleBreadcrumbClick}
 			></h-breadcrumbs>
 		`;

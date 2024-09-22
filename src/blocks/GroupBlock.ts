@@ -56,6 +56,7 @@ export class GroupBlock extends IndexedCompositeBlock {
 
 		const model = this.model as GroupModel;
 		const children = (this.content as CompositeContent).children || [];
+		console.log('children', children);
 
 		return html`
 			<div>
@@ -67,7 +68,13 @@ export class GroupBlock extends IndexedCompositeBlock {
 						(_childId, index) => html`
 							<div class="group-item">
 								${this.renderChildComponent(
-									BlockFactory.createComponent(this.path.toString(), children[index], 'element'),
+									BlockFactory.createComponent(
+										this.contentPath.toString(),
+										children[index],
+										this.modelPath.toString(),
+										model.itemTypes[0].key,
+										'element'
+									),
 									'Loading child component...'
 								)}
 								<button class="remove-button" @click=${() => this.removeChildBlock(index)}>

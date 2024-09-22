@@ -59,7 +59,6 @@ export class ArrayBlock extends IndexedCompositeBlock {
 		childComponentPromise: Promise<TemplateResult>,
 		placeholder: string
 	): TemplateResult {
-		console.log('Rendering child component', this.path.path);
 		return html`
 			${until(
 				childComponentPromise.catch(() => html`<span>Error loading component</span>`),
@@ -91,8 +90,10 @@ export class ArrayBlock extends IndexedCompositeBlock {
 							<div class="array-item" id="item-${childId}">
 								${this.renderChildComponent(
 									BlockFactory.createComponent(
-										this.path.path,
-										`${index}:${model.itemType.key}`,
+										this.contentPath.path,
+										childId,
+										this.modelPath.path,
+										model.itemType.key,
 										model.itemType.type
 									),
 									'Loading child component...'

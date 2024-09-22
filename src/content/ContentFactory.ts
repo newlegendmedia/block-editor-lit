@@ -61,13 +61,12 @@ export class ContentFactory {
 
 		return {
 			modelInfo,
-			modelDefinition: model,
 			content: defaultValue,
 		};
 	}
 
 	private static createObjectContent(
-		model: ObjectModel,
+		_model: ObjectModel,
 		modelInfo: Content['modelInfo']
 	): Omit<CompositeContent, 'id'> {
 		const childContent: Record<string, string> = {};
@@ -75,31 +74,28 @@ export class ContentFactory {
 
 		return {
 			modelInfo,
-			modelDefinition: model,
 			content: childContent,
 			children,
 		};
 	}
 
 	private static createArrayContent(
-		model: ArrayModel,
+		_model: ArrayModel,
 		modelInfo: Content['modelInfo']
 	): Omit<CompositeContent, 'id'> {
 		return {
 			modelInfo,
-			modelDefinition: model,
 			content: [],
 			children: [],
 		};
 	}
 
 	private static createGroupContent(
-		model: GroupModel,
+		_model: GroupModel,
 		modelInfo: Content['modelInfo']
 	): Omit<CompositeContent, 'id'> {
 		return {
 			modelInfo,
-			modelDefinition: model,
 			content: [],
 			children: [],
 		};

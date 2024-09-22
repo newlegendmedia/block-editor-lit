@@ -242,7 +242,7 @@ export class ContentStoreViewer extends LitElement {
 				<div class="tree-node-content">
 					<span class="tree-node-icon">${nodeIcon}</span>
 					<span class="tree-node-text" @click=${() => this.toggleNodeDetails(node.id)}>
-						${node.modelDefinition?.name} (${node.modelInfo.key} | ${node.modelInfo.type})
+						(${node.modelInfo.key} | ${node.modelInfo.type})
 					</span>
 				</div>
 				<div class="tree-node-details" id="details-${node.id}" style="display: none;">

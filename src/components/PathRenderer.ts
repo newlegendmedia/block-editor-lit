@@ -52,7 +52,7 @@ export class PathRenderer extends LitElement {
 
 			console.log(`Rendering component for parent path: ${parentPath}, key: ${key}`);
 
-			const component = await BlockFactory.createComponent(parentPath, key, 'element');
+			const component = await BlockFactory.createComponent(parentPath, key, parentPath, key);
 
 			if (!component) {
 				throw new Error(`Failed to create component for path: ${this.path}`);

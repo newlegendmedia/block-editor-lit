@@ -3,28 +3,30 @@ import { ContentId, CompositeContent } from '../content/content';
 import { Model } from '../model/model';
 import { contentStore } from '../content/ContentStore';
 import { ContentFactory } from '../content/ContentFactory';
+import { generateId } from '../util/generateId';
 
 export abstract class IndexedCompositeBlock extends BaseBlock {
 	protected async addChildBlock(itemType: Model): Promise<ContentId> {
-		const { modelInfo, modelDefinition, content } = ContentFactory.createContentFromModel(itemType);
+		const { modelInfo, content } = ContentFactory.createContentFromModel(itemType);
 
 		const compositeContent = this.content as CompositeContent;
 		if (!compositeContent.children) {
 			compositeContent.children = [];
 		}
 
-		const newIndex = compositeContent.children?.length || 0;
-		const originalKey = modelInfo.key;
-		modelInfo.key = `${newIndex}:${originalKey}`;
+		const id = generateId('CON');
+		modelInfo.key = this.modelPath.key;
+		modelInfo.type = itemType.type;
 
 		const newChildContent = await contentStore.create(
 			modelInfo,
-			modelDefinition,
 			content,
 			this.content.id,
-			this.getChildPath(modelInfo.key)
+			this.getChildPath(id),
+			id
 		);
 
+		console.log('JJ Adding childId', id, newChildContent.id, compositeContent.children);
 		compositeContent.children.push(newChildContent.id);
 
 		// if (isCompositeModel(itemType)) {

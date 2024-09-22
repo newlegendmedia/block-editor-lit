@@ -24,7 +24,6 @@ export class DocumentManager {
 
 		const rootContent = await contentStore.create(
 			{ type: modelType, key: modelKey },
-			model,
 			{ title },
 			'root',
 			rootContentPath.toString()

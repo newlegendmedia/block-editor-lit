@@ -4,7 +4,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { until } from 'lit/directives/until.js';
 import { KeyedCompositeBlock } from './KeyedCompositeBlock';
 import { BlockFactory } from './BlockFactory';
-import { ObjectModel, Model, isElement } from '../model/model';
+import { ObjectModel, Model } from '../model/model';
 import { KeyedCompositeContent } from '../content/content';
 import { contentStore } from '../content/ContentStore';
 
@@ -116,39 +116,44 @@ export class ObjectBlock extends KeyedCompositeBlock {
 
 	private async createChildComponent(property: Model, childKey: string): Promise<TemplateResult> {
 		try {
-			if (this.inlineChildren && isElement(property)) {
-				return await this.createInlineChildComponent(property, childKey, this.path.toString());
-			} else {
-				return await this.createStandardChildComponent(property, childKey, this.path.toString());
-			}
+			// if (this.inlineChildren && isElement(property)) {
+			// 	return await this.createInlineChildComponent(property, childKey);
+			// } else {
+			return await this.createStandardChildComponent(property, childKey);
+			//			}
 		} catch (error) {
 			console.error(`Error creating child component for ${childKey}:`, error);
 			return html`<div>Error: ${(error as Error).message}</div>`;
 		}
 	}
 
-	private async createInlineChildComponent(
-		property: Model,
-		childKey: string,
-		parentPath: string
-	): Promise<TemplateResult> {
-		const contentData = this.content?.content as KeyedCompositeContent;
-		const value = contentData?.[childKey];
-		return await BlockFactory.createComponent(
-			parentPath,
-			`inline:${this.content?.id}:${childKey}`,
-			property.type,
-			value
-		);
-	}
+	// private async createInlineChildComponent(
+	// 	property: Model,
+	// 	childKey: string,
+	// 	parentPath: string
+	// ): Promise<TemplateResult> {
+	// 	const contentData = this.content?.content as KeyedCompositeContent;
+	// 	const value = contentData?.[childKey];
+	// 	return await BlockFactory.createComponent(
+	// 		this.contentPath,
+	// 		`inline:${this.content?.id}:${childKey}`,
+	// 		property.type,
+	// 		value
+	// 	);
+	// }
 
 	private async createStandardChildComponent(
 		property: Model,
-		childKey: string,
-		parentPath: string
+		childKey: string
 	): Promise<TemplateResult> {
 		// Let BlockFactory create or retrieve the content
-		const component = await BlockFactory.createComponent(parentPath, childKey, property.type);
+		const component = await BlockFactory.createComponent(
+			this.contentPath.path,
+			childKey,
+			this.modelPath.path,
+			property.key,
+			property.type
+		);
 
 		// After BlockFactory creates the component, update this.content
 		await this.updateChildContentReference(childKey);

@@ -9,14 +9,13 @@ import { ContentPath } from './ContentPath';
 import { ContentFactory } from './ContentFactory';
 
 export class ContentStore extends ResourceStore<ContentId, Content> {
-	private pathMap: Map<string, ContentId> = new Map();
+	pathMap: Map<string, ContentId> = new Map();
 	private rootContentId: ContentId = 'root' as ContentId;
 
 	constructor(storageAdapter: StorageAdapter<Content>) {
 		const rootContent: Content = {
 			id: 'root' as ContentId,
 			modelInfo: { type: 'root', key: 'root' },
-			modelDefinition: { id: 'root', type: 'root', key: 'root' },
 			content: {},
 		};
 		super(storageAdapter, 'root' as ContentId, rootContent);
@@ -40,8 +39,10 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 				id: generateId('CONTENT'),
 				...defaultContent,
 			};
+			console.log('Creating default content:', content, model);
 			const contentPath = new ContentPath(path);
 			content = await contentStore.add(content, contentPath.parentPath, contentPath.path);
+			console.log('Added default content to store:', content, model);
 		}
 		return content;
 	}
@@ -105,28 +106,20 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 			throw new Error(`Parent content not found at path ${parentPath}`);
 		}
 
-		if (!content.modelDefinition) throw new Error('Model definition is required to add content');
-
-		return await this.create(
-			content.modelInfo,
-			content.modelDefinition,
-			content.content,
-			parentId,
-			path
-		);
+		return await this.create(content.modelInfo, content.content, parentId, path);
 	}
 
 	async create(
 		modelInfo: ModelInfo,
-		modelDefinition: Model,
 		content: any,
 		parentId: ContentId = this.rootContentId,
-		path?: string
+		path?: string,
+		id?: ContentId
 	): Promise<Content> {
-		const id = generateId(
-			modelInfo.type ? modelInfo.type.slice(0, 3).toUpperCase() : ''
-		) as ContentId;
-		const newContent: Content = { id, modelInfo, modelDefinition, content };
+		if (!id) {
+			id = generateId(modelInfo.type ? modelInfo.type.slice(0, 3).toUpperCase() : '') as ContentId;
+		}
+		const newContent: Content = { id, modelInfo, content };
 
 		await this.addCompositeContent(newContent, parentId, path);
 
@@ -151,7 +144,7 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 				const childContent = await this.get(childId);
 				if (childContent) {
 					const childPath = path
-						? new ContentPath(path, childContent.modelInfo.key).toString()
+						? new ContentPath(path, childId).toString()
 						: ContentPath.fromDocumentId(childContent.modelInfo.key).toString();
 					await this.addCompositeContent(childContent, content.id, childPath);
 				}
