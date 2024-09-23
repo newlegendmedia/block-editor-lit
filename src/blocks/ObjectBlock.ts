@@ -27,7 +27,6 @@ export class ObjectBlock extends KeyedCompositeBlock {
 
 	protected getModelProperties(): Model[] {
 		const properties = (this.model as ObjectModel)?.properties || [];
-		console.log(`ObjectBlock getModelProperties:`, properties);
 		return properties;
 	}
 

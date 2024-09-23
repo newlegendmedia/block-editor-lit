@@ -4,7 +4,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { until } from 'lit/directives/until.js';
 import { BaseBlock } from './BaseBlock';
 import { BlockFactory } from './BlockFactory';
-import { ContentId, CompositeContent, ContentReference } from '../content/content';
+import { ContentId, CompositeContent, ContentReference, IndexedContent } from '../content/content';
 import { Model } from '../model/model';
 import { contentStore } from '../content/ContentStore';
 import { ContentFactory } from '../content/ContentFactory';
@@ -101,6 +101,14 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 		_index: number
 	): Promise<TemplateResult> {
 		try {
+			console.log(
+				'ZZZ1 Creating child component:',
+				this.contentPath.path,
+				childRef.id,
+				this.modelPath.path,
+				childRef.key,
+				childRef.type
+			);
 			return await BlockFactory.createComponent(
 				this.contentPath.path,
 				childRef.id,
@@ -127,7 +135,6 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 		if (confirmed) {
 			try {
 				await this.removeChildBlock(index);
-				this.requestUpdate();
 			} catch (error) {
 				console.error('Error removing child block:', error);
 				// Optionally, show a user-facing error message
@@ -139,7 +146,6 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 		try {
 			await this.addChildBlock(itemType);
 			this.showAddMenu = false;
-			this.requestUpdate();
 		} catch (error) {
 			console.error('Error adding child block:', error);
 			// Optionally, show a user-facing error message
@@ -177,20 +183,28 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 			return updatedContent;
 		});
 
-		// Use the correct model path when creating the child component
-		await BlockFactory.createComponent(
-			this.contentPath.path,
-			newChildContent.id,
-			this.modelPath.path,
-			itemType.key,
-			itemType.type
-		);
+		// console.log(
+		// 	'ZZZ2 Creating child component:',
+		// 	this.contentPath.path,
+		// 	newChildContent.id,
+		// 	this.modelPath.path,
+		// 	itemType.key,
+		// 	itemType.type
+		// );
+
+		// await BlockFactory.createComponent(
+		// 	this.contentPath.path,
+		// 	newChildContent.id,
+		// 	this.modelPath.path,
+		// 	itemType.key,
+		// 	itemType.type
+		// );
 
 		return newChildContent.id;
 	}
 
 	protected async removeChildBlock(index: number): Promise<void> {
-		const compositeContent = this.content as CompositeContent;
+		const compositeContent = this.content as IndexedContent;
 		if (!compositeContent.children || index < 0 || index >= compositeContent.children.length) {
 			return;
 		}

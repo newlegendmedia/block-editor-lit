@@ -92,19 +92,13 @@ export class DocumentManager {
 		if (content) {
 			if ('children' in content && Array.isArray(content.children)) {
 				for (const childId of content.children) {
-					await this.deleteContentRecursively(childId);
+					await this.deleteContentRecursively(childId.id);
 				}
 			}
 			await contentStore.delete(contentId);
 		}
 	}
 
-	getContentPath(documentId: DocumentId, ...segments: string[]): string {
-		const path = ContentPath.fromDocumentId(documentId);
-		return segments
-			.reduce((p, segment) => p.appendSegment({ type: 'key', value: segment }), path)
-			.toString();
-	}
 }
 
 export const documentManager = new DocumentManager();

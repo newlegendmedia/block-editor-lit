@@ -34,6 +34,14 @@ export type Content<T = unknown> = {
 	children?: KeyedCompositeChildren | IndexedCompositeChildren;
 };
 
+export type IndexedContent<T = unknown> = {
+	id: ContentId;
+	modelInfo: ModelInfo;
+	content: T;
+	children?: IndexedCompositeChildren;
+};
+
+
 export type CompositeContent = Content<KeyedCompositeContent | IndexedCompositeContent> & {
 	children: KeyedCompositeChildren | IndexedCompositeChildren;
 };

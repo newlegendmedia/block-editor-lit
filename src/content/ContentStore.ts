@@ -29,7 +29,6 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 
 	async get(id: ContentId): Promise<Content | undefined> {
 		const content = await super.get(id);
-		console.log(`ContentStore get:`, id, content);
 		return content;
 	}
 
@@ -39,8 +38,7 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 	}
 
 	async getOrCreateByPath(path: string, model: Model): Promise<Content> {
-		console.log(`ContentStore getOrCreateByPath:`, path, model);
-		let content = await contentStore.getByPath(path);
+		let content = await this.getByPath(path);
 		if (!content) {
 			const defaultContent = ContentFactory.createContentFromModel(model);
 			content = {
@@ -48,7 +46,7 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 				...defaultContent,
 			};
 			const contentPath = new ContentPath(path);
-			content = await contentStore.add(content, contentPath.parentPath, contentPath.path);
+			content = await this.add(content, contentPath.parentPath, path);
 		}
 		return content;
 	}
@@ -116,6 +114,24 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		this.subscriptions.notify(id as string, null);
 		this.subscriptions.notifyAll();
 	}
+
+	// async add(content: Content, parentPath: string, path: string): Promise<Content> {
+	// 	const parentContentPath = new ContentPath(parentPath);
+	// 	const contentPath = new ContentPath(path);
+	// 	const parentId = this.pathMap.get(parentContentPath.toString());
+	// 	if (!parentId) {
+	// 		throw new Error(`Parent content not found at path ${parentPath}`);
+	// 	}
+
+	// 	const createdContent = await this.create(
+	// 		content.modelInfo,
+	// 		content.content,
+	// 		parentId,
+	// 		contentPath.toString()
+	// 	);
+	// 	this.pathMap.set(contentPath.toString(), createdContent.id);
+	// 	return createdContent;
+	// }
 
 	async add(content: Content, parentPath: string, path: string): Promise<Content> {
 		const parentContentPath = new ContentPath(parentPath);
@@ -208,7 +224,6 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 
 	async getAllHierarchical(): Promise<HierarchicalItem<Content>> {
 		const result = this.tree.getAllHierarchical();
-		console.log(`ContentStore getAllHierarchical:`, result);
 		return result;
 	}
 

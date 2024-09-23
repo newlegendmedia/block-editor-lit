@@ -12,9 +12,10 @@ export class DocumentComponent extends LitElement {
 	@state() private rootContent: Content | undefined = undefined;
 	@state() private rootComponent: TemplateResult | undefined = undefined;
 
-	async connectedCallback() {
-		super.connectedCallback();
-		await this.loadDocument();
+	updated(changedProperties: Map<string, any>) {
+		if (changedProperties.has('documentId')) {
+			this.loadDocument();
+		}
 	}
 
 	async loadDocument() {
@@ -35,12 +36,12 @@ export class DocumentComponent extends LitElement {
 		} catch (error) {
 			console.error('Error loading document:', error);
 		}
-		//    this.requestUpdate();
+		this.requestUpdate();
 	}
 
 	render() {
 		if (!this.document || !this.rootContent) {
-			return html`<div>Loading document...</div>`;
+			return html`<div>Loading document ${this.documentId}...</div>`;
 		}
 
 		return html`

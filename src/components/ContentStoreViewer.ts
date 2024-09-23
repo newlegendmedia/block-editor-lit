@@ -135,10 +135,6 @@ export class ContentStoreViewer extends LitElement {
 		if (contentStore) {
 			this.contents = await contentStore.getAll();
 			this.contentsHierarchy = await contentStore.getAllHierarchical();
-			console.log('ContentStoreViewer updateContents:', {
-				contents: this.contents,
-				hierarchy: this.contentsHierarchy,
-			});
 			this.requestUpdate();
 		}
 	}
@@ -204,8 +200,6 @@ export class ContentStoreViewer extends LitElement {
 	): TemplateResult {
 		if (!hierarchicalItem) return html``;
 
-		console.log(`Rendering hierarchical item at level ${level}:`, hierarchicalItem);
-
 		return html`
 			<div class="level-wrap">
 				${this.renderContent(hierarchicalItem)}
@@ -213,7 +207,6 @@ export class ContentStoreViewer extends LitElement {
 					? html`
 							<div style="margin-left: 20px;">
 								${(hierarchicalItem.children as HierarchicalItem<Content>[]).map((child) => {
-									console.log(`Rendering child of ${hierarchicalItem.id}:`, child);
 									return this.renderHierarchicalContents(child, level + 1);
 								})}
 							</div>
@@ -256,8 +249,6 @@ export class ContentStoreViewer extends LitElement {
 			!isContentReference && 'children' in node && node.children && node.children.length > 0;
 		const nodeIcon = hasChildren ? '📁' : '📄';
 
-		console.log('Rendering tree node:', { nodeId, nodeType, nodeKey, hasChildren });
-
 		return html`
 			<div class="tree-node">
 				<div class="tree-node-content">
@@ -273,7 +264,6 @@ export class ContentStoreViewer extends LitElement {
 				</div>
 				${hasChildren
 					? (node as HierarchicalItem<Content>).children.map((child) => {
-							console.log(`Rendering child of ${nodeId}:`, child);
 							return this.renderTreeNode(child as HierarchicalItem<Content> | ContentReference);
 						})
 					: ''}
@@ -314,7 +304,6 @@ export class ContentStoreViewer extends LitElement {
 	}
 
 	private renderContentDetails(content: Content): TemplateResult {
-		console.log('Rendering content details:', content);
 		return html`
 			<ul class="property-list">
 				${Object.entries(content).map(
