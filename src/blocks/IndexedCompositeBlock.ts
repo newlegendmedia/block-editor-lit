@@ -170,6 +170,7 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 		// Update the parent content with the child reference
 		await this.updateContent((content) => {
 			const updatedContent = content as IndexedContent;
+			if (!updatedContent.children) updatedContent.children = [];
 			updatedContent.children.push(contentReference);
 			return content;
 		});
