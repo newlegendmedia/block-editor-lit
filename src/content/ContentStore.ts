@@ -195,7 +195,7 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 
 		if (content) {
 			const updatedContent = updater(content);
-			const parentNode = this.tree.parent(id as string);
+
 			const path = this.getPathForContent(id);
 			if (!path) {
 				console.warn(`Content path not found for ID ${id}`);
@@ -204,6 +204,7 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 			const oldPath = new ContentPath(path);
 			const newPath = new ContentPath(oldPath.parentPath, updatedContent.modelInfo.key);
 
+			const parentNode = this.tree.parent(id as string);
 			await this.set(updatedContent, parentNode?.id as ContentId, newPath.toString());
 			return updatedContent;
 		}

@@ -149,6 +149,7 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 		};
 		return defaultChildContent;
 	}
+
 	protected async addContentToStore(content: Content): Promise<Content> {
 		const newContent = await contentStore.add(
 			content,
@@ -157,6 +158,7 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 		);
 		return newContent;
 	}
+
 	protected async makeContentReference(content: Content): Promise<ContentReference> {
 		// Create a reference to the child content
 		const contentReference: ContentReference = {
@@ -166,6 +168,7 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 		};
 		return contentReference;
 	}
+
 	protected async addContentReference(
 		contentReference: ContentReference
 	): Promise<ContentReference> {

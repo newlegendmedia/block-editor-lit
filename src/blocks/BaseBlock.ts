@@ -41,22 +41,11 @@ export abstract class BaseBlock extends LitElement {
 		}
 	`;
 
+	protected abstract renderContent(): unknown;
+
 	async connectedCallback() {
 		super.connectedCallback();
-		await this.initialize();
-	}
-
-	async updated(changedProperties: Map<string | number | symbol, unknown>) {}
-
-	protected async initialize() {
-		try {
-			await this.initializeBlock();
-		} catch (error) {
-			console.error('Initialization error:', error);
-			this.error = `Initialization failed: ${
-				error instanceof Error ? error.message : String(error)
-			}`;
-		}
+		await this.initializeBlock();
 	}
 
 	protected async initializeBlock() {
@@ -70,10 +59,10 @@ export abstract class BaseBlock extends LitElement {
 		const content = await contentStore.update(this.content.id, updater);
 
 		if (!content) {
-			//			throw new Error('Failed to update content');
 			console.warn('Failed to update content', this.content.id);
-			return;
+			throw new Error('Failed to update content');
 		}
+
 		this.content = content;
 	}
 
@@ -96,8 +85,6 @@ export abstract class BaseBlock extends LitElement {
 			</div>
 		`;
 	}
-
-	protected abstract renderContent(): unknown;
 
 	protected getChildPath(childKey: string): string {
 		if (!this.contentPath) {
