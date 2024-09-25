@@ -52,18 +52,12 @@ export abstract class BaseBlock extends LitElement {
 		// Noop
 	}
 
-	protected async updateContent(updater: (content: Content) => Content) {
-		if (!this.content) {
-			throw new Error('Content not found');
+	protected async updateContent(updater: (content: Content) => Content): Promise<void> {
+		const updatedContent = await contentStore.update(this.content.id, updater);
+		if (!updatedContent) {
+			throw new Error(`Failed to update content ${this.content.id}`);
 		}
-		const content = await contentStore.update(this.content.id, updater);
-
-		if (!content) {
-			console.warn('Failed to update content', this.content.id);
-			throw new Error('Failed to update content');
-		}
-
-		this.content = content;
+		this.content = updatedContent;
 	}
 
 	render() {
@@ -77,10 +71,7 @@ export abstract class BaseBlock extends LitElement {
 
 		return html`
 			<div class="block">
-				<div class="block-topbar">
-					${this.renderPath()}
-					<div style="font-size:11px; margin-bottom:5px;">${this.content.id}</div>
-				</div>
+				<div class="block-topbar">${this.renderPath()}</div>
 				<div>${this.renderContent()}</div>
 			</div>
 		`;
@@ -99,6 +90,7 @@ export abstract class BaseBlock extends LitElement {
 				.path=${this.modelPath}
 				@breadcrumb-clicked=${this.handleBreadcrumbClick}
 			></h-breadcrumbs>
+			<div style="font-size:11px; margin-bottom:5px;">${this.content.id}</div>
 		`;
 	}
 

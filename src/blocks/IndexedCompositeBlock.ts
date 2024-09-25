@@ -107,7 +107,7 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 		}
 	}
 
-	protected async addChildBlock(itemType: Model): Promise<ContentId> {
+	protected async addChildBlock(itemType: Model): Promise<void> {
 		// create default content for the child block
 		const childContent = await this.makeDefaultContent(itemType);
 		await this.addContentToStore(childContent);
@@ -115,8 +115,6 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 		// add a reference to the default child content to the parent content
 		const childContentReference = await this.makeContentReference(childContent);
 		await this.addContentReference(childContentReference);
-
-		return childContentReference.id;
 	}
 
 	protected async removeChildBlock(index: number): Promise<void> {
@@ -143,11 +141,10 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 	//
 	protected async makeDefaultContent(itemType: Model): Promise<Content> {
 		// Create default content based on the item type
-		const defaultChildContent = {
+		return {
 			id: generateId(itemType.type ? itemType.type.slice(0, 3).toUpperCase() : '') as ContentId,
 			...ContentFactory.createContentFromModel(itemType),
 		};
-		return defaultChildContent;
 	}
 
 	protected async addContentToStore(content: Content): Promise<Content> {
@@ -169,16 +166,12 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 		return contentReference;
 	}
 
-	protected async addContentReference(
-		contentReference: ContentReference
-	): Promise<ContentReference> {
+	protected async addContentReference(contentReference: ContentReference): Promise<void> {
 		// Update the parent content with the child reference
 		await this.updateContent((content) => {
-			const updatedContent = { ...content } as IndexedContent;
-			if (updatedContent.children === undefined) updatedContent.children = [];
+			const updatedContent = content as IndexedContent;
 			updatedContent.children.push(contentReference);
-			return updatedContent;
+			return content;
 		});
-		return contentReference;
 	}
 }
