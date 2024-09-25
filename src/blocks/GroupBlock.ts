@@ -9,23 +9,8 @@ export class GroupBlock extends IndexedCompositeBlock {
 		return (this.model as GroupModel).name || 'Group';
 	}
 
-	protected renderAddButton(): TemplateResult {
-		return html`<button @click=${this.toggleAddMenu}>Add Item</button>`;
-	}
-
-	protected renderAddMenu(): TemplateResult {
+	protected getItemTypes(): Model[] {
 		const model = this.model as GroupModel;
-		const itemTypes = Array.isArray(model.itemTypes) ? model.itemTypes : [model.itemTypes];
-		return html`
-			<div class="add-menu">
-				${itemTypes.map(
-					(itemType: Model) => html`
-						<button @click=${() => this.handleAdd(itemType)}>
-							${itemType.name || itemType.key}
-						</button>
-					`
-				)}
-			</div>
-		`;
+		return Array.isArray(model.itemTypes) ? model.itemTypes : [model.itemTypes];
 	}
 }

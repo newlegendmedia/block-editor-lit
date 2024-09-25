@@ -38,7 +38,7 @@ export type IndexedContent<T = unknown> = {
 	id: ContentId;
 	modelInfo: ModelInfo;
 	content: T;
-	children?: IndexedCompositeChildren;
+	children: IndexedCompositeChildren;
 };
 
 

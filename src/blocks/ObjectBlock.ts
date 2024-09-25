@@ -33,4 +33,5 @@ export class ObjectBlock extends KeyedCompositeBlock {
 	protected getBlockTitle(): string {
 		return (this.model as ObjectModel).name || 'Object';
 	}
+
 }

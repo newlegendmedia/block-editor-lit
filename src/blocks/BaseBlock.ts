@@ -46,6 +46,8 @@ export abstract class BaseBlock extends LitElement {
 		await this.initialize();
 	}
 
+	async updated(changedProperties: Map<string | number | symbol, unknown>) {}
+
 	protected async initialize() {
 		try {
 			await this.initializeBlock();

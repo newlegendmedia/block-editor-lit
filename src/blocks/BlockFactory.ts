@@ -25,7 +25,6 @@ export class BlockFactory {
 		_inlineModel?: Model
 	): Promise<TemplateResult> {
 		try {
-			//			const blockPath = new ContentPath(path, key);
 			const cPath = new ContentPath(contentPath, contentKey);
 			const mPath = new ContentPath(modelPath, modelKey);
 

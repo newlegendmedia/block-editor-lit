@@ -1,34 +1,29 @@
 import { html, css, TemplateResult } from 'lit';
-import { state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { until } from 'lit/directives/until.js';
 import { BaseBlock } from './BaseBlock';
 import { BlockFactory } from './BlockFactory';
-import { ContentId, CompositeContent, ContentReference, IndexedContent } from '../content/content';
+import {
+	Content,
+	ContentId,
+	ContentReference,
+	IndexedContent,
+	IndexedCompositeChildren,
+} from '../content/content';
 import { Model } from '../model/model';
 import { contentStore } from '../content/ContentStore';
 import { ContentFactory } from '../content/ContentFactory';
 import { generateId } from '../util/generateId';
+import '../module/interface/AddItemMenu';
 
 export abstract class IndexedCompositeBlock extends BaseBlock {
-	@state() protected showAddMenu: boolean = false;
-
 	static styles = [
 		BaseBlock.blockStyles,
 		css`
-			.composite {
-			}
-			.composite-title {
-				font-size: 16px;
-				font-weight: bold;
-				margin-top: var(--spacing-xsmall);
-				margin-bottom: var(--spacing-small);
-			}
 			.composite-content {
 				display: flex;
 				flex-direction: column;
 				gap: var(--spacing-medium);
-				margin-left: var(--spacing-medium);
 				margin-bottom: var(--spacing-medium);
 			}
 			.composite-item {
@@ -39,43 +34,47 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 			.item-container {
 				flex: 1;
 			}
-			.remove-button {
-				margin-left: var(--spacing-small);
-			}
-			.add-menu {
-				margin-top: var(--spacing-small);
-			}
 		`,
 	];
 
+	protected abstract getBlockTitle(): string;
+	protected abstract getItemTypes(): Model[];
+
 	protected renderContent(): TemplateResult {
-		if (!this.content || !this.model) {
-			return html`<div>Loading...</div>`;
-		}
-
-		const childReferences = this.getChildReferences();
-
 		return html`
 			<div class="composite indexed">
 				<h3 class="composite-title">${this.getBlockTitle()}</h3>
 				<div class="composite-content">
 					${repeat(
-						childReferences,
+						this.getChildReferences(),
 						(childRef) => childRef.id,
-						(childRef, index) => this.renderCompositeItem(childRef, index)
+						(childRef, index) => this.renderChild(childRef, index)
 					)}
 				</div>
-				${this.renderAddButton()} ${this.showAddMenu ? this.renderAddMenu() : ''}
+				<add-item-menu
+					.itemTypes=${this.getItemTypes()}
+					.blockTitle=${this.getBlockTitle()}
+					@add-item=${this.handleAdd}
+				></add-item-menu>
 			</div>
 		`;
 	}
 
-	protected abstract getBlockTitle(): string;
-
-	protected renderCompositeItem(childRef: ContentReference, index: number): TemplateResult {
+	protected renderChild(childRef: ContentReference, index: number): TemplateResult {
 		return html`
 			<div class="composite-item" id="item-${childRef.id}">
-				<div class="item-container">${this.renderChildComponent(childRef, index)}</div>
+				<div class="item-container">
+					${until(
+						BlockFactory.createComponent(
+							this.contentPath.path,
+							childRef.id,
+							this.modelPath.path,
+							childRef.key,
+							childRef.type
+						),
+						html`<span>Loading child component...</span>`
+					)}
+				</div>
 				<button
 					class="remove-button"
 					@click=${() => this.handleRemove(index)}
@@ -87,47 +86,14 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 		`;
 	}
 
-	protected renderChildComponent(childRef: ContentReference, index: number): TemplateResult {
-		return html`
-			${until(
-				this.createChildComponent(childRef, index),
-				html`<span>Loading child component...</span>`
-			)}
-		`;
+	protected getChildReferences(): IndexedCompositeChildren {
+		const content = this.content as IndexedContent;
+		return content.children || [];
 	}
 
-	protected async createChildComponent(
-		childRef: ContentReference,
-		_index: number
-	): Promise<TemplateResult> {
-		try {
-			console.log(
-				'ZZZ1 Creating child component:',
-				this.contentPath.path,
-				childRef.id,
-				this.modelPath.path,
-				childRef.key,
-				childRef.type
-			);
-			return await BlockFactory.createComponent(
-				this.contentPath.path,
-				childRef.id,
-				this.modelPath.path,
-				childRef.key,
-				childRef.type
-			);
-		} catch (error) {
-			console.error(`Error creating child component for ${childRef.id}:`, error);
-			return html`<div>Error: ${(error as Error).message}</div>`;
-		}
-	}
-
-	protected abstract renderAddButton(): TemplateResult;
-
-	protected abstract renderAddMenu(): TemplateResult;
-
-	protected toggleAddMenu() {
-		this.showAddMenu = !this.showAddMenu;
+	protected async handleAdd(event: CustomEvent) {
+		const { itemType } = event.detail;
+		await this.addChildBlock(itemType);
 	}
 
 	protected async handleRemove(index: number) {
@@ -137,98 +103,79 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 				await this.removeChildBlock(index);
 			} catch (error) {
 				console.error('Error removing child block:', error);
-				// Optionally, show a user-facing error message
 			}
-		}
-	}
-
-	protected async handleAdd(itemType: Model) {
-		try {
-			await this.addChildBlock(itemType);
-			this.showAddMenu = false;
-		} catch (error) {
-			console.error('Error adding child block:', error);
-			// Optionally, show a user-facing error message
 		}
 	}
 
 	protected async addChildBlock(itemType: Model): Promise<ContentId> {
-		const { modelInfo, content } = ContentFactory.createContentFromModel(itemType);
+		// create default content for the child block
+		const childContent = await this.makeDefaultContent(itemType);
+		await this.addContentToStore(childContent);
 
-		const id = generateId('CON');
-		modelInfo.key = itemType.key;
-		modelInfo.type = itemType.type;
+		// add a reference to the default child content to the parent content
+		const childContentReference = await this.makeContentReference(childContent);
+		await this.addContentReference(childContentReference);
 
-		const newChildContent = await contentStore.create(
-			modelInfo,
-			content,
-			this.content.id,
-			this.getChildPath(id),
-			id
-		);
-
-		const contentReference: ContentReference = {
-			id: newChildContent.id,
-			key: modelInfo.key,
-			type: modelInfo.type,
-		};
-
-		// Update the content with the new child reference
-		await this.updateContent((currentContent) => {
-			const updatedContent = { ...currentContent } as CompositeContent;
-			if (!Array.isArray(updatedContent.children)) {
-				updatedContent.children = [];
-			}
-			(updatedContent.children as ContentReference[]).push(contentReference);
-			return updatedContent;
-		});
-
-		// console.log(
-		// 	'ZZZ2 Creating child component:',
-		// 	this.contentPath.path,
-		// 	newChildContent.id,
-		// 	this.modelPath.path,
-		// 	itemType.key,
-		// 	itemType.type
-		// );
-
-		// await BlockFactory.createComponent(
-		// 	this.contentPath.path,
-		// 	newChildContent.id,
-		// 	this.modelPath.path,
-		// 	itemType.key,
-		// 	itemType.type
-		// );
-
-		return newChildContent.id;
+		return childContentReference.id;
 	}
 
 	protected async removeChildBlock(index: number): Promise<void> {
-		const compositeContent = this.content as IndexedContent;
-		if (!compositeContent.children || index < 0 || index >= compositeContent.children.length) {
-			return;
+		const indexedContent = this.content as IndexedContent;
+
+		// Check if the request is valid
+		if (!indexedContent.children || indexedContent.children.length <= index) {
+			throw new Error(`Invalid index: ${index}`);
 		}
 
-		const childReference = (compositeContent.children as ContentReference[])[index];
-		if (!childReference) return;
+		// Remove the child content from the store
+		await contentStore.delete(indexedContent.children[index].id);
 
-		// Remove the child from the content
-		(compositeContent.children as ContentReference[]).splice(index, 1);
-
-		// Update the content in the store
-		await this.updateContent((currentContent) => {
-			return {
-				...currentContent,
-				children: compositeContent.children,
-			};
+		// Remove the child reference from the parent content
+		await this.updateContent((content) => {
+			const updatedContent = { ...content } as IndexedContent;
+			updatedContent.children.splice(index, 1);
+			return updatedContent;
 		});
-
-		// Delete the child content
-		await contentStore.delete(childReference.id);
 	}
 
-	protected getChildReferences(): ContentReference[] {
-		const compositeContent = this.content as CompositeContent;
-		return (compositeContent.children as ContentReference[]) || [];
+	//
+	// AddChild Related Methods
+	//
+	protected async makeDefaultContent(itemType: Model): Promise<Content> {
+		// Create default content based on the item type
+		const defaultChildContent = {
+			id: generateId(itemType.type ? itemType.type.slice(0, 3).toUpperCase() : '') as ContentId,
+			...ContentFactory.createContentFromModel(itemType),
+		};
+		return defaultChildContent;
+	}
+	protected async addContentToStore(content: Content): Promise<Content> {
+		const newContent = await contentStore.add(
+			content,
+			this.contentPath.path,
+			this.getChildPath(content.id)
+		);
+		return newContent;
+	}
+	protected async makeContentReference(content: Content): Promise<ContentReference> {
+		// Create a reference to the child content
+		const contentReference: ContentReference = {
+			id: content.id,
+			key: content.modelInfo.key,
+			type: content.modelInfo.type,
+		};
+		return contentReference;
+	}
+	protected async addContentReference(
+		contentReference: ContentReference
+	): Promise<ContentReference> {
+		// Update the parent content with the child reference
+		await this.updateContent((content) => {
+			const updatedContent = { ...content } as IndexedContent;
+			if (updatedContent.children === undefined) updatedContent.children = [];
+			updatedContent.children.push(contentReference);
+			return updatedContent;
+		});
+		return contentReference;
 	}
 }

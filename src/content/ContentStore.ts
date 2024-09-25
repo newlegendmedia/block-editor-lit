@@ -140,7 +140,7 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 			throw new Error(`Parent content not found at path ${parentPath}`);
 		}
 
-		return await this.create(content.modelInfo, content.content, parentId, path);
+		return await this.create(content.modelInfo, content.content, parentId, path, content.id);
 	}
 
 	async create(
@@ -173,18 +173,18 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		}
 
 		// Handle nested content if it's a composite type
-		if ('children' in content && content.children) {
-			const childrenEntries = Object.entries(content.children as KeyedCompositeChildren);
-			for (const [childKey, childRef] of childrenEntries) {
-				const childContent = await this.get(childRef.id);
-				if (childContent) {
-					const childPath = path
-						? new ContentPath(path, childKey).toString()
-						: ContentPath.fromDocumentId(childContent.modelInfo.key).toString();
-					await this.addCompositeContent(childContent, content.id, childPath);
-				}
-			}
-		}
+		// if ('children' in content && content.children) {
+		// 	const childrenEntries = Object.entries(content.children as KeyedCompositeChildren);
+		// 	for (const [childKey, childRef] of childrenEntries) {
+		// 		const childContent = await this.get(childRef.id);
+		// 		if (childContent) {
+		// 			const childPath = path
+		// 				? new ContentPath(path, childKey).toString()
+		// 				: ContentPath.fromDocumentId(childContent.modelInfo.key).toString();
+		// 			await this.addCompositeContent(childContent, content.id, childPath);
+		// 		}
+		// 	}
+		// }
 	}
 
 	async update(
