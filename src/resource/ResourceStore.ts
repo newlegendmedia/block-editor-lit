@@ -106,4 +106,53 @@ export class ResourceStore<K, T extends Resource<K>> {
 	protected getParentId(_item: T): K | undefined {
 		return undefined;
 	}
+
+	async getSubtree(id: K): Promise<T | null> {
+		const subtreeNode = this.tree.getSubtree(id);
+		if (!subtreeNode) {
+			return null;
+		}
+
+		const getSubtreeHelper = async (node: T): Promise<T> => {
+			const clonedNode = deepClone(node);
+			const children = await Promise.all(
+				this.tree.get(node.id as K)!.children.map((child) => getSubtreeHelper(child.item))
+			);
+			(clonedNode as any).children = children;
+			return clonedNode;
+		};
+
+		return getSubtreeHelper(subtreeNode.item);
+	}
+
+	async duplicateSubtree(id: K): Promise<T | null> {
+		const duplicatedNode = this.tree.duplicateSubtree(id);
+		if (!duplicatedNode) {
+			return null;
+		}
+
+		const updateStorageHelper = async (node: T): Promise<void> => {
+			await this.storage.set(node);
+			if ((node as any).children) {
+				await Promise.all((node as any).children.map((child: T) => updateStorageHelper(child)));
+			}
+		};
+
+		await updateStorageHelper(duplicatedNode.item);
+
+		this.subscriptions.notifyAll();
+		return duplicatedNode.item;
+	}
+
+	// async moveSubtree(id: K, newParentId: K): Promise<boolean> {
+	// 	const success = this.tree.moveSubtree(id, newParentId);
+	// 	if (success) {
+	// 		const movedNode = this.tree.get(id);
+	// 		if (movedNode) {
+	// 			await this.storage.set(movedNode.item);
+	// 			this.subscriptions.notifyAll();
+	// 		}
+	// 	}
+	// 	return success;
+	// }
 }

@@ -331,6 +331,65 @@ export class Tree<K, Item> {
 		processLevel(this.root.children as TreeNode<K, Item>[]);
 	}
 
+	getSubtree(nodeId: K): TreeNode<K, Item> | undefined {
+		return this.nodes.get(nodeId);
+	}
+
+	duplicateSubtree(nodeId: K, newParentId?: K): TreeNode<K, Item> | undefined {
+		const originalNode = this.nodes.get(nodeId);
+		if (!originalNode) return undefined;
+
+		const duplicateNode = (node: TreeNode<K, Item>, parentId: K | null): TreeNode<K, Item> => {
+			const newId = generateId() as K;
+			const newItem = JSON.parse(JSON.stringify(node.item)); // Deep copy the item
+			const newNode = new TreeNode(newId, newItem, parentId, undefined, this);
+
+			this.nodes.set(newId, newNode);
+
+			node.children.forEach((child) => {
+				const duplicatedChild = duplicateNode(child as TreeNode<K, Item>, newId);
+				newNode.children.push(duplicatedChild);
+			});
+
+			return newNode;
+		};
+
+		const duplicatedSubtree = duplicateNode(originalNode, newParentId || originalNode.parentId);
+
+		// Add the duplicated subtree to the parent
+		const parentId = newParentId || originalNode.parentId;
+		if (parentId) {
+			const parent = this.nodes.get(parentId);
+			if (parent) {
+				const index = parent.children.findIndex((child) => child.id === nodeId);
+				parent.children.splice(index + 1, 0, duplicatedSubtree);
+			}
+		}
+
+		return duplicatedSubtree;
+	}
+
+	// moveSubtree(nodeId: K, newParentId: K): boolean {
+	// 	const node = this.nodes.get(nodeId);
+	// 	const newParent = this.nodes.get(newParentId);
+
+	// 	if (!node || !newParent) return false;
+
+	// 	// Remove node from its current parent
+	// 	if (node.parentId) {
+	// 		const currentParent = this.nodes.get(node.parentId);
+	// 		if (currentParent) {
+	// 			currentParent.children = currentParent.children.filter((child) => child.id !== nodeId);
+	// 		}
+	// 	}
+
+	// 	// Add node to new parent
+	// 	node.parentId = newParentId;
+	// 	newParent.children.push(node);
+
+	// 	return true;
+	// }
+
 	findPreviousOfType(
 		currentId: K,
 		match: (node: TreeNode<K, Item>) => boolean

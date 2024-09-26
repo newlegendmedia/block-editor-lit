@@ -9,11 +9,15 @@ export type ModelInfo = {
 	ref?: string;
 };
 
-export type KeyedCompositeContent = {
-	[key: string]: ContentId;
+//
+// Content Types
+//
+export type Content<T = unknown> = {
+	id: ContentId;
+	modelInfo: ModelInfo;
+	content: T;
+	children?: KeyedCompositeChildren | IndexedCompositeChildren;
 };
-
-export type IndexedCompositeContent = ContentId[];
 
 export interface ContentReference {
 	id: ContentId;
@@ -21,18 +25,33 @@ export interface ContentReference {
 	type: ModelType;
 }
 
+export interface Document {
+	id: DocumentId;
+	title: string;
+	rootContent: ContentId;
+	createdAt: string;
+	updatedAt: string;
+	isActive: boolean;
+}
+
+//
+// Composite content types
+//
+export type CompositeContent = Content<KeyedCompositeContent | IndexedCompositeContent> & {
+	children: KeyedCompositeChildren | IndexedCompositeChildren;
+};
+
+export type KeyedCompositeContent = {
+	[key: string]: ContentId;
+};
+
 export type KeyedCompositeChildren = {
 	[key: string]: ContentReference;
 };
 
-export type IndexedCompositeChildren = ContentReference[];
+export type IndexedCompositeContent = ContentId[];
 
-export type Content<T = unknown> = {
-	id: ContentId;
-	modelInfo: ModelInfo;
-	content: T;
-	children?: KeyedCompositeChildren | IndexedCompositeChildren;
-};
+export type IndexedCompositeChildren = ContentReference[];
 
 export type IndexedContent<T = unknown> = {
 	id: ContentId;
@@ -41,11 +60,9 @@ export type IndexedContent<T = unknown> = {
 	children: IndexedCompositeChildren;
 };
 
-
-export type CompositeContent = Content<KeyedCompositeContent | IndexedCompositeContent> & {
-	children: KeyedCompositeChildren | IndexedCompositeChildren;
-};
-
+//
+// Block Type Specific content types
+//
 export type ElementContent = Content<any>;
 
 export type ObjectContent = CompositeContent & {
@@ -63,15 +80,10 @@ export type GroupContent = CompositeContent & {
 	children: IndexedCompositeChildren;
 };
 
-export interface Document {
-	id: DocumentId;
-	title: string;
-	rootContent: ContentId;
-	createdAt: string;
-	updatedAt: string;
-	isActive: boolean;
-}
 
+//
+// Type Guards
+//
 export function isCompositeContent(content: Content): content is CompositeContent {
 	return (
 		'children' in content &&

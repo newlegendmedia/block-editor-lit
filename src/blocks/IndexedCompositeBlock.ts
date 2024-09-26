@@ -34,6 +34,10 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 			.item-container {
 				flex: 1;
 			}
+			.item-controls {
+				display: flex;
+				gap: var(--spacing-small);
+			}
 		`,
 	];
 
@@ -65,23 +69,26 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 			<div class="composite-item" id="item-${childRef.id}">
 				<div class="item-container">
 					${until(
-						BlockFactory.createComponent(
-							this.contentPath.path,
-							childRef.id,
-							this.modelPath.path,
-							childRef.key,
-							childRef.type
-						),
+						this.createChildComponent(childRef),
 						html`<span>Loading child component...</span>`
 					)}
 				</div>
-				<button
-					class="remove-button"
-					@click=${() => this.handleRemove(index)}
-					aria-label="Remove item ${index + 1}"
-				>
-					Remove
-				</button>
+				<div class="item-controls">
+					<button
+						class="duplicate-button"
+						@click=${() => this.handleDuplicate(index)}
+						aria-label="Duplicate item ${index + 1}"
+					>
+						Duplicate
+					</button>
+					<button
+						class="remove-button"
+						@click=${() => this.handleRemove(index)}
+						aria-label="Remove item ${index + 1}"
+					>
+						Remove
+					</button>
+				</div>
 			</div>
 		`;
 	}
@@ -106,6 +113,76 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 			}
 		}
 	}
+
+	protected async handleDuplicate(index: number) {
+		try {
+			const indexedContent = this.content as IndexedContent;
+			const originalChildRef = indexedContent.children[index];
+
+			const duplicatedSubtree = await contentStore.duplicateSubtree(originalChildRef.id);
+
+			if (duplicatedSubtree) {
+				// Create a new content reference for the duplicated subtree
+				const newContentReference: ContentReference = {
+					id: duplicatedSubtree.id,
+					key: duplicatedSubtree.modelInfo.key,
+					type: duplicatedSubtree.modelInfo.type,
+				};
+
+				// Update the parent content with the new child reference
+				await this.updateContent((content) => {
+					const updatedContent = content as IndexedContent;
+					if (!updatedContent.children) updatedContent.children = [];
+					updatedContent.children.splice(index + 1, 0, newContentReference);
+					return updatedContent;
+				});
+			}
+		} catch (error) {
+			console.error('Error duplicating child block:', error);
+		}
+	}
+
+	// protected async handleDuplicate(index: number) {
+	// 	try {
+	// 		const indexedContent = this.content as IndexedContent;
+	// 		const originalChildRef = indexedContent.children[index];
+	// 		const originalContent = await contentStore.get(originalChildRef.id);
+
+	// 		console.log('originalContent:', originalContent);
+
+	// 		if (originalContent) {
+	// 			// Create a deep copy of the original content
+	// 			const duplicatedContent = JSON.parse(JSON.stringify(originalContent));
+	// 			duplicatedContent.id = generateId(
+	// 				originalChildRef.type.slice(0, 3).toUpperCase()
+	// 			) as ContentId;
+
+	// 			// Add the duplicated content to the store
+	// 			const newContent = await contentStore.add(
+	// 				duplicatedContent,
+	// 				this.contentPath.path,
+	// 				this.getChildPath(duplicatedContent.id)
+	// 			);
+
+	// 			// Create a reference for the new content
+	// 			const newContentReference: ContentReference = {
+	// 				id: newContent.id,
+	// 				key: newContent.modelInfo.key,
+	// 				type: newContent.modelInfo.type,
+	// 			};
+
+	// 			// Update the parent content with the new child reference
+	// 			await this.updateContent((content) => {
+	// 				const updatedContent = content as IndexedContent;
+	// 				if (!updatedContent.children) updatedContent.children = [];
+	// 				updatedContent.children.splice(index + 1, 0, newContentReference);
+	// 				return updatedContent;
+	// 			});
+	// 		}
+	// 	} catch (error) {
+	// 		console.error('Error duplicating child block:', error);
+	// 	}
+	// }
 
 	protected async addChildBlock(itemType: Model): Promise<void> {
 		// create default content for the child block
@@ -134,6 +211,21 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 			updatedContent.children.splice(index, 1);
 			return updatedContent;
 		});
+	}
+
+	protected async createChildComponent(childRef: ContentReference): Promise<TemplateResult> {
+		try {
+			return await BlockFactory.createComponent(
+				this.contentPath.path,
+				childRef.id,
+				this.modelPath.path,
+				childRef.key,
+				childRef.type
+			);
+		} catch (error) {
+			console.error(`Error creating child component for ${childRef.key}:`, error);
+			return html`<div>Error: ${(error as Error).message}</div>`;
+		}
 	}
 
 	//
