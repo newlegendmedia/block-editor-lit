@@ -7,7 +7,7 @@ import { HierarchicalItem } from "../tree/HierarchicalItem";
 @customElement('model-store-viewer')
 export class ModelStoreViewer extends LitElement {
 	@state() private models: Model[] = [];
-	@state() private viewMode: 'flat' | 'tree' = 'flat';
+	@state() private viewMode: 'flat' | 'tree' = 'tree';
 	@state() private modelsHierarchy: HierarchicalItem<Model> | null = null;
 
 	private unsubscribe: (() => void) | null = null;
