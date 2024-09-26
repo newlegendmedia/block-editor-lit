@@ -1,5 +1,5 @@
 // Resource.ts
-export interface Resource {
-  id?: string;
-  [key: string]: any;
+export interface Resource<K> {
+	id: K;
+	parentId?: K;
 }

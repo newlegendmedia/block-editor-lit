@@ -4,7 +4,7 @@ import { StorageAdapter } from '../storage/StorageAdapter';
 import { SubscriptionManager } from "./SubscriptionManager";
 import { deepClone } from '../util/deepClone';
 
-export class ResourceStore<K, T extends Resource> {
+export class ResourceStore<K, T extends Resource<K>> {
 	protected tree: Tree<K, T>;
 	private storage: StorageAdapter<T>;
 	protected subscriptions: SubscriptionManager<K, T>;
@@ -22,7 +22,7 @@ export class ResourceStore<K, T extends Resource> {
 			item = await this.storage.get(id as string);
 
 			if (item) {
-				this.tree.add(item, item.parentId as K | undefined, item.id as K);
+				this.tree.add(item, item.parentId as K | undefined, item.id);
 			}
 		}
 
@@ -30,11 +30,11 @@ export class ResourceStore<K, T extends Resource> {
 	}
 
 	async set(item: T, parentId?: K): Promise<void> {
-		const existingItem = await this.get(item.id as K);
+		// const existingItem = await this.get(item.id as K);
 
-		if (existingItem) {
-			item = { ...existingItem, ...item };
-		}
+		// if (existingItem) {
+		// 	item = { ...existingItem, ...item };
+		// }
 
 		await this.storage.set(item);
 
