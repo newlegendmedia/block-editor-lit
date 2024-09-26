@@ -1,3 +1,5 @@
+// Tree.ts
+
 import { TreeNode } from './TreeNode';
 import { generateId } from '../util/generateId';
 import { HierarchicalItem } from './HierarchicalItem';
@@ -9,46 +11,44 @@ export class Tree<K, Item> {
 	constructor(rootId: K, rootItem?: Item) {
 		this.nodes = new Map();
 		if (!rootItem) rootItem = {} as Item;
-		this.root = new TreeNode(rootId, rootItem, null, undefined, this);
+		this.root = new TreeNode<K, Item>(rootId, rootItem, null, []);
 		this.nodes.set(rootId, this.root);
 	}
 
+	// Get a node by ID
 	get(id: K): TreeNode<K, Item> | undefined {
-		if (id === this.root.id) return this.root;
 		return this.nodes.get(id);
 	}
 
+	// Get all items in the tree
 	getAll(): Item[] {
-		const items: Item[] = Array.from(this.nodes.values()).map((node) => node.item);
-		return items;
+		return Array.from(this.nodes.values()).map((node) => node.item);
 	}
 
+	// Get the hierarchical structure of the tree
 	getAllHierarchical(): HierarchicalItem<Item> {
-		const buildHierarchy = (node: TreeNode<string, Item>): HierarchicalItem<Item> => {
-			return {
-				...node.item,
-				id: node.id,
-				children: node.children.map((child) => buildHierarchy(child as TreeNode<string, Item>)),
-			};
-		};
+		const buildHierarchy = (node: TreeNode<string, Item>): HierarchicalItem<Item> => ({
+			...node.item,
+			id: node.id,
+			children: node.children.map(buildHierarchy),
+		});
 
 		return buildHierarchy(this.root as TreeNode<string, Item>);
 	}
 
+	// Get the root node's ID
 	getRootId(): K {
 		return this.root.id;
 	}
 
-	// Proposed improved add method:
+	// Add a node to the tree
 	add(item: Item, parentId?: K, id?: K): TreeNode<K, Item> | undefined {
 		const nodeId = id || (generateId() as K);
 
 		// Check if the node already exists
 		const existingNode = this.nodes.get(nodeId);
-
 		if (existingNode) {
-			// If the parent is different, we need to handle the move
-
+			// If the parent is different, move the node
 			if (existingNode.parentId !== parentId) {
 				this.moveNode(nodeId, parentId);
 			}
@@ -58,39 +58,61 @@ export class Tree<K, Item> {
 			return existingNode;
 		}
 
-		// If the node doesn't exist, create and add it
-		const node = new TreeNode(nodeId, item, parentId || null, undefined, this);
-		this.nodes.set(nodeId, node);
+		// Create and add the new node
+		const newNode = new TreeNode<K, Item>(nodeId, item, parentId || null, []);
+		this.nodes.set(nodeId, newNode);
 
 		if (!parentId) {
-			return this.root.addChild(node);
+			this.root.children.push(newNode);
+		} else {
+			const parentNode = this.nodes.get(parentId);
+			if (parentNode) {
+				parentNode.children.push(newNode);
+			} else {
+				console.error(`Parent node with ID ${parentId} not found.`);
+				return undefined;
+			}
 		}
-		return this.nodes.get(parentId)?.addChild(node);
+
+		return newNode;
 	}
 
-	// New method to handle moving nodes
-	private moveNode(nodeId: K, newParentId: K | undefined): void {
+	// Move a node to a new parent
+	private moveNode(nodeId: K, newParentId: K | null | undefined): void {
 		const node = this.nodes.get(nodeId);
-		if (!node) return;
-
-		// Remove from old parent
-
-		if (node.parentId) {
-			const oldParent = this.nodes.get(node.parentId);
-			oldParent?.children.splice(oldParent.children.indexOf(node), 1);
+		if (!node) {
+			console.error(`Node with ID ${nodeId} not found.`);
+			return;
 		}
 
-		// Add to new parent
+		// Remove from old parent
+		if (node.parentId) {
+			const oldParent = this.nodes.get(node.parentId);
+			if (oldParent) {
+				oldParent.children = oldParent.children.filter((child) => child.id !== nodeId);
+			}
+		} else {
+			// If no parentId, it's a direct child of root
+			this.root.children = this.root.children.filter((child) => child.id !== nodeId);
+		}
+
+		// Update parentId
 		node.parentId = newParentId || null;
 
+		// Add to new parent
 		if (newParentId) {
 			const newParent = this.nodes.get(newParentId);
-			newParent?.children.push(node);
+			if (newParent) {
+				newParent.children.push(node);
+			} else {
+				console.error(`New parent node with ID ${newParentId} not found.`);
+			}
 		} else {
 			this.root.children.push(node);
 		}
 	}
 
+	// Insert a node after a specific sibling
 	insert(item: Item, afterNodeId: K, id?: K): TreeNode<K, Item> | undefined {
 		const parentNode = this.parent(afterNodeId);
 
@@ -98,70 +120,80 @@ export class Tree<K, Item> {
 			console.error('Parent node not found.', afterNodeId);
 			return undefined;
 		}
+
 		const nodeId = id || (generateId() as K);
-		const node = new TreeNode(nodeId, item, parentNode.id, undefined, this);
-		return parentNode.addChild(node, afterNodeId);
+		const newNode = new TreeNode<K, Item>(nodeId, item, parentNode.id, []);
+		this.nodes.set(nodeId, newNode);
+
+		const index = parentNode.children.findIndex((child) => child.id === afterNodeId);
+		if (index === -1) {
+			console.error(`Sibling node with ID ${afterNodeId} not found.`);
+			return undefined;
+		}
+
+		parentNode.children.splice(index + 1, 0, newNode);
+		return newNode;
 	}
 
+	// Remove a node and its subtree
 	remove(nodeId: K): void {
 		const node = this.nodes.get(nodeId);
 		if (!node) return;
 
 		// Recursively remove all children
-		node.children.forEach((child) => {
-			this.remove(child.id);
-		});
+		node.children.forEach((child) => this.remove(child.id));
 
+		// Remove the node itself
 		this.removeSingleNode(nodeId);
 	}
 
+	// Remove a single node without affecting its children
 	removeSingleNode(nodeId: K): void {
 		const node = this.nodes.get(nodeId);
 		if (!node) return;
 
-		// Remove the node itself
-		this.nodes.delete(nodeId);
-
-		// Remove from parent
-
+		// Remove from parent's children
 		if (node.parentId) {
 			const parent = this.nodes.get(node.parentId);
-
 			if (parent) {
-				const index = parent.children.findIndex((child) => child.id === nodeId);
-
-				if (index !== -1) {
-					parent.children.splice(index, 1);
-				}
+				parent.children = parent.children.filter((child) => child.id !== nodeId);
 			}
+		} else {
+			// If no parentId, it's a direct child of root
+			this.root.children = this.root.children.filter((child) => child.id !== nodeId);
 		}
+
+		// Remove from the map
+		this.nodes.delete(nodeId);
 	}
 
+	// Replace a node's item
 	replace(id: K, item: Item): void {
 		if (id === this.root.id) {
 			console.error('Cannot replace the root node.');
 			return;
 		}
 
-		const nodeToReplace = this.nodes.get(id);
-		if (!nodeToReplace) return;
+		const node = this.nodes.get(id);
+		if (!node) return;
 
-		// Replace the node
-		nodeToReplace.item = item;
+		node.item = item;
 	}
 
-	reset(rootId: K, rootItem?: Item) {
+	// Reset the tree to a new root
+	reset(rootId: K, rootItem?: Item): void {
 		this.nodes = new Map();
 		if (!rootItem) rootItem = {} as Item;
-		this.root = new TreeNode(rootId, rootItem, null, undefined, this);
-		this.nodes.set(this.root.id, this.root);
+		this.root = new TreeNode<K, Item>(rootId, rootItem, null, []);
+		this.nodes.set(rootId, this.root);
 	}
 
+	// Get the parent of a node
 	parent(nodeId: K): TreeNode<K, Item> | undefined {
 		const node = this.nodes.get(nodeId);
-		const parent = node ? this.nodes.get(node.parentId!) : undefined;
-		if (parent === undefined && node?.parentId === this.root.id) return this.root;
-		return parent;
+		if (!node) return undefined;
+		if (node.parentId === null) return undefined; // Root has no parent
+		return this.nodes.get(node.parentId);
 	}
 
 	protected createNode(id: K, item: Item): TreeNode<K, Item> {
@@ -342,7 +374,7 @@ export class Tree<K, Item> {
 		const duplicateNode = (node: TreeNode<K, Item>, parentId: K | null): TreeNode<K, Item> => {
 			const newId = generateId() as K;
 			const newItem = JSON.parse(JSON.stringify(node.item)); // Deep copy the item
-			const newNode = new TreeNode(newId, newItem, parentId, undefined, this);
+			const newNode = new TreeNode(newId, newItem, parentId, undefined);
 
 			this.nodes.set(newId, newNode);
 
