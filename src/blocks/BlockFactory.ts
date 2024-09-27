@@ -34,11 +34,13 @@ export class BlockFactory {
 				return html`<div>Error: Model not found ${mPath.toString()}</div>`;
 			}
 
+			console.log('BlockFactory.createComponent getOrCreateByPath', cPath, model);
 			let content = await contentStore.getOrCreateByPath(cPath.toString(), model);
 			if (!content) {
 				console.error(`BlockFactory: Content not found for ${cPath}`);
 				return html`<div>Error: Content not found ${cPath}</div>`;
 			}
+			console.log('BlockFactory.createComponent DONE getOrCreateByPath', cPath, content);
 
 			// Create the appropriate block based on content type
 			switch (content.modelInfo.type) {

@@ -15,14 +15,14 @@ export type AtomType = (typeof AtomType)[keyof typeof AtomType];
 export type ModelId = string;
 
 export interface BaseModel {
-  id?: ModelId;
-  type: ModelType;
-  key: string;
-  name?: string;
-  path?: string;
-  config?: Record<string, Model>;
-  metadata?: Record<string, Model>;
-  required?: boolean;
+	id?: ModelId;
+	type: ModelType;
+	key: string;
+	name?: string;
+	path?: string;
+	config?: Record<string, Model>;
+	metadata?: Record<string, Model>;
+	required?: boolean;
 }
 
 export interface BaseCompositeModel extends BaseModel {

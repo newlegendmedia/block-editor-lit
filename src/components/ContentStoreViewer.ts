@@ -275,7 +275,7 @@ export class ContentStoreViewer extends LitElement {
 		return html`
 			<ul class="property-list">
 				<li class="property-item">
-					<span class="property-key">id:</span>
+					<span class="property-key">XXid:</span>
 					<span class="property-value">${contentRef.id}</span>
 				</li>
 				<li class="property-item">

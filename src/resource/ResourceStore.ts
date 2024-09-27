@@ -6,7 +6,7 @@ import { deepClone } from '../util/deepClone';
 
 export class ResourceStore<K, T extends Resource<K>> {
 	protected tree: Tree<K, T>;
-	private storage: StorageAdapter<T>;
+	protected storage: StorageAdapter<T>;
 	protected subscriptions: SubscriptionManager<K, T>;
 
 	constructor(storage: StorageAdapter<T>, rootId: K, rootItem: T) {
@@ -125,24 +125,24 @@ export class ResourceStore<K, T extends Resource<K>> {
 		return getSubtreeHelper(subtreeNode.item);
 	}
 
-	async duplicateSubtree(id: K): Promise<T | null> {
-		const duplicatedNode = this.tree.duplicateSubtree(id);
-		if (!duplicatedNode) {
-			return null;
-		}
+	// async duplicateSubtree(id: K, parentId: K): Promise<T | null> {
+	// 	const duplicatedNode = this.tree.duplicateSubtree(id, parentId);
+	// 	if (!duplicatedNode) {
+	// 		return null;
+	// 	}
 
-		const updateStorageHelper = async (node: T): Promise<void> => {
-			await this.storage.set(node);
-			if ((node as any).children) {
-				await Promise.all((node as any).children.map((child: T) => updateStorageHelper(child)));
-			}
-		};
+	// 	const updateStorageHelper = async (node: T): Promise<void> => {
+	// 		await this.storage.set(node);
+	// 		if ((node as any).children) {
+	// 			await Promise.all((node as any).children.map((child: T) => updateStorageHelper(child)));
+	// 		}
+	// 	};
 
-		await updateStorageHelper(duplicatedNode.item);
+	// 	await updateStorageHelper(duplicatedNode.item);
 
-		this.subscriptions.notifyAll();
-		return duplicatedNode.item;
-	}
+	// 	this.subscriptions.notifyAll();
+	// 	return duplicatedNode.item;
+	// }
 
 	// async moveSubtree(id: K, newParentId: K): Promise<boolean> {
 	// 	const success = this.tree.moveSubtree(id, newParentId);

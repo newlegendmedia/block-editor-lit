@@ -50,7 +50,6 @@ export abstract class KeyedCompositeBlock extends BaseBlock {
 		if (!this.content || !this.model) {
 			return html`<div>Loading...</div>`;
 		}
-
 		return html`
 			<div>
 				<h3 class="composite-title">${this.getBlockTitle()}</h3>
@@ -58,14 +57,14 @@ export abstract class KeyedCompositeBlock extends BaseBlock {
 					${repeat(
 						this.getModelProperties(),
 						(prop) => prop.key,
-						(prop) => this.renderCompositeItem(prop)
+						(prop, index) => this.renderCompositeItem(prop, index)
 					)}
 				</div>
 			</div>
 		`;
 	}
 
-	protected renderCompositeItem(property: Model): TemplateResult {
+	protected renderCompositeItem(property: Model, _index: number): TemplateResult {
 		const childKey = property.key;
 		return html`
 			<div class="composite-item" id="item-${childKey}">

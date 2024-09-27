@@ -52,7 +52,10 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 					${repeat(
 						this.getChildReferences(),
 						(childRef) => childRef.id,
-						(childRef, index) => this.renderChild(childRef, index)
+						(childRef, index) => {
+							console.log('renderContent childRef:', childRef, index);
+							return this.renderChild(childRef, index);
+						}
 					)}
 				</div>
 				<add-item-menu
@@ -95,6 +98,7 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 
 	protected getChildReferences(): IndexedCompositeChildren {
 		const content = this.content as IndexedContent;
+		console.log('render getChildReferences content:', content);
 		return content.children || [];
 	}
 
@@ -119,70 +123,17 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 			const indexedContent = this.content as IndexedContent;
 			const originalChildRef = indexedContent.children[index];
 
-			const duplicatedSubtree = await contentStore.duplicateSubtree(originalChildRef.id);
+			const duplicatedSubtree = await contentStore.duplicateContent(originalChildRef.id);
 
 			if (duplicatedSubtree) {
 				// Create a new content reference for the duplicated subtree
-				const newContentReference: ContentReference = {
-					id: duplicatedSubtree.id,
-					key: duplicatedSubtree.modelInfo.key,
-					type: duplicatedSubtree.modelInfo.type,
-				};
-
-				// Update the parent content with the new child reference
-				await this.updateContent((content) => {
-					const updatedContent = content as IndexedContent;
-					if (!updatedContent.children) updatedContent.children = [];
-					updatedContent.children.splice(index + 1, 0, newContentReference);
-					return updatedContent;
-				});
+				const childContentReference = await this.makeContentReference(duplicatedSubtree);
+				await this.addContentReference(childContentReference);
 			}
 		} catch (error) {
 			console.error('Error duplicating child block:', error);
 		}
 	}
-
-	// protected async handleDuplicate(index: number) {
-	// 	try {
-	// 		const indexedContent = this.content as IndexedContent;
-	// 		const originalChildRef = indexedContent.children[index];
-	// 		const originalContent = await contentStore.get(originalChildRef.id);
-
-	// 		console.log('originalContent:', originalContent);
-
-	// 		if (originalContent) {
-	// 			// Create a deep copy of the original content
-	// 			const duplicatedContent = JSON.parse(JSON.stringify(originalContent));
-	// 			duplicatedContent.id = generateId(
-	// 				originalChildRef.type.slice(0, 3).toUpperCase()
-	// 			) as ContentId;
-
-	// 			// Add the duplicated content to the store
-	// 			const newContent = await contentStore.add(
-	// 				duplicatedContent,
-	// 				this.contentPath.path,
-	// 				this.getChildPath(duplicatedContent.id)
-	// 			);
-
-	// 			// Create a reference for the new content
-	// 			const newContentReference: ContentReference = {
-	// 				id: newContent.id,
-	// 				key: newContent.modelInfo.key,
-	// 				type: newContent.modelInfo.type,
-	// 			};
-
-	// 			// Update the parent content with the new child reference
-	// 			await this.updateContent((content) => {
-	// 				const updatedContent = content as IndexedContent;
-	// 				if (!updatedContent.children) updatedContent.children = [];
-	// 				updatedContent.children.splice(index + 1, 0, newContentReference);
-	// 				return updatedContent;
-	// 			});
-	// 		}
-	// 	} catch (error) {
-	// 		console.error('Error duplicating child block:', error);
-	// 	}
-	// }
 
 	protected async addChildBlock(itemType: Model): Promise<void> {
 		// create default content for the child block
@@ -191,6 +142,7 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 
 		// add a reference to the default child content to the parent content
 		const childContentReference = await this.makeContentReference(childContent);
+		console.log('new childContentReference:', childContentReference);
 		await this.addContentReference(childContentReference);
 	}
 
@@ -264,7 +216,49 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 			const updatedContent = content as IndexedContent;
 			if (!updatedContent.children) updatedContent.children = [];
 			updatedContent.children.push(contentReference);
+			console.log('updatedContent with new content reference:', updatedContent);
 			return content;
 		});
 	}
 }
+
+// const x = [
+// 	{
+// 		id: 'OBJ-1727376608106-14',
+// 		modelInfo: { type: 'object', key: 'section' },
+// 		content: {},
+// 		children: [
+// 			{
+// 				id: 'CONTENT-1727376608125-15',
+// 				modelInfo: { type: 'element', key: 'heading' },
+// 				content: '',
+// 				children: [],
+// 			},
+// 			{
+// 				id: 'CONTENT-1727376608125-16',
+// 				modelInfo: { type: 'element', key: 'body' },
+// 				content: '',
+// 				children: [],
+// 			},
+// 		],
+// 	},
+// 	{
+// 		id: 'ID-1727376612188-17',
+// 		modelInfo: { type: 'object', key: 'section' },
+// 		content: {},
+// 		children: [
+// 			{
+// 				id: 'ID-1727376612188-18',
+// 				modelInfo: { type: 'element', key: 'heading' },
+// 				content: '',
+// 				children: [],
+// 			},
+// 			{
+// 				id: 'ID-1727376612188-19',
+// 				modelInfo: { type: 'element', key: 'body' },
+// 				content: '',
+// 				children: [],
+// 			},
+// 		],
+// 	},
+// ];

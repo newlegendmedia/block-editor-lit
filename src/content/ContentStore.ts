@@ -4,7 +4,7 @@ import {
 	ContentId,
 	ModelInfo,
 	isCompositeContent,
-	KeyedCompositeChildren,
+	isIndexedCompositeContent,
 } from './content';
 import { Model } from '../model/model';
 import { StorageAdapter } from '../storage/StorageAdapter';
@@ -13,6 +13,8 @@ import { HierarchicalItem } from '../tree/HierarchicalItem';
 import { IndexedDBAdapter } from '../storage/IndexedDBAdapter';
 import { ContentPath } from './ContentPath';
 import { ContentFactory } from './ContentFactory';
+import { TreeNode } from '../tree/TreeNode';
+import { deepClone } from '../util/deepClone';
 
 export class ContentStore extends ResourceStore<ContentId, Content> {
 	pathMap: Map<string, ContentId> = new Map();
@@ -40,6 +42,7 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 	async getOrCreateByPath(path: string, model: Model): Promise<Content> {
 		let content = await this.getByPath(path);
 		if (!content) {
+			console.log('Creating new content for path:', path);
 			const defaultContent = ContentFactory.createContentFromModel(model);
 			content = {
 				id: generateId('CONTENT'),
@@ -227,6 +230,108 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		const result = this.tree.getAllHierarchical();
 		return result;
 	}
+
+	async duplicateContent(id: ContentId): Promise<Content | null> {
+		const node = this.tree.get(id);
+		if (!node) {
+			console.warn(`Node not found for ID ${id}`);
+			return null;
+		}
+
+		const parentId = node.parentId;
+		if (!parentId) {
+			console.warn(`Parent ID not found for ID ${id}`);
+			return null;
+		}
+		let parentPath = this.getPathForContent(parentId) as string;
+
+		const updateItemHelper = async (
+			node: TreeNode<ContentId, Content>,
+			parent: TreeNode<ContentId, Content>,
+			parentPath: string
+		): Promise<Content> => {
+			// create a unique new item and ID
+			const newItem = deepClone(node.item);
+			newItem.id = generateId(newItem.modelInfo.type.slice(0, 3).toUpperCase()) as ContentId;
+
+			// create the new path based on the parent item type
+			let newPath: string;
+			if (isIndexedCompositeContent(parent.item)) {
+				newPath = new ContentPath(parentPath, newItem.id).toString();
+			} else {
+				newPath = new ContentPath(parentPath, newItem.modelInfo.key).toString();
+			}
+
+			// create the new content
+			const newContent = await this.add(newItem, parentPath, newPath);
+			this.pathMap.set(newPath, newItem.id);
+
+			if ((node as any).children) {
+				await Promise.all(
+					(node as any).children.map((child: TreeNode<ContentId, Content>) =>
+						updateItemHelper(child, node, newPath)
+					)
+				);
+			}
+			return newContent;
+		};
+
+		let parent = this.tree.get(parentId);
+		if (!parent) {
+			console.warn(`Parent node not found for ID ${parentId}`);
+			return null;
+		}
+		const duplicateContent = await updateItemHelper(node, parent, parentPath);
+
+		this.subscriptions.notifyAll();
+
+		return duplicateContent;
+	}
+
+	// async duplicateContentSubtree(id: ContentId, parentId: ContentId): Promise<Content | null> {
+	// 	let parentPath = this.getPathForContent(parentId);
+	// 	if (!parentPath) {
+	// 		console.warn(`Parent path not found for ID ${parentId}`);
+	// 		return null;
+	// 	}
+
+	// 	const duplicatedNode = this.tree.duplicateSubtree(id, parentId);
+	// 	if (!duplicatedNode) {
+	// 		return null;
+	// 	}
+
+	// 	const updateItemHelper = async (
+	// 		node: TreeNode<ContentId, Content>,
+	// 		parent: TreeNode<ContentId, Content>,
+	// 		parentPath: string
+	// 	): Promise<void> => {
+	// 		node.item.id = node.id;
+	// 		let newPath: string;
+	// 		if (isIndexedCompositeContent(parent.item)) {
+	// 			newPath = new ContentPath(parentPath, node.id).toString();
+	// 		} else {
+	// 			newPath = new ContentPath(parentPath, node.item.modelInfo.key).toString();
+	// 		}
+	// 		this.pathMap.set(newPath, node.id);
+	// 		if ((node as any).children) {
+	// 			await Promise.all(
+	// 				(node as any).children.map((child: TreeNode<ContentId, Content>) =>
+	// 					updateItemHelper(child, node, newPath)
+	// 				)
+	// 			);
+	// 		}
+	// 	};
+
+	// 	let parent = this.tree.get(parentId);
+	// 	if (!parent) {
+	// 		console.warn(`Parent node not found for ID ${parentId}`);
+	// 		return null;
+	// 	}
+	// 	await updateItemHelper(duplicatedNode, parent, parentPath);
+
+	// 	this.subscriptions.notifyAll();
+	// 	return duplicatedNode.item;
+	// }
 
 	subscribeAll(callback: () => void): () => void {
 		return super.subscribeToAll(callback);
