@@ -5,6 +5,8 @@ import {
 	CompositeContent,
 	KeyedCompositeChildren,
 	IndexedCompositeChildren,
+	ContentId,
+	ObjectContent,
 } from './content';
 import {
 	AtomType,
@@ -18,6 +20,7 @@ import {
 	isGroup,
 	Model,
 } from '../model/model';
+import { generateId } from '../util/generateId';
 
 export class ContentFactory {
 	static createContentFromModel(model: Model): Omit<Content, 'id'> {
@@ -73,17 +76,31 @@ export class ContentFactory {
 	}
 
 	private static createObjectContent(
-		_model: ObjectModel,
+		model: ObjectModel,
 		modelInfo: Content['modelInfo']
-	): Omit<CompositeContent, 'id'> {
-		const childContent: Record<string, string> = {};
+	): Omit<ObjectContent, 'id'> {
+		const childContent: Record<string, ContentId> = {};
 		const children: KeyedCompositeChildren = {};
 
-		return {
+		model.properties.forEach((propertyModel) => {
+			const childId = generateId(propertyModel.type.slice(0, 3).toUpperCase()) as ContentId;
+			const childContentItem = this.createContentFromModel(propertyModel) as Omit<Content, 'id'>;
+
+			childContent[propertyModel.key] = childId;
+			children[propertyModel.key] = {
+				id: childId,
+				key: propertyModel.key,
+				type: propertyModel.type,
+				...childContentItem,
+			};
+		});
+
+		const newContent = {
 			modelInfo,
 			content: childContent,
 			children,
 		};
+		return newContent;
 	}
 
 	private static createArrayContent(

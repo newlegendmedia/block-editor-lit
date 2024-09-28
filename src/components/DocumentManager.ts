@@ -22,12 +22,26 @@ export class DocumentManager {
 		const documentId = generateId('DOC') as DocumentId;
 		const rootContentPath = ContentPath.fromDocumentId(documentId, modelKey);
 
-		const rootContent = await contentStore.create(
-			{ type: modelType, key: modelKey },
-			{ title },
-			'root',
-			rootContentPath.toString()
-		);
+		// const rootContent = await contentStore.create(
+		// 	{
+		// 		type: modelType,
+		// 		key: modelKey,
+		// 	},
+		// 	{ title },
+		// 	'root',
+		// 	rootContentPath.toString()
+		// );
+
+		// Create the root content using the specified model
+		const rootContent = await contentStore.getOrCreateByPath(rootContentPath.path, model);
+
+		// // Create a document root node in the content store
+		// const documentRootContent = await contentStore.create(
+		// 	{ type: 'root', key: 'document' },
+		// 	{ [modelKey]: rootContent.id },
+		// 	undefined,
+		// 	documentId
+		// );
 
 		const document: Document = {
 			id: documentId,
@@ -98,7 +112,6 @@ export class DocumentManager {
 			await contentStore.delete(contentId);
 		}
 	}
-
 }
 
 export const documentManager = new DocumentManager();

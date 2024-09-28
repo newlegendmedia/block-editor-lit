@@ -84,6 +84,31 @@ export type GroupContent = CompositeContent & {
 //
 // Type Guards
 //
+export function isContentReference(obj: any): obj is ContentReference {
+	return (
+		typeof obj === 'object' &&
+		obj !== null &&
+		'id' in obj &&
+		typeof obj.id === 'string' &&
+		'key' in obj &&
+		typeof obj.key === 'string' &&
+		'type' in obj &&
+		isModelType(obj.type) &&
+		Object.keys(obj).length === 3
+	);
+}
+
+function isModelType(type: any): type is ModelType {
+	return ['element', 'object', 'array', 'group', 'root'].includes(type);
+}
+
+// Additional type guard for full Content objects
+export function isFullContent(obj: any): obj is Content {
+	return (
+		typeof obj === 'object' && obj !== null && 'id' in obj && 'modelInfo' in obj && 'content' in obj
+	);
+}
+
 export function isCompositeContent(content: Content): content is CompositeContent {
 	return (
 		'children' in content &&

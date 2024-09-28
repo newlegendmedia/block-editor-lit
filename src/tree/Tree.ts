@@ -50,7 +50,6 @@ export class Tree<K, Item> {
 		if (existingNode) {
 			// If the parent is different, move the node
 			if (existingNode.parentId !== parentId) {
-				console.log('Moving node', nodeId, 'to parent', parentId);
 				this.moveNode(nodeId, parentId);
 			}
 
@@ -62,8 +61,6 @@ export class Tree<K, Item> {
 		// Create and add the new node
 		const newNode = new TreeNode<K, Item>(nodeId, item, parentId || null, []);
 		this.nodes.set(nodeId, newNode);
-		console.log('Adding node set', nodeId, newNode);
-
 		if (!parentId) {
 			this.root.children.push(newNode);
 		} else {

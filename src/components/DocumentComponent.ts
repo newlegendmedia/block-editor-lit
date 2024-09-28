@@ -4,6 +4,7 @@ import { BlockFactory } from '../blocks/BlockFactory';
 import { contentStore } from '../content/ContentStore';
 import { documentManager } from '../components/DocumentManager';
 import { Document, Content } from '../content/content';
+import { ContentPath } from '../content/ContentPath';
 
 @customElement('document-component')
 export class DocumentComponent extends LitElement {
@@ -24,11 +25,14 @@ export class DocumentComponent extends LitElement {
 			if (this.document) {
 				this.rootContent = await contentStore.get(this.document.rootContent);
 				if (this.rootContent) {
+					const contentPath = new ContentPath(this.documentId, this.rootContent.modelInfo.key);
+					const modelPath = new ContentPath(this.documentId, this.rootContent.modelInfo.key);
+
 					this.rootComponent = await BlockFactory.createComponent(
-						this.documentId,
-						this.rootContent.modelInfo.key,
-						this.documentId,
-						this.rootContent.modelInfo.key,
+						contentPath.parentPath,
+						contentPath.key,
+						modelPath.parentPath,
+						modelPath.key,
 						this.rootContent.modelInfo.type
 					);
 				}

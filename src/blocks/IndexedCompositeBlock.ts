@@ -53,7 +53,6 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 						this.getChildReferences(),
 						(childRef) => childRef.id,
 						(childRef, index) => {
-							console.log('renderContent childRef:', childRef, index);
 							return this.renderChild(childRef, index);
 						}
 					)}
@@ -98,7 +97,6 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 
 	protected getChildReferences(): IndexedCompositeChildren {
 		const content = this.content as IndexedContent;
-		console.log('render getChildReferences content:', content);
 		return content.children || [];
 	}
 
@@ -142,7 +140,6 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 
 		// add a reference to the default child content to the parent content
 		const childContentReference = await this.makeContentReference(childContent);
-		console.log('new childContentReference:', childContentReference);
 		await this.addContentReference(childContentReference);
 	}
 
@@ -216,7 +213,6 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 			const updatedContent = content as IndexedContent;
 			if (!updatedContent.children) updatedContent.children = [];
 			updatedContent.children.push(contentReference);
-			console.log('updatedContent with new content reference:', updatedContent);
 			return content;
 		});
 	}

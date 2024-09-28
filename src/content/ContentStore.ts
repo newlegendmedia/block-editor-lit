@@ -5,6 +5,9 @@ import {
 	ModelInfo,
 	isCompositeContent,
 	isIndexedCompositeContent,
+	isContentReference,
+	KeyedCompositeChildren,
+	isFullContent,
 } from './content';
 import { Model } from '../model/model';
 import { StorageAdapter } from '../storage/StorageAdapter';
@@ -42,19 +45,32 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 	async getOrCreateByPath(path: string, model: Model): Promise<Content> {
 		let content = await this.getByPath(path);
 		if (!content) {
-			console.log('Creating new content for path:', path);
 			const defaultContent = ContentFactory.createContentFromModel(model);
 			content = {
 				id: generateId('CONTENT'),
 				...defaultContent,
 			};
 			const contentPath = new ContentPath(path);
+
+			// // Special handling for document root content
+			// if (contentPath.pathSegments.length === 1) {
+			// 	// This is a document root, create it without a parent
+			// 	content = await this.create(
+			// 		content.modelInfo,
+			// 		content.content,
+			// 		undefined,
+			// 		path,
+			// 		content.id
+			// 	);
+			// } else {
+			// Normal case, create with parent
 			content = await this.add(content, contentPath.parentPath, path);
+			//			}
 		}
 		return content;
 	}
 
-	async set(content: Content, parentId?: ContentId, path?: string): Promise<void> {
+	async set(content: Content, parentId?: ContentId): Promise<void> {
 		// Check if the content already exists in the tree
 		const existingNode = this.tree.get(content.id as string);
 
@@ -80,12 +96,6 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 
 			// Add new node
 			this.tree.add(content, parentId as string | undefined, content.id as string);
-		}
-
-		// Update pathMap
-		if (path) {
-			const contentPath = new ContentPath(path);
-			this.pathMap.set(contentPath.toString(), content.id);
 		}
 
 		// Update storage
@@ -118,44 +128,50 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		this.subscriptions.notifyAll();
 	}
 
-	// async add(content: Content, parentPath: string, path: string): Promise<Content> {
-	// 	const parentContentPath = new ContentPath(parentPath);
-	// 	const contentPath = new ContentPath(path);
-	// 	const parentId = this.pathMap.get(parentContentPath.toString());
-	// 	if (!parentId) {
-	// 		throw new Error(`Parent content not found at path ${parentPath}`);
-	// 	}
-
-	// 	const createdContent = await this.create(
-	// 		content.modelInfo,
-	// 		content.content,
-	// 		parentId,
-	// 		contentPath.toString()
-	// 	);
-	// 	this.pathMap.set(contentPath.toString(), createdContent.id);
-	// 	return createdContent;
-	// }
-
 	async add(content: Content, parentPath: string, path: string): Promise<Content> {
 		const parentContentPath = new ContentPath(parentPath);
-		const parentId = this.pathMap.get(parentContentPath.toString());
-		if (!parentId) {
+		let parentId: ContentId | undefined = this.pathMap.get(parentContentPath.toString());
+
+		// If parentId is not found, check if this is a document root
+		if (!parentId && parentContentPath.pathSegments.length === 1) {
+			// This is likely a document root, so we'll create it without a parent
+			parentId = undefined;
+		} else if (!parentId) {
 			throw new Error(`Parent content not found at path ${parentPath}`);
 		}
+		return await this.create2(content, parentId, path);
+	}
 
-		return await this.create(content.modelInfo, content.content, parentId, path, content.id);
+	async create2(content: Content, parentId?: ContentId, path?: string): Promise<Content> {
+		if (!parentId) {
+			parentId = this.rootContentId;
+		}
+
+		if (!content.id) {
+			content.id = generateId(
+				content.modelInfo.type ? content.modelInfo.type.slice(0, 3).toUpperCase() : ''
+			) as ContentId;
+		}
+
+		await this.addCompositeContent(content, parentId, path);
+
+		return content;
 	}
 
 	async create(
 		modelInfo: ModelInfo,
 		content: any,
-		parentId: ContentId = this.rootContentId,
+		parentId?: ContentId,
 		path?: string,
 		id?: ContentId
 	): Promise<Content> {
 		if (!id) {
 			id = generateId(modelInfo.type ? modelInfo.type.slice(0, 3).toUpperCase() : '') as ContentId;
 		}
+		if (!parentId) {
+			parentId = this.rootContentId;
+		}
+
 		const newContent: Content = { id, modelInfo, content };
 
 		await this.addCompositeContent(newContent, parentId, path);
@@ -163,31 +179,69 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		return newContent;
 	}
 
+	// private async addCompositeContent(
+	// 	content: Content,
+	// 	parentId?: ContentId,
+	// 	path?: string
+	// ): Promise<void> {
+	// 	await this.set(content, parentId);
+
+	// 	if (path) {
+	// 		const contentPath = new ContentPath(path);
+	// 		this.pathMap.set(contentPath.toString(), content.id);
+	// 	}
+
+	// 	// Handle nested content if it's a composite type
+	// 	if (isCompositeContent(content) && content.children) {
+	// 		const childrenEntries = Object.entries(content.children);
+	// 		for (const [childKey, childRef] of childrenEntries) {
+	// 			const childContent = await this.get(childRef.id);
+	// 			if (!childContent) {
+	// 				const childPath = path
+	// 					? new ContentPath(path, childKey).toString()
+	// 					: ContentPath.fromDocumentId(childRef.key).toString();
+
+	// 				// Recursively add the child content
+	// 				await this.addCompositeContent(childRef as Content, content.id, childPath);
+	// 			}
+	// 		}
+	// 	}
+	// }
+
 	private async addCompositeContent(
-		content: Content,
+		content: Content | ContentReference,
 		parentId?: ContentId,
 		path?: string
 	): Promise<void> {
-		await this.set(content, parentId, path);
+		// If it's a ContentReference, resolve it to full Content
+		if (isContentReference(content)) {
+			return;
+		}
+
+		await this.set(content, parentId);
 
 		if (path) {
 			const contentPath = new ContentPath(path);
 			this.pathMap.set(contentPath.toString(), content.id);
 		}
 
-		// Handle nested content if it's a composite type
-		// if ('children' in content && content.children) {
-		// 	const childrenEntries = Object.entries(content.children as KeyedCompositeChildren);
-		// 	for (const [childKey, childRef] of childrenEntries) {
-		// 		const childContent = await this.get(childRef.id);
-		// 		if (childContent) {
-		// 			const childPath = path
-		// 				? new ContentPath(path, childKey).toString()
-		// 				: ContentPath.fromDocumentId(childContent.modelInfo.key).toString();
-		// 			await this.addCompositeContent(childContent, content.id, childPath);
-		// 		}
-		// 	}
-		// }
+		// Add composite content children to the store if they arent already there
+		if (isCompositeContent(content) && content.children) {
+			const childrenEntries = Object.entries(content.children);
+			for (const [childKey, childRef] of childrenEntries) {
+				if (isFullContent(childRef)) {
+					const childContent = await this.get(childRef.id);
+					if (!childContent) {
+						const childPath = path
+							? new ContentPath(path, childKey).toString()
+							: ContentPath.fromDocumentId(childRef.key).toString();
+
+						// Recursively add the child content
+						await this.addCompositeContent(childRef, content.id, childPath);
+					}
+				}
+			}
+		}
 	}
 
 	async update(
@@ -199,27 +253,11 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		if (content) {
 			const updatedContent = updater(content);
 
-			const path = this.getPathForContent(id);
-			if (!path) {
-				console.warn(`Content path not found for ID ${id}`);
-				return undefined;
-			}
-			const oldPath = new ContentPath(path);
-			const newPath = new ContentPath(oldPath.parentPath, updatedContent.modelInfo.key);
-
 			const parentNode = this.tree.parent(id as string);
-			await this.set(updatedContent, parentNode?.id as ContentId, newPath.toString());
+			await this.set(updatedContent, parentNode?.id as ContentId);
 			return updatedContent;
 		}
 		return undefined;
-	}
-
-	async updatePath(oldPath: string, newPath: string): Promise<void> {
-		const contentId = this.pathMap.get(oldPath);
-		if (contentId) {
-			this.pathMap.delete(oldPath);
-			this.pathMap.set(newPath, contentId);
-		}
 	}
 
 	async getAll(): Promise<Content[]> {
