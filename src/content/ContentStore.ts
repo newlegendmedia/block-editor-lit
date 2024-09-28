@@ -6,7 +6,6 @@ import {
 	isCompositeContent,
 	isIndexedCompositeContent,
 	isContentReference,
-	KeyedCompositeChildren,
 	isFullContent,
 } from './content';
 import { Model } from '../model/model';
@@ -47,25 +46,12 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		if (!content) {
 			const defaultContent = ContentFactory.createContentFromModel(model);
 			content = {
-				id: generateId('CONTENT'),
+				id: generateId(model.type ? model.type.slice(0, 3).toUpperCase() : '') as ContentId,
 				...defaultContent,
 			};
 			const contentPath = new ContentPath(path);
 
-			// // Special handling for document root content
-			// if (contentPath.pathSegments.length === 1) {
-			// 	// This is a document root, create it without a parent
-			// 	content = await this.create(
-			// 		content.modelInfo,
-			// 		content.content,
-			// 		undefined,
-			// 		path,
-			// 		content.id
-			// 	);
-			// } else {
-			// Normal case, create with parent
 			content = await this.add(content, contentPath.parentPath, path);
-			//			}
 		}
 		return content;
 	}
@@ -84,6 +70,7 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		} else {
 			// Ensure we're only storing ContentReference objects for children
 			if (isCompositeContent(content) && Array.isArray(content.children)) {
+				console.warn('Converting children to references', content);
 				content = {
 					...content,
 					children: content.children.map((child) => ({
@@ -92,6 +79,7 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 						type: child.type,
 					})),
 				};
+				console.warn('Converted to', content);
 			}
 
 			// Add new node
@@ -178,35 +166,6 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 
 		return newContent;
 	}
-
-	// private async addCompositeContent(
-	// 	content: Content,
-	// 	parentId?: ContentId,
-	// 	path?: string
-	// ): Promise<void> {
-	// 	await this.set(content, parentId);
-
-	// 	if (path) {
-	// 		const contentPath = new ContentPath(path);
-	// 		this.pathMap.set(contentPath.toString(), content.id);
-	// 	}
-
-	// 	// Handle nested content if it's a composite type
-	// 	if (isCompositeContent(content) && content.children) {
-	// 		const childrenEntries = Object.entries(content.children);
-	// 		for (const [childKey, childRef] of childrenEntries) {
-	// 			const childContent = await this.get(childRef.id);
-	// 			if (!childContent) {
-	// 				const childPath = path
-	// 					? new ContentPath(path, childKey).toString()
-	// 					: ContentPath.fromDocumentId(childRef.key).toString();
-
-	// 				// Recursively add the child content
-	// 				await this.addCompositeContent(childRef as Content, content.id, childPath);
-	// 			}
-	// 		}
-	// 	}
-	// }
 
 	private async addCompositeContent(
 		content: Content | ContentReference,
