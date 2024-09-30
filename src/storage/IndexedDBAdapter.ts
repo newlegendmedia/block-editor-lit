@@ -1,7 +1,7 @@
 import { StorageAdapter } from './StorageAdapter';
 import { Resource } from '../resource/Resource';
 
-export class IndexedDBAdapter<T extends Resource<string>> implements StorageAdapter<T> {
+export class IndexedDBAdapter<T extends Resource<string>> implements StorageAdapter<string, T> {
 	private dbName: string;
 	private dbVersion: number;
 	private storeName: string;

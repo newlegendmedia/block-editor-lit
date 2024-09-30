@@ -37,6 +37,7 @@ export interface Document {
 //
 // Composite content types
 //
+
 export type CompositeContent = Content<KeyedCompositeContent | IndexedCompositeContent> & {
 	children: KeyedCompositeChildren | IndexedCompositeChildren;
 };

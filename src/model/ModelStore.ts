@@ -12,7 +12,7 @@ import { IndexedDBAdapter } from '../storage/IndexedDBAdapter';
 export class ModelStore extends ResourceStore<string, Model> {
 	private schemas: Map<string, ModelSchema> = new Map();
 
-	constructor(storage: StorageAdapter<Model>) {
+	constructor(storage: StorageAdapter<string, Model>) {
 		const rootModel: Model = { id: 'root', type: 'root', key: 'root' };
 		super(storage, 'root', rootModel);
 	}

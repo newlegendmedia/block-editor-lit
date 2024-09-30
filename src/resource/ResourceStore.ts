@@ -6,10 +6,10 @@ import { deepClone } from '../util/deepClone';
 
 export class ResourceStore<K, T extends Resource<K>> {
 	protected tree: Tree<K, T>;
-	protected storage: StorageAdapter<T>;
+	protected storage: StorageAdapter<K, T>;
 	protected subscriptions: SubscriptionManager<K, T>;
 
-	constructor(storage: StorageAdapter<T>, rootId: K, rootItem: T) {
+	constructor(storage: StorageAdapter<K, T>, rootId: K, rootItem: T) {
 		this.storage = storage;
 		this.tree = new Tree<K, T>(rootId, rootItem);
 		this.subscriptions = new SubscriptionManager<K, T>();
@@ -19,7 +19,7 @@ export class ResourceStore<K, T extends Resource<K>> {
 		let item = this.tree.get(id)?.item;
 
 		if (!item) {
-			item = await this.storage.get(id as string);
+			item = await this.storage.get(id);
 
 			if (item) {
 				this.tree.add(item, item.parentId as K | undefined, item.id);
@@ -49,7 +49,7 @@ export class ResourceStore<K, T extends Resource<K>> {
 	}
 
 	async delete(id: K): Promise<void> {
-		await this.storage.delete(id as string);
+		await this.storage.delete(id);
 		this.tree.remove(id);
 		this.subscriptions.notify(id, null);
 		this.subscriptions.notifyAll();
@@ -99,7 +99,7 @@ export class ResourceStore<K, T extends Resource<K>> {
 		this.subscriptions.unsubscribeFromAll(callback);
 	}
 
-	protected getStorage(): StorageAdapter<T> {
+	protected getStorage(): StorageAdapter<K, T> {
 		return this.storage;
 	}
 

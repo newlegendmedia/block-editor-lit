@@ -22,7 +22,7 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 	pathMap: Map<string, ContentId> = new Map();
 	private rootContentId: ContentId = 'root' as ContentId;
 
-	constructor(storageAdapter: StorageAdapter<Content>) {
+	constructor(storageAdapter: StorageAdapter<string, Content>) {
 		const rootContent: Content = {
 			id: 'root' as ContentId,
 			modelInfo: { type: 'root', key: 'root' },
