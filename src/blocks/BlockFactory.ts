@@ -41,7 +41,7 @@ export class BlockFactory {
 			}
 
 			// Create the appropriate block based on content type
-			switch (content.modelInfo.type) {
+			switch (content.type) {
 				case 'object':
 					return this.createObjectBlock(content, model, cPath, mPath);
 				case 'array':
@@ -51,8 +51,8 @@ export class BlockFactory {
 				case 'group':
 					return this.createGroupBlock(content, model, cPath, mPath);
 				default:
-					console.warn(`BlockFactory: Unknown content type: ${content.modelInfo.type}`);
-					return html`<div>Unknown content type: ${content.modelInfo.type}</div>`;
+					console.warn(`BlockFactory: Unknown content type: ${content.type}`);
+					return html`<div>Unknown content type: ${content.type}</div>`;
 			}
 		} catch (error) {
 			console.error(

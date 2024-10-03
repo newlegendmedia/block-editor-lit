@@ -201,8 +201,8 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 		// Create a reference to the child content
 		const contentReference: ContentReference = {
 			id: content.id,
-			key: content.modelInfo.key,
-			type: content.modelInfo.type,
+			key: content.key,
+			type: content.type,
 		};
 		return contentReference;
 	}
@@ -217,44 +217,3 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 		});
 	}
 }
-
-// const x = [
-// 	{
-// 		id: 'OBJ-1727376608106-14',
-// 		modelInfo: { type: 'object', key: 'section' },
-// 		content: {},
-// 		children: [
-// 			{
-// 				id: 'CONTENT-1727376608125-15',
-// 				modelInfo: { type: 'element', key: 'heading' },
-// 				content: '',
-// 				children: [],
-// 			},
-// 			{
-// 				id: 'CONTENT-1727376608125-16',
-// 				modelInfo: { type: 'element', key: 'body' },
-// 				content: '',
-// 				children: [],
-// 			},
-// 		],
-// 	},
-// 	{
-// 		id: 'ID-1727376612188-17',
-// 		modelInfo: { type: 'object', key: 'section' },
-// 		content: {},
-// 		children: [
-// 			{
-// 				id: 'ID-1727376612188-18',
-// 				modelInfo: { type: 'element', key: 'heading' },
-// 				content: '',
-// 				children: [],
-// 			},
-// 			{
-// 				id: 'ID-1727376612188-19',
-// 				modelInfo: { type: 'element', key: 'body' },
-// 				content: '',
-// 				children: [],
-// 			},
-// 		],
-// 	},
-// ];

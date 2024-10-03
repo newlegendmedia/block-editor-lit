@@ -25,15 +25,15 @@ export class DocumentComponent extends LitElement {
 			if (this.document) {
 				this.rootContent = await contentStore.get(this.document.rootContent);
 				if (this.rootContent) {
-					const contentPath = new ContentPath(this.documentId, this.rootContent.modelInfo.key);
-					const modelPath = new ContentPath(this.documentId, this.rootContent.modelInfo.key);
+					const contentPath = new ContentPath(this.documentId, this.rootContent.key);
+					const modelPath = new ContentPath(this.documentId, this.rootContent.key);
 
 					this.rootComponent = await BlockFactory.createComponent(
 						contentPath.parentPath,
 						contentPath.key,
 						modelPath.parentPath,
 						modelPath.key,
-						this.rootContent.modelInfo.type
+						this.rootContent.type
 					);
 				}
 			}

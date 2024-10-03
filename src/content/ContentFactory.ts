@@ -1,5 +1,4 @@
 import {
-	ModelInfo,
 	Content,
 	ElementContent,
 	CompositeContent,
@@ -24,29 +23,20 @@ import { generateId } from '../util/generateId';
 
 export class ContentFactory {
 	static createContentFromModel(model: Model): Omit<Content, 'id'> {
-		const modelInfo: ModelInfo = {
-			type: model.type,
-			key: model.key,
-			ref: 'ref' in model ? model.ref : undefined,
-		};
-
 		if (isElement(model)) {
-			return this.createElementContent(model, modelInfo);
+			return this.createElementContent(model);
 		} else if (isObject(model)) {
-			return this.createObjectContent(model, modelInfo);
+			return this.createObjectContent(model);
 		} else if (isArray(model)) {
-			return this.createArrayContent(model, modelInfo);
+			return this.createArrayContent(model);
 		} else if (isGroup(model)) {
-			return this.createGroupContent(model, modelInfo);
+			return this.createGroupContent(model);
 		}
 		console.error(`Unsupported model type: ${model.type}`, model);
 		throw new Error(`Unsupported model type: ${model.type}`);
 	}
 
-	private static createElementContent(
-		model: ElementModel,
-		modelInfo: Content['modelInfo']
-	): Omit<ElementContent, 'id'> {
+	private static createElementContent(model: ElementModel): Omit<ElementContent, 'id'> {
 		let defaultValue: any;
 
 		switch (model.base) {
@@ -70,15 +60,13 @@ export class ContentFactory {
 		}
 
 		return {
-			modelInfo,
+			key: model.key,
+			type: model.type,
 			content: defaultValue,
 		};
 	}
 
-	private static createObjectContent(
-		model: ObjectModel,
-		modelInfo: Content['modelInfo']
-	): Omit<ObjectContent, 'id'> {
+	private static createObjectContent(model: ObjectModel): Omit<ObjectContent, 'id'> {
 		const childContent: Record<string, ContentId> = {};
 		const children: KeyedCompositeChildren = {};
 
@@ -89,37 +77,32 @@ export class ContentFactory {
 			childContent[propertyModel.key] = childId;
 			children[propertyModel.key] = {
 				id: childId,
-				key: propertyModel.key,
-				type: propertyModel.type,
 				...childContentItem,
 			};
 		});
 
 		const newContent = {
-			modelInfo,
+			key: model.key,
+			type: model.type,
 			content: childContent,
 			children,
 		};
 		return newContent;
 	}
 
-	private static createArrayContent(
-		_model: ArrayModel,
-		modelInfo: Content['modelInfo']
-	): Omit<CompositeContent, 'id'> {
+	private static createArrayContent(model: ArrayModel): Omit<CompositeContent, 'id'> {
 		return {
-			modelInfo,
+			key: model.key,
+			type: model.type,
 			content: [],
 			children: [] as IndexedCompositeChildren,
 		};
 	}
 
-	private static createGroupContent(
-		_model: GroupModel,
-		modelInfo: Content['modelInfo']
-	): Omit<CompositeContent, 'id'> {
+	private static createGroupContent(model: GroupModel): Omit<CompositeContent, 'id'> {
 		return {
-			modelInfo,
+			key: model.key,
+			type: model.type,
 			content: [],
 			children: [] as IndexedCompositeChildren,
 		};

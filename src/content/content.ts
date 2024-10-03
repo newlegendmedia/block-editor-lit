@@ -3,18 +3,13 @@ import { ModelType } from '../model/model';
 export type ContentId = string;
 export type DocumentId = string;
 
-export type ModelInfo = {
-	type: ModelType;
-	key: string;
-	ref?: string;
-};
-
 //
 // Content Types
 //
 export type Content<T = unknown> = {
 	id: ContentId;
-	modelInfo: ModelInfo;
+	type: ModelType;
+	key: string;
 	content: T;
 	children?: KeyedCompositeChildren | IndexedCompositeChildren;
 };
@@ -56,7 +51,8 @@ export type IndexedCompositeChildren = ContentReference[];
 
 export type IndexedContent<T = unknown> = {
 	id: ContentId;
-	modelInfo: ModelInfo;
+	type: ModelType;
+	key: string;
 	content: T;
 	children: IndexedCompositeChildren;
 };

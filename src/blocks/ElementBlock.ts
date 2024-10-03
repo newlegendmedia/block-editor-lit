@@ -52,10 +52,8 @@ export class ElementBlock extends BaseBlock {
 		}
 		return {
 			id: `inline:${this.content?.id}`,
-			modelInfo: {
-				type: 'element',
-				key: this.inlineModel?.key || 'inline-element',
-			},
+			type: 'element',
+			key: this.inlineModel?.key || 'inline-element',
 			content: this.inlineValue,
 		};
 	}

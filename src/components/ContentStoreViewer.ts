@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { contentStore } from '../content/ContentStore';
 import { Content } from '../content/content';
 import { HierarchicalItem } from '../tree/HierarchicalItem';
+import { ContentReference } from '../content/content';
 
 @customElement('content-store-viewer')
 export class ContentStoreViewer extends LitElement {
@@ -221,7 +222,7 @@ export class ContentStoreViewer extends LitElement {
 			${contents.map(
 				(content) => html`
 					<li>
-						${content.modelInfo.key} (${content.modelInfo.type})
+						${content.key} (${content.type})
 						${Array.isArray(content.content)
 							? html`<ul>
 									${this.renderHierarchicalContent(content.content)}
@@ -243,8 +244,8 @@ export class ContentStoreViewer extends LitElement {
 	private renderTreeNode(node: HierarchicalItem<Content> | ContentReference): TemplateResult {
 		const isContentReference = 'type' in node && !('modelInfo' in node);
 		const nodeId = isContentReference ? node.id : (node as HierarchicalItem<Content>).id;
-		const nodeType = isContentReference ? node.type : (node as Content).modelInfo.type;
-		const nodeKey = isContentReference ? node.key : (node as Content).modelInfo.key;
+		const nodeType = isContentReference ? node.type : (node as Content).type;
+		const nodeKey = isContentReference ? node.key : (node as Content).key;
 		const hasChildren =
 			!isContentReference && 'children' in node && node.children && node.children.length > 0;
 		const nodeIcon = hasChildren ? '📁' : '📄';
@@ -294,8 +295,8 @@ export class ContentStoreViewer extends LitElement {
 		return html`
 			<div class="content-item">
 				<div class="content-item-header">
-					<span>${content.modelInfo.key}</span>
-					<span class="content-type">${content.modelInfo.type}</span>
+					<span>${content.key}</span>
+					<span class="content-type">${content.type}</span>
 				</div>
 				<div class="content-id">${content.id}</div>
 				<div class="content-details">${this.renderContentDetails(content)}</div>

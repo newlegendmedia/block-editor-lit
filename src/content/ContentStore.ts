@@ -2,10 +2,8 @@ import { ResourceStore } from '../resource/ResourceStore';
 import {
 	Content,
 	ContentId,
-	ModelInfo,
 	isCompositeContent,
 	isIndexedCompositeContent,
-	isContentReference,
 	isFullContent,
 } from './content';
 import { Model } from '../model/model';
@@ -25,7 +23,8 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 	constructor(storageAdapter: StorageAdapter<string, Content>) {
 		const rootContent: Content = {
 			id: 'root' as ContentId,
-			modelInfo: { type: 'root', key: 'root' },
+			type: 'root',
+			key: 'root',
 			content: {},
 		};
 		super(storageAdapter, 'root' as ContentId, rootContent);
@@ -137,7 +136,7 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 
 		if (!content.id) {
 			content.id = generateId(
-				content.modelInfo.type ? content.modelInfo.type.slice(0, 3).toUpperCase() : ''
+				content.type ? content.type.slice(0, 3).toUpperCase() : ''
 			) as ContentId;
 		}
 
@@ -146,36 +145,15 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		return content;
 	}
 
-	async create(
-		modelInfo: ModelInfo,
-		content: any,
-		parentId?: ContentId,
-		path?: string,
-		id?: ContentId
-	): Promise<Content> {
-		if (!id) {
-			id = generateId(modelInfo.type ? modelInfo.type.slice(0, 3).toUpperCase() : '') as ContentId;
-		}
-		if (!parentId) {
-			parentId = this.rootContentId;
-		}
-
-		const newContent: Content = { id, modelInfo, content };
-
-		await this.addCompositeContent(newContent, parentId, path);
-
-		return newContent;
-	}
-
 	private async addCompositeContent(
-		content: Content | ContentReference,
+		content: Content,
 		parentId?: ContentId,
 		path?: string
 	): Promise<void> {
 		// If it's a ContentReference, resolve it to full Content
-		if (isContentReference(content)) {
-			return;
-		}
+		// if (isContentReference(content)) {
+		// 	return;
+		// }
 
 		await this.set(content, parentId);
 
@@ -249,14 +227,14 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		): Promise<Content> => {
 			// create a unique new item and ID
 			const newItem = deepClone(node.item);
-			newItem.id = generateId(newItem.modelInfo.type.slice(0, 3).toUpperCase()) as ContentId;
+			newItem.id = generateId(newItem.type.slice(0, 3).toUpperCase()) as ContentId;
 
 			// create the new path based on the parent item type
 			let newPath: string;
 			if (isIndexedCompositeContent(parent.item)) {
 				newPath = new ContentPath(parentPath, newItem.id).toString();
 			} else {
-				newPath = new ContentPath(parentPath, newItem.modelInfo.key).toString();
+				newPath = new ContentPath(parentPath, newItem.key).toString();
 			}
 
 			// create the new content
@@ -307,7 +285,7 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 	// 		if (isIndexedCompositeContent(parent.item)) {
 	// 			newPath = new ContentPath(parentPath, node.id).toString();
 	// 		} else {
-	// 			newPath = new ContentPath(parentPath, node.item.modelInfo.key).toString();
+	// 			newPath = new ContentPath(parentPath, node.item.key).toString();
 	// 		}
 	// 		this.pathMap.set(newPath, node.id);
 	// 		if ((node as any).children) {
