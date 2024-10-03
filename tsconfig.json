@@ -41,7 +41,9 @@
 		"sandbox/unode4.ts",
 		"sandbox/unode3.ts",
 		"sandbox/unode2.ts",
-		"sandbox/TreeNext.ts"
+		"sandbox/TreeNext.ts",
+		"sandbox/contentTypes2.ts",
+		"sandbox/contentTypes.ts"
 	],
 	"exclude": ["node_modules", "sandbox"]
 }

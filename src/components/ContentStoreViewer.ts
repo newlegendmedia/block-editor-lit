@@ -242,7 +242,7 @@ export class ContentStoreViewer extends LitElement {
 	}
 
 	private renderTreeNode(node: HierarchicalItem<Content> | ContentReference): TemplateResult {
-		const isContentReference = 'type' in node && !('modelInfo' in node);
+		const isContentReference = false; //'type' in node && !('modelInfo' in node);
 		const nodeId = isContentReference ? node.id : (node as HierarchicalItem<Content>).id;
 		const nodeType = isContentReference ? node.type : (node as Content).type;
 		const nodeKey = isContentReference ? node.key : (node as Content).key;
