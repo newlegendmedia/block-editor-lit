@@ -172,9 +172,9 @@ export class ModelStore extends ResourceStore<Model> {
 			resolvedProperties.push(resolvedProperty);
 		}
 
-		const children = model.properties.map((property) => property.path || property.key);
+		//		const children = model.properties.map((property) => property.path || property.key);
 
-		return { ...model, properties: resolvedProperties, children };
+		return { ...model, properties: resolvedProperties };
 	}
 
 	private async resolveArrayModel(
@@ -192,9 +192,9 @@ export class ModelStore extends ResourceStore<Model> {
 			currentPath
 		);
 
-		const children = [model.itemType.key];
+		//		const children = [model.itemType.key];
 
-		return { ...model, itemType: resolvedItemType, children };
+		return { ...model, itemType: resolvedItemType };
 	}
 
 	private async resolveGroupModel(
@@ -217,9 +217,9 @@ export class ModelStore extends ResourceStore<Model> {
 				resolvedItemTypes.push(resolvedItem);
 			}
 
-			const children = model.itemTypes.map((property) => property.key);
+			//			const children = model.itemTypes.map((property) => property.key);
 
-			return { ...model, itemTypes: resolvedItemTypes, children };
+			return { ...model, itemTypes: resolvedItemTypes };
 		} else {
 			const itemPath = `${currentPath}.${model.itemTypes.key}`;
 			const resolvedItemTypes = await this.resolveStructure(

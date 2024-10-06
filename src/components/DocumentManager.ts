@@ -106,7 +106,7 @@ export class DocumentManager {
 		if (content) {
 			if ('children' in content && Array.isArray(content.children)) {
 				for (const childId of content.children) {
-					await this.deleteContentRecursively(childId.id);
+					await this.deleteContentRecursively(childId);
 				}
 			}
 			await contentStore.delete(contentId);

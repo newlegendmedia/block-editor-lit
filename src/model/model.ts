@@ -1,5 +1,4 @@
 import { Resource } from '../resource/Resource';
-import { TreeNode } from '../tree/TreeNode';
 
 export type ModelType = 'element' | 'object' | 'array' | 'group' | 'root';
 
@@ -50,7 +49,7 @@ export interface ArrayModel extends BaseCompositeModel {
 
 export interface GroupModel extends BaseCompositeModel {
 	type: 'group';
-	itemTypes: (Model | ModelReference)[] | ModelReference;
+	itemTypes: Model[];
 	editable?: boolean;
 }
 

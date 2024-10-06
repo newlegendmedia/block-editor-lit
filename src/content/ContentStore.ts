@@ -118,8 +118,6 @@ export class ContentStore extends ResourceStore<Content> {
 
 		await this.set(content, parentId);
 
-		console.log('Adding content', content, this.tree);
-
 		if (path) {
 			const contentPath = new ContentPath(path);
 			this.pathMap.set(contentPath.toString(), content.id);
@@ -127,10 +125,8 @@ export class ContentStore extends ResourceStore<Content> {
 
 		// Add composite content children to the store if they arent already there
 		// if (isCompositeContent(content) && content.children) {
-		// 	console.log('Adding composite content', content);
 		// 	const childrenEntries = Object.entries(content.children);
 		// 	for (const [childKey, childRef] of childrenEntries) {
-		// 		console.log('Adding composite content child', childRef);
 		// 		if (isFullContent(childRef)) {
 		// 			const childContent = await this.get(childRef.id);
 		// 			if (!childContent) {
@@ -147,7 +143,6 @@ export class ContentStore extends ResourceStore<Content> {
 		// 				: ContentPath.fromDocumentId(childKey).toString();
 
 		// 			// Recursively add the child content
-		// 			console.log('Adding not fullcontent', childRef, content.id, childPath);
 		// 			await this.addCompositeContent(childRef, content.id, childPath);
 		// 		}
 		// 	}

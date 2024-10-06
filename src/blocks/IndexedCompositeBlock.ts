@@ -61,7 +61,6 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 	}
 
 	protected renderChild(childRef: ContentId, index: number): TemplateResult {
-		console.log('>>> childRef:', childRef);
 		return html`
 			<div class="composite-item" id="item-${childRef}">
 				<div class="item-container">

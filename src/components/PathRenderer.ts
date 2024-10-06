@@ -29,7 +29,6 @@ export class PathRenderer extends LitElement {
 
 		try {
 			const contentPath = new ContentPath(this.path);
-			console.log('Target - Content path:', contentPath.toString(), contentPath.pathSegments);
 
 			// If only document ID is provided, dispatch the document-id-only event
 			if (contentPath.pathSegments.length === 1) {

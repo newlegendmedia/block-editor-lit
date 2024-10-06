@@ -10,6 +10,6 @@ export class ArrayBlock extends IndexedCompositeBlock {
 	}
 
 	protected getBlockTitle(): string {
-		return (this.model as ArrayModel).name || 'Array';
+		return this.model.name || 'Array Block';
 	}
 }
