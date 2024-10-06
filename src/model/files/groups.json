@@ -1,82 +1,109 @@
 {
-  "page": {
-    "type": "group",
-    "key": "page",
-    "name": "Notion++ Page",
-    "editable": false,
-    "childrenType": "indexed",
-    "itemTypes": [
-      {
-        "type": "element",
-        "key": "textelement",
-        "name": "Text Block",
-        "base": "text"
-      },
-      {
-        "type": "array",
-        "key": "imageGallery",
-        "name": "Image Gallery",
-        "itemType": {
-          "type": "object",
-          "key": "image",
-          "name": "Image",
-          "properties": [
-            { "type": "element", "key": "url", "name": "Image URL", "base": "text" },
-            { "type": "element", "key": "caption", "name": "Caption", "base": "text" }
-          ]
-        },
-        "repeatable": true
-      },
-      {
-        "type": "object",
-        "key": "taskItem1",
-        "name": "Task",
-        "ref": "taskModel"
-      },
-      {
-        "type": "array",
-        "key": "taskList",
-        "name": "Task List",
-        "itemType": {
-          "type": "object",
-          "key": "task",
-          "name": "Task",
-          "properties": [
-            { "type": "element", "key": "title", "name": "Task Title", "base": "text" },
-            { "type": "element", "key": "completed", "name": "Completed", "base": "boolean" },
-            { "type": "element", "key": "dueDate", "name": "Due Date", "base": "datetime" }
-          ]
-        },
-        "repeatable": true
-      }
-    ]
-  },
-  "footerGroup": {
-    "type": "group",
-    "key": "footer",
-    "name": "Document Footer",
-    "itemTypes": [
-      { "key": "date1", "type": "element", "ref": "dateElement" },
-      { "key": "author1", "type": "object", "ref": "authorModel" }
-    ]
-  },
-  "editableGroupTypes": {
-    "type": "group",
-    "key": "editableGroupTypes",
-    "name": "Editable Group Types",
-    "itemTypes": [
-      { "key": "date", "type": "element", "ref": "dateElement" },
-      { "key": "author", "type": "object", "ref": "authorModel" }
-    ]
-  },
-  "predefinedGroup": {
-    "type": "group",
-    "key": "predefinedGroup",
-    "name": "Predefined Group",
-    "editable": false,
-    "itemTypes": [
-      { "type": "element", "key": "date", "ref": "dateElement" },
-      { "type": "object", "key": "author", "ref": "authorModel" }
-    ]
-  }
+	"page": {
+		"type": "group",
+		"key": "page",
+		"name": "Notion++ Page",
+		"editable": false,
+		"childrenType": "indexed",
+		"itemTypes": [
+			{
+				"type": "element",
+				"key": "textelement",
+				"name": "Text Block",
+				"base": "text"
+			},
+			{
+				"type": "array",
+				"key": "imageGallery",
+				"name": "Image Gallery",
+				"itemType": {
+					"type": "object",
+					"key": "image",
+					"name": "Image",
+					"properties": [
+						{ "type": "element", "key": "url", "name": "Image URL", "base": "text" },
+						{ "type": "element", "key": "caption", "name": "Caption", "base": "text" }
+					]
+				},
+				"repeatable": true
+			},
+			{
+				"type": "object",
+				"key": "taskItem1",
+				"name": "Task",
+				"ref": "taskModel"
+			},
+			{
+				"type": "array",
+				"key": "taskList",
+				"name": "Task List",
+				"itemType": {
+					"type": "object",
+					"key": "task",
+					"name": "Task",
+					"properties": [
+						{ "type": "element", "key": "title", "name": "Task Title", "base": "text" },
+						{ "type": "element", "key": "completed", "name": "Completed", "base": "boolean" },
+						{ "type": "element", "key": "dueDate", "name": "Due Date", "base": "datetime" }
+					]
+				},
+				"repeatable": true
+			}
+		]
+	},
+	"footerGroup": {
+		"type": "group",
+		"key": "footer",
+		"name": "Document Footer",
+		"itemTypes": [
+			{ "key": "date1", "type": "element", "ref": "dateElement" },
+			{ "key": "author1", "type": "object", "ref": "authorModel" }
+		]
+	},
+	"editableGroupTypes": {
+		"type": "group",
+		"key": "editableGroupTypes",
+		"name": "Editable Group Types",
+		"itemTypes": [
+			{ "key": "date", "type": "element", "ref": "dateElement" },
+			{ "key": "author", "type": "object", "ref": "authorModel" }
+		]
+	},
+	"predefinedGroup": {
+		"type": "group",
+		"key": "predefinedGroup",
+		"name": "Predefined Group",
+		"editable": false,
+		"itemTypes": [
+			{ "type": "element", "key": "date", "ref": "dateElement" },
+			{ "type": "object", "key": "author", "ref": "authorModel" }
+		]
+	},
+	"notion": {
+		"type": "group",
+		"key": "notion",
+		"name": "Notion++",
+		"itemTypes": [
+			{ "type": "element", "key": "titleElement1", "name": "Title", "ref": "textInput" },
+			{ "type": "group", "key": "pageIntro", "name": "content", "editable": true, "ref": "page" },
+			{
+				"type": "array",
+				"key": "sections",
+				"name": "Document Sections",
+				"itemType": { "type": "object", "key": "section", "ref": "sectionModel" },
+				"repeatable": true
+			},
+			{ "type": "group", "key": "page1", "name": "content", "editable": true, "ref": "page" },
+			{
+				"type": "object",
+				"key": "taskItem1",
+				"name": "Task",
+				"ref": "taskModel"
+			},
+			{ "type": "element", "key": "dateElement1", "name": "Created On", "ref": "dateElement" },
+			{ "type": "element", "key": "dateElement2", "name": "Last Updated", "ref": "dateElement" },
+			{ "type": "element", "key": "tags1", "name": "Tags", "ref": "tags" },
+			{ "type": "group", "key": "page2", "name": "content", "editable": true, "ref": "page" }
+		]
+	}
 }
