@@ -1,12 +1,4 @@
-import {
-	Content,
-	ElementContent,
-	CompositeContent,
-	KeyedCompositeChildren,
-	IndexedCompositeChildren,
-	ContentId,
-	ObjectContent,
-} from './content';
+import { Content, ElementContent, CompositeContent, ContentId, ObjectContent } from './content';
 import {
 	AtomType,
 	ObjectModel,
@@ -20,23 +12,30 @@ import {
 	Model,
 } from '../model/model';
 import { generateId } from '../util/generateId';
+import { TreeNode } from '../tree/TreeNode';
 
 export class ContentFactory {
-	static createContentFromModel(model: Model): Omit<Content, 'id'> {
+	static createContentFromModel(
+		model: Model,
+		parentId: string | null = null
+	): Omit<Content, 'id'> & Partial<TreeNode> {
 		if (isElement(model)) {
-			return this.createElementContent(model);
+			return this.createElementContent(model, parentId);
 		} else if (isObject(model)) {
-			return this.createObjectContent(model);
+			return this.createObjectContent(model, parentId);
 		} else if (isArray(model)) {
-			return this.createArrayContent(model);
+			return this.createArrayContent(model, parentId);
 		} else if (isGroup(model)) {
-			return this.createGroupContent(model);
+			return this.createGroupContent(model, parentId);
 		}
 		console.error(`Unsupported model type: ${model.type}`, model);
 		throw new Error(`Unsupported model type: ${model.type}`);
 	}
 
-	private static createElementContent(model: ElementModel): Omit<ElementContent, 'id'> {
+	private static createElementContent(
+		model: ElementModel,
+		parentId: string | null
+	): Omit<ElementContent, 'id'> & Partial<TreeNode> {
 		let defaultValue: any;
 
 		switch (model.base) {
@@ -63,48 +62,60 @@ export class ContentFactory {
 			key: model.key,
 			type: model.type,
 			content: defaultValue,
+			parentId: parentId,
+			children: [],
 		};
 	}
 
-	private static createObjectContent(model: ObjectModel): Omit<ObjectContent, 'id'> {
+	private static createObjectContent(
+		model: ObjectModel,
+		parentId: string | null
+	): Omit<ObjectContent, 'id'> & Partial<TreeNode> {
 		const childContent: Record<string, ContentId> = {};
-		const children: KeyedCompositeChildren = {};
+		const children: ContentId[] = [];
 
 		model.properties.forEach((propertyModel) => {
-			const childId = generateId(propertyModel.type.slice(0, 3).toUpperCase()) as ContentId;
-			const childContentItem = this.createContentFromModel(propertyModel) as Omit<Content, 'id'>;
-
-			childContent[propertyModel.key] = childId;
-			children[propertyModel.key] = {
-				id: childId,
-				...childContentItem,
-			};
+			const childContentItem = this.createContentFromModel(propertyModel, parentId) as Omit<
+				Content,
+				'id'
+			>;
+			// const childId = generateId(propertyModel.type.slice(0, 3).toUpperCase()) as ContentId;
+			// childContent[propertyModel.key] = childId;
+			// children.push(childId);
 		});
 
-		const newContent = {
+		return {
 			key: model.key,
 			type: model.type,
 			content: childContent,
 			children,
+			parentId: parentId,
 		};
-		return newContent;
 	}
 
-	private static createArrayContent(model: ArrayModel): Omit<CompositeContent, 'id'> {
+	private static createArrayContent(
+		model: ArrayModel,
+		parentId: string | null
+	): Omit<CompositeContent, 'id'> & Partial<TreeNode> {
 		return {
 			key: model.key,
 			type: model.type,
 			content: [],
-			children: [] as IndexedCompositeChildren,
+			children: [],
+			parentId: parentId,
 		};
 	}
 
-	private static createGroupContent(model: GroupModel): Omit<CompositeContent, 'id'> {
+	private static createGroupContent(
+		model: GroupModel,
+		parentId: string | null
+	): Omit<CompositeContent, 'id'> & Partial<TreeNode> {
 		return {
 			key: model.key,
 			type: model.type,
 			content: [],
-			children: [] as IndexedCompositeChildren,
+			children: [],
+			parentId: parentId,
 		};
 	}
 }

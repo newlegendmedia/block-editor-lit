@@ -1,11 +1,5 @@
 import { ResourceStore } from '../resource/ResourceStore';
-import {
-	Content,
-	ContentId,
-	isCompositeContent,
-	isIndexedCompositeContent,
-	isFullContent,
-} from './content';
+import { Content, ContentId } from './content';
 import { Model } from '../model/model';
 import { StorageAdapter } from '../storage/StorageAdapter';
 import { generateId } from '../util/generateId';
@@ -13,10 +7,8 @@ import { HierarchicalItem } from '../tree/HierarchicalItem';
 import { IndexedDBAdapter } from '../storage/IndexedDBAdapter';
 import { ContentPath } from './ContentPath';
 import { ContentFactory } from './ContentFactory';
-import { TreeNode } from '../tree/TreeNode';
-import { deepClone } from '../util/deepClone';
 
-export class ContentStore extends ResourceStore<ContentId, Content> {
+export class ContentStore extends ResourceStore<Content> {
 	pathMap: Map<string, ContentId> = new Map();
 	private rootContentId: ContentId = 'root' as ContentId;
 
@@ -25,6 +17,8 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 			id: 'root' as ContentId,
 			type: 'root',
 			key: 'root',
+			parentId: null,
+			children: [],
 			content: {},
 		};
 		super(storageAdapter, 'root' as ContentId, rootContent);
@@ -52,45 +46,12 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 
 			content = await this.add(content, contentPath.parentPath, path);
 		}
+
 		return content;
 	}
 
 	async set(content: Content, parentId?: ContentId): Promise<void> {
-		// Check if the content already exists in the tree
-		const existingNode = this.tree.get(content.id as string);
-
-		if (existingNode) {
-			// Update existing node
-			existingNode.item = content;
-
-			if (parentId) {
-				existingNode.parentId = parentId as string;
-			}
-		} else {
-			// Ensure we're only storing ContentReference objects for children
-			if (isCompositeContent(content) && Array.isArray(content.children)) {
-				console.warn('Converting children to references', content);
-				content = {
-					...content,
-					children: content.children.map((child) => ({
-						id: child.id,
-						key: child.key,
-						type: child.type,
-					})),
-				};
-				console.warn('Converted to', content);
-			}
-
-			// Add new node
-			this.tree.add(content, parentId as string | undefined, content.id as string);
-		}
-
-		// Update storage
-		await this.getStorage().set(content);
-
-		// Notify subscribers
-		this.subscriptions.notify(content.id as string, content);
-		this.subscriptions.notifyAll();
+		super.set(content, parentId);
 	}
 
 	async delete(id: ContentId): Promise<void> {
@@ -157,28 +118,40 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 
 		await this.set(content, parentId);
 
+		console.log('Adding content', content, this.tree);
+
 		if (path) {
 			const contentPath = new ContentPath(path);
 			this.pathMap.set(contentPath.toString(), content.id);
 		}
 
 		// Add composite content children to the store if they arent already there
-		if (isCompositeContent(content) && content.children) {
-			const childrenEntries = Object.entries(content.children);
-			for (const [childKey, childRef] of childrenEntries) {
-				if (isFullContent(childRef)) {
-					const childContent = await this.get(childRef.id);
-					if (!childContent) {
-						const childPath = path
-							? new ContentPath(path, childKey).toString()
-							: ContentPath.fromDocumentId(childRef.key).toString();
+		// if (isCompositeContent(content) && content.children) {
+		// 	console.log('Adding composite content', content);
+		// 	const childrenEntries = Object.entries(content.children);
+		// 	for (const [childKey, childRef] of childrenEntries) {
+		// 		console.log('Adding composite content child', childRef);
+		// 		if (isFullContent(childRef)) {
+		// 			const childContent = await this.get(childRef.id);
+		// 			if (!childContent) {
+		// 				const childPath = path
+		// 					? new ContentPath(path, childKey).toString()
+		// 					: ContentPath.fromDocumentId(childRef.key).toString();
 
-						// Recursively add the child content
-						await this.addCompositeContent(childRef, content.id, childPath);
-					}
-				}
-			}
-		}
+		// 				// Recursively add the child content
+		// 				await this.addCompositeContent(childRef, content.id, childPath);
+		// 			}
+		// 		} else {
+		// 			const childPath = path
+		// 				? new ContentPath(path, childKey).toString()
+		// 				: ContentPath.fromDocumentId(childKey).toString();
+
+		// 			// Recursively add the child content
+		// 			console.log('Adding not fullcontent', childRef, content.id, childPath);
+		// 			await this.addCompositeContent(childRef, content.id, childPath);
+		// 		}
+		// 	}
+		// }
 	}
 
 	async update(
@@ -190,7 +163,7 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		if (content) {
 			const updatedContent = updater(content);
 
-			const parentNode = this.tree.parent(id as string);
+			const parentNode = this.tree.parent(content);
 			await this.set(updatedContent, parentNode?.id as ContentId);
 			return updatedContent;
 		}
@@ -206,61 +179,61 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		return result;
 	}
 
-	async duplicateContent(id: ContentId): Promise<Content | null> {
-		const node = this.tree.get(id);
-		if (!node) {
-			console.warn(`Node not found for ID ${id}`);
-			return null;
-		}
+	async duplicateContent(_id: ContentId): Promise<Content | null> {
+		// const node = this.tree.get(id);
+		// if (!node) {
+		// 	console.warn(`Node not found for ID ${id}`);
+		// 	return null;
+		// }
 
-		const parentId = node.parentId;
-		if (!parentId) {
-			console.warn(`Parent ID not found for ID ${id}`);
-			return null;
-		}
-		let parentPath = this.getPathForContent(parentId) as string;
+		// const parentId = node.parentId;
+		// if (!parentId) {
+		// 	console.warn(`Parent ID not found for ID ${id}`);
+		// 	return null;
+		// }
+		// let parentPath = this.getPathForContent(parentId) as string;
 
-		const updateItemHelper = async (
-			node: TreeNode<ContentId, Content>,
-			parent: TreeNode<ContentId, Content>,
-			parentPath: string
-		): Promise<Content> => {
-			// create a unique new item and ID
-			const newItem = deepClone(node.item);
-			newItem.id = generateId(newItem.type.slice(0, 3).toUpperCase()) as ContentId;
+		// const updateItemHelper = async (
+		// 	node: TreeNode<ContentId, Content>,
+		// 	parent: TreeNode<ContentId, Content>,
+		// 	parentPath: string
+		// ): Promise<Content> => {
+		// 	// create a unique new item and ID
+		// 	const newItem = deepClone(node.item);
+		// 	newItem.id = generateId(newItem.type.slice(0, 3).toUpperCase()) as ContentId;
 
-			// create the new path based on the parent item type
-			let newPath: string;
-			if (isIndexedCompositeContent(parent.item)) {
-				newPath = new ContentPath(parentPath, newItem.id).toString();
-			} else {
-				newPath = new ContentPath(parentPath, newItem.key).toString();
-			}
+		// 	// create the new path based on the parent item type
+		// 	let newPath: string;
+		// 	if (isIndexedCompositeContent(parent.item)) {
+		// 		newPath = new ContentPath(parentPath, newItem.id).toString();
+		// 	} else {
+		// 		newPath = new ContentPath(parentPath, newItem.key).toString();
+		// 	}
 
-			// create the new content
-			const newContent = await this.add(newItem, parentPath, newPath);
-			this.pathMap.set(newPath, newItem.id);
+		// 	// create the new content
+		// 	const newContent = await this.add(newItem, parentPath, newPath);
+		// 	this.pathMap.set(newPath, newItem.id);
 
-			if ((node as any).children) {
-				await Promise.all(
-					(node as any).children.map((child: TreeNode<ContentId, Content>) =>
-						updateItemHelper(child, node, newPath)
-					)
-				);
-			}
-			return newContent;
-		};
+		// 	if ((node as any).children) {
+		// 		await Promise.all(
+		// 			(node as any).children.map((child: TreeNode<ContentId, Content>) =>
+		// 				updateItemHelper(child, node, newPath)
+		// 			)
+		// 		);
+		// 	}
+		// 	return newContent;
+		// };
 
-		let parent = this.tree.get(parentId);
-		if (!parent) {
-			console.warn(`Parent node not found for ID ${parentId}`);
-			return null;
-		}
-		const duplicateContent = await updateItemHelper(node, parent, parentPath);
+		// let parent = this.tree.get(parentId);
+		// if (!parent) {
+		// 	console.warn(`Parent node not found for ID ${parentId}`);
+		// 	return null;
+		// }
+		// const duplicateContent = await updateItemHelper(node, parent, parentPath);
 
-		this.subscriptions.notifyAll();
+		// this.subscriptions.notifyAll();
 
-		return duplicateContent;
+		return null;
 	}
 
 	// async duplicateContentSubtree(id: ContentId, parentId: ContentId): Promise<Content | null> {
@@ -312,7 +285,7 @@ export class ContentStore extends ResourceStore<ContentId, Content> {
 		return super.subscribeToAll(callback);
 	}
 
-	private getPathForContent(id: ContentId): string | undefined {
+	getPathForContent(id: ContentId): string | undefined {
 		for (const [path, contentId] of this.pathMap.entries()) {
 			if (contentId === id) {
 				return path;

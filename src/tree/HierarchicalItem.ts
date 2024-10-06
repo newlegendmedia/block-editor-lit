@@ -1,5 +1,6 @@
 // HierarchicalItem.ts
-export type HierarchicalItem<T> = T & {
-	id: string;
+import { ResolvedNode, TreeNode } from './TreeNode';
+
+export type HierarchicalItem<T extends TreeNode> = ResolvedNode<T> & {
 	children: HierarchicalItem<T>[];
 };

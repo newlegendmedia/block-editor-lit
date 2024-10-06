@@ -1,54 +1,51 @@
-import { Tree } from "../tree/Tree";
-import { Resource } from "./Resource";
+import { Tree } from '../tree/Tree';
+import { Resource } from './Resource';
 import { StorageAdapter } from '../storage/StorageAdapter';
-import { SubscriptionManager } from "./SubscriptionManager";
+import { SubscriptionManager } from './SubscriptionManager';
 import { deepClone } from '../util/deepClone';
+import { ResolvedNode } from '../tree/TreeNode';
 
-export class ResourceStore<K, T extends Resource<K>> {
-	protected tree: Tree<K, T>;
-	protected storage: StorageAdapter<K, T>;
-	protected subscriptions: SubscriptionManager<K, T>;
+type ResourceId = string;
 
-	constructor(storage: StorageAdapter<K, T>, rootId: K, rootItem: T) {
+export class ResourceStore<T extends Resource> {
+	protected tree: Tree<T>;
+	protected storage: StorageAdapter<ResourceId, T>;
+	protected subscriptions: SubscriptionManager<ResourceId, T>;
+
+	constructor(storage: StorageAdapter<ResourceId, T>, _rootId: ResourceId, rootItem: T) {
 		this.storage = storage;
-		this.tree = new Tree<K, T>(rootId, rootItem);
-		this.subscriptions = new SubscriptionManager<K, T>();
+		this.tree = new Tree<T>(rootItem);
+		this.subscriptions = new SubscriptionManager<ResourceId, T>();
 	}
 
-	async get(id: K): Promise<T | undefined> {
-		let item = this.tree.get(id)?.item;
+	async get(id: ResourceId): Promise<T | undefined> {
+		let item = this.tree.getById(id);
 
 		if (!item) {
 			item = await this.storage.get(id);
 
 			if (item) {
-				this.tree.add(item, item.parentId as K | undefined, item.id);
+				this.tree.add(item);
 			}
 		}
 
 		return item ? deepClone(item) : undefined;
 	}
 
-	async set(item: T, parentId?: K): Promise<void> {
-		// const existingItem = await this.get(item.id as K);
-
-		// if (existingItem) {
-		// 	item = { ...existingItem, ...item };
-		// }
-
+	async set(item: T, parentId?: ResourceId): Promise<void> {
 		await this.storage.set(item);
 
-		const node = this.tree.add(item, parentId, item.id as K);
+		const node = this.tree.add(item, parentId, item.id);
 
 		if (!node) {
 			console.error(`Failed to add/update item ${item.id} in the tree.`);
 		}
 
-		this.subscriptions.notify(item.id as K, deepClone(item));
+		this.subscriptions.notify(item.id, deepClone(item));
 		this.subscriptions.notifyAll();
 	}
 
-	async delete(id: K): Promise<void> {
+	async delete(id: ResourceId): Promise<void> {
 		await this.storage.delete(id);
 		this.tree.remove(id);
 		this.subscriptions.notify(id, null);
@@ -56,10 +53,11 @@ export class ResourceStore<K, T extends Resource<K>> {
 	}
 
 	async getAll(): Promise<T[]> {
-		return deepClone(this.tree.getAll());
+		const all = deepClone(this.tree.getAll());
+		return all;
 	}
 
-	async getMany(ids: K[]): Promise<(T | undefined)[]> {
+	async getMany(ids: ResourceId[]): Promise<(T | undefined)[]> {
 		const items = await Promise.all(ids.map((id) => this.get(id)));
 		return items.map((item) => (item ? deepClone(item) : undefined));
 	}
@@ -68,26 +66,34 @@ export class ResourceStore<K, T extends Resource<K>> {
 		await Promise.all(items.map((item) => this.set(item)));
 	}
 
-	async deleteMany(ids: K[]): Promise<void> {
+	async deleteMany(ids: ResourceId[]): Promise<void> {
 		await Promise.all(ids.map((id) => this.delete(id)));
 	}
 
-	async exists(id: K): Promise<boolean> {
+	async exists(id: ResourceId): Promise<boolean> {
 		const item = await this.get(id);
 		return item !== undefined;
 	}
 
 	async clear(): Promise<void> {
 		await this.storage.clear();
-		this.tree = new Tree<K, T>(this.tree.getRootId(), this.tree.get(this.tree.getRootId())!.item);
+		const root: Resource = {
+			id: 'root',
+			type: 'root',
+			key: 'root',
+			content: null,
+			parentId: null,
+			children: [],
+		};
+		this.tree = new Tree<T>(root as T);
 		this.subscriptions.notifyAll();
 	}
 
-	subscribe(id: K, callback: (item: T | null) => void): void {
+	subscribe(id: ResourceId, callback: (item: T | null) => void): void {
 		this.subscriptions.subscribe(id, callback);
 	}
 
-	unsubscribe(id: K, callback: (item: T | null) => void): void {
+	unsubscribe(id: ResourceId, callback: (item: T | null) => void): void {
 		this.subscriptions.unsubscribe(id, callback);
 	}
 
@@ -99,30 +105,31 @@ export class ResourceStore<K, T extends Resource<K>> {
 		this.subscriptions.unsubscribeFromAll(callback);
 	}
 
-	protected getStorage(): StorageAdapter<K, T> {
+	protected getStorage(): StorageAdapter<ResourceId, T> {
 		return this.storage;
 	}
 
-	protected getParentId(_item: T): K | undefined {
+	protected getParentId(_item: T): ResourceId | undefined {
 		return undefined;
 	}
 
-	async getSubtree(id: K): Promise<T | null> {
-		const subtreeNode = this.tree.getSubtree(id);
+	async getSubtree(id: ResourceId): Promise<ResolvedNode<T> | null> {
+		const subtreeNode = this.tree.getResolved(id);
 		if (!subtreeNode) {
 			return null;
 		}
 
-		const getSubtreeHelper = async (node: T): Promise<T> => {
-			const clonedNode = deepClone(node);
-			const children = await Promise.all(
-				this.tree.get(node.id as K)!.children.map((child) => getSubtreeHelper(child.item))
-			);
-			(clonedNode as any).children = children;
-			return clonedNode;
-		};
+		// const getSubtreeHelper = async (node: T): Promise<T> => {
+		// 	const clonedNode = deepClone(node);
+		// 	const children = await Promise.all(
+		// 		this.tree.get(node.id)!.children.map((child) => getSubtreeHelper(child))
+		// 	);
+		// 	(clonedNode as any).children = children;
+		// 	return clonedNode;
+		// };
 
-		return getSubtreeHelper(subtreeNode.item);
+		//return getSubtreeHelper(subtreeNode);
+		return subtreeNode;
 	}
 
 	// async duplicateSubtree(id: K, parentId: K): Promise<T | null> {

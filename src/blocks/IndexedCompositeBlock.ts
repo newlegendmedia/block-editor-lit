@@ -3,13 +3,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { until } from 'lit/directives/until.js';
 import { BaseBlock } from './BaseBlock';
 import { BlockFactory } from './BlockFactory';
-import {
-	Content,
-	ContentId,
-	ContentReference,
-	IndexedContent,
-	IndexedCompositeChildren,
-} from '../content/content';
+import { Content, ContentId, IndexedCompositeChildren } from '../content/content';
 import { Model } from '../model/model';
 import { contentStore } from '../content/ContentStore';
 import { ContentFactory } from '../content/ContentFactory';
@@ -51,7 +45,7 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 				<div class="composite-content">
 					${repeat(
 						this.getChildReferences(),
-						(childRef) => childRef.id,
+						(childRef) => childRef,
 						(childRef, index) => {
 							return this.renderChild(childRef, index);
 						}
@@ -66,9 +60,10 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 		`;
 	}
 
-	protected renderChild(childRef: ContentReference, index: number): TemplateResult {
+	protected renderChild(childRef: ContentId, index: number): TemplateResult {
+		console.log('>>> childRef:', childRef);
 		return html`
-			<div class="composite-item" id="item-${childRef.id}">
+			<div class="composite-item" id="item-${childRef}">
 				<div class="item-container">
 					${until(
 						this.createChildComponent(childRef),
@@ -96,8 +91,7 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 	}
 
 	protected getChildReferences(): IndexedCompositeChildren {
-		const content = this.content as IndexedContent;
-		return content.children || [];
+		return this.content.children || [];
 	}
 
 	protected async handleAdd(event: CustomEvent) {
@@ -118,14 +112,14 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 
 	protected async handleDuplicate(index: number) {
 		try {
-			const indexedContent = this.content as IndexedContent;
-			const originalChildRef = indexedContent.children[index];
+			//			const indexedContent = this.content as IndexedContent;
+			const originalChildRef = this.content.children[index];
 
-			const duplicatedSubtree = await contentStore.duplicateContent(originalChildRef.id);
+			const duplicatedSubtree = await contentStore.duplicateContent(originalChildRef);
 
 			if (duplicatedSubtree) {
 				// Create a new content reference for the duplicated subtree
-				const childContentReference = await this.makeContentReference(duplicatedSubtree);
+				const childContentReference = duplicatedSubtree.id;
 				await this.addContentReference(childContentReference);
 			}
 		} catch (error) {
@@ -139,40 +133,43 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 		await this.addContentToStore(childContent);
 
 		// add a reference to the default child content to the parent content
-		const childContentReference = await this.makeContentReference(childContent);
+		const childContentReference = childContent.id;
 		await this.addContentReference(childContentReference);
 	}
 
 	protected async removeChildBlock(index: number): Promise<void> {
-		const indexedContent = this.content as IndexedContent;
-
 		// Check if the request is valid
-		if (!indexedContent.children || indexedContent.children.length <= index) {
+		if (!this.content.children || this.content.children.length <= index) {
 			throw new Error(`Invalid index: ${index}`);
 		}
 
 		// Remove the child content from the store
-		await contentStore.delete(indexedContent.children[index].id);
+		await contentStore.delete(this.content.children[index]);
 
 		// Remove the child reference from the parent content
 		await this.updateContent((content) => {
-			const updatedContent = { ...content } as IndexedContent;
+			const updatedContent = { ...content };
 			updatedContent.children.splice(index, 1);
 			return updatedContent;
 		});
 	}
 
-	protected async createChildComponent(childRef: ContentReference): Promise<TemplateResult> {
+	protected async createChildComponent(childRef: ContentId): Promise<TemplateResult> {
+		let childContent = await contentStore.get(childRef);
+		if (!childContent) {
+			console.error(`Child content not found: ${childRef}`);
+			return html`<div>Child content not found: ${childRef}</div>`;
+		}
 		try {
 			return await BlockFactory.createComponent(
 				this.contentPath.path,
-				childRef.id,
+				childRef,
 				this.modelPath.path,
-				childRef.key,
-				childRef.type
+				childContent.key,
+				childContent.type
 			);
 		} catch (error) {
-			console.error(`Error creating child component for ${childRef.key}:`, error);
+			console.error(`Error creating child component for ${childRef}:`, error);
 			return html`<div>Error: ${(error as Error).message}</div>`;
 		}
 	}
@@ -197,22 +194,11 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 		return newContent;
 	}
 
-	protected async makeContentReference(content: Content): Promise<ContentReference> {
-		// Create a reference to the child content
-		const contentReference: ContentReference = {
-			id: content.id,
-			key: content.key,
-			type: content.type,
-		};
-		return contentReference;
-	}
-
-	protected async addContentReference(contentReference: ContentReference): Promise<void> {
+	protected async addContentReference(contentReference: ContentId): Promise<void> {
 		// Update the parent content with the child reference
 		await this.updateContent((content) => {
-			const updatedContent = content as IndexedContent;
-			if (!updatedContent.children) updatedContent.children = [];
-			updatedContent.children.push(contentReference);
+			if (!content.children) content.children = [];
+			content.children.push(contentReference);
 			return content;
 		});
 	}

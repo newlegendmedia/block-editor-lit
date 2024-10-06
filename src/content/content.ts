@@ -1,4 +1,5 @@
 import { ModelType } from '../model/model';
+import { TreeNode } from '../tree/TreeNode';
 
 export type ContentId = string;
 export type DocumentId = string;
@@ -6,12 +7,13 @@ export type DocumentId = string;
 //
 // Content Types
 //
-export type Content<T = unknown> = {
+
+export type Content<T = unknown> = TreeNode & {
 	id: ContentId;
 	type: ModelType;
 	key: string;
 	content: T;
-	children?: KeyedCompositeChildren | IndexedCompositeChildren;
+	children?: Content<T>[] | ContentId[];
 };
 
 export interface ContentReference {
@@ -33,29 +35,25 @@ export interface Document {
 // Composite content types
 //
 
-export type CompositeContent = Content<KeyedCompositeContent | IndexedCompositeContent> & {
-	children: KeyedCompositeChildren | IndexedCompositeChildren;
-};
+export type CompositeContent = Content<KeyedCompositeContent | IndexedCompositeContent>;
 
 export type KeyedCompositeContent = {
 	[key: string]: ContentId;
 };
 
-export type KeyedCompositeChildren = {
-	[key: string]: ContentReference;
-};
+export type KeyedCompositeChildren = ContentId[];
 
 export type IndexedCompositeContent = ContentId[];
 
-export type IndexedCompositeChildren = ContentReference[];
+export type IndexedCompositeChildren = ContentId[];
 
-export type IndexedContent<T = unknown> = {
-	id: ContentId;
-	type: ModelType;
-	key: string;
-	content: T;
-	children: IndexedCompositeChildren;
-};
+// export type IndexedContent<T = unknown> = {
+// 	id: ContentId;
+// 	type: ModelType;
+// 	key: string;
+// 	content: T;
+// 	children: IndexedCompositeChildren;
+// };
 
 //
 // Block Type Specific content types
@@ -76,7 +74,6 @@ export type GroupContent = CompositeContent & {
 	content: IndexedCompositeContent;
 	children: IndexedCompositeChildren;
 };
-
 
 //
 // Type Guards
@@ -101,9 +98,7 @@ function isModelType(type: any): type is ModelType {
 
 // Additional type guard for full Content objects
 export function isFullContent(obj: any): obj is Content {
-	return (
-		typeof obj === 'object' && obj !== null && 'id' in obj && 'modelInfo' in obj && 'content' in obj
-	);
+	return typeof obj === 'object' && obj !== null && 'id' in obj && 'content' in obj;
 }
 
 export function isCompositeContent(content: Content): content is CompositeContent {

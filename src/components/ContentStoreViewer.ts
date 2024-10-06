@@ -203,7 +203,7 @@ export class ContentStoreViewer extends LitElement {
 
 		return html`
 			<div class="level-wrap">
-				${this.renderContent(hierarchicalItem)}
+				${this.renderContent(hierarchicalItem as Content)}
 				${hierarchicalItem.children
 					? html`
 							<div style="margin-left: 20px;">
@@ -265,7 +265,7 @@ export class ContentStoreViewer extends LitElement {
 				</div>
 				${hasChildren
 					? (node as HierarchicalItem<Content>).children.map((child) => {
-							return this.renderTreeNode(child as HierarchicalItem<Content> | ContentReference);
+							return this.renderTreeNode(child as HierarchicalItem<Content>);
 						})
 					: ''}
 			</div>

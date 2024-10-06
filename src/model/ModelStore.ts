@@ -1,19 +1,26 @@
 import { ResourceStore } from '../resource/ResourceStore';
-import { Model, ModelType } from './model';
+import { Model, ModelType, ObjectModel } from './model';
 import { StorageAdapter } from '../storage/StorageAdapter';
 import { DEFAULT_SCHEMA_NAME } from './SchemaStorage';
 import { SchemaStorage } from './SchemaStorage';
 import { isModelReference, isObject, isArray, isGroup } from './model';
 import { HierarchicalItem } from '../tree/HierarchicalItem';
-import { ModelSchema } from './model';
+import { ModelSchema, ArrayModel, GroupModel } from './model';
 import { deepClone } from '../util/deepClone';
 import { IndexedDBAdapter } from '../storage/IndexedDBAdapter';
 
-export class ModelStore extends ResourceStore<string, Model> {
+export class ModelStore extends ResourceStore<Model> {
 	private schemas: Map<string, ModelSchema> = new Map();
 
 	constructor(storage: StorageAdapter<string, Model>) {
-		const rootModel: Model = { id: 'root', type: 'root', key: 'root' };
+		const rootModel: Model = {
+			id: 'root',
+			type: 'root',
+			key: 'root',
+			content: '',
+			parentId: null,
+			children: [],
+		};
 		super(storage, 'root', rootModel);
 	}
 
@@ -87,7 +94,7 @@ export class ModelStore extends ResourceStore<string, Model> {
 		if (model) {
 			this.tree.remove(oldPath);
 			let parentId = model.parentId === null ? undefined : model.parentId;
-			this.tree.add(model.item, parentId, newPath);
+			this.tree.add(model, parentId, newPath);
 		}
 	}
 
@@ -103,6 +110,13 @@ export class ModelStore extends ResourceStore<string, Model> {
 	): Promise<Model> {
 		let resolvedModel = deepClone(model);
 
+		resolvedModel = {
+			...resolvedModel,
+			id: currentPath,
+			parentId: parentPath,
+			children: [],
+		};
+
 		if (isModelReference(model) && model.ref) {
 			const referencedModel = await this.getModelfromSchema(model.ref, model.type, schemaName);
 
@@ -112,12 +126,14 @@ export class ModelStore extends ResourceStore<string, Model> {
 			}
 			delete model.ref;
 			resolvedModel = deepClone({ ...referencedModel, ...model });
-			return this.resolveStructure(resolvedModel, schemaName, currentPath, parentPath);
+			return await this.resolveStructure(resolvedModel, schemaName, currentPath, parentPath);
 		}
 
 		resolvedModel.path = currentPath;
+		resolvedModel.id = currentPath;
 
 		// Add the model to the tree before processing its children
+		if (parentPath === '') parentPath = 'root';
 		this.tree.add(resolvedModel, parentPath, currentPath);
 
 		if (isObject(resolvedModel)) {
@@ -129,7 +145,7 @@ export class ModelStore extends ResourceStore<string, Model> {
 		}
 
 		// Update the model in the tree after processing
-		this.tree.replace(currentPath, resolvedModel);
+		this.tree.set(currentPath, resolvedModel);
 
 		return resolvedModel;
 	}
@@ -138,8 +154,10 @@ export class ModelStore extends ResourceStore<string, Model> {
 		model: Model,
 		schemaName: string,
 		currentPath: string
-	): Promise<Model> {
-		if (!isObject(model)) return model;
+	): Promise<ObjectModel> {
+		if (!isObject(model)) {
+			throw new Error(`Model is not an object: ${model}`);
+		}
 
 		const resolvedProperties = [];
 
@@ -154,14 +172,16 @@ export class ModelStore extends ResourceStore<string, Model> {
 			resolvedProperties.push(resolvedProperty);
 		}
 
-		return { ...model, properties: resolvedProperties };
+		const children = model.properties.map((property) => property.path || property.key);
+
+		return { ...model, properties: resolvedProperties, children };
 	}
 
 	private async resolveArrayModel(
-		model: Model,
+		model: ArrayModel,
 		schemaName: string,
 		currentPath: string
-	): Promise<Model> {
+	): Promise<ArrayModel> {
 		if (!isArray(model)) return model;
 
 		const itemTypePath = `${currentPath}.${model.itemType.key}`;
@@ -171,15 +191,21 @@ export class ModelStore extends ResourceStore<string, Model> {
 			itemTypePath,
 			currentPath
 		);
-		return { ...model, itemType: resolvedItemType };
+
+		const children = [model.itemType.key];
+
+		return { ...model, itemType: resolvedItemType, children };
 	}
 
 	private async resolveGroupModel(
 		model: Model,
 		schemaName: string,
 		currentPath: string
-	): Promise<Model> {
-		if (!isGroup(model)) return model;
+	): Promise<GroupModel> {
+		if (!isGroup(model)) {
+			throw new Error(`Model is not a group: ${model}`);
+			``;
+		}
 
 		if (Array.isArray(model.itemTypes)) {
 			const resolvedItemTypes = [];
@@ -190,7 +216,10 @@ export class ModelStore extends ResourceStore<string, Model> {
 				const resolvedItem = await this.resolveStructure(item, schemaName, itemPath, currentPath);
 				resolvedItemTypes.push(resolvedItem);
 			}
-			return { ...model, itemTypes: resolvedItemTypes };
+
+			const children = model.itemTypes.map((property) => property.key);
+
+			return { ...model, itemTypes: resolvedItemTypes, children };
 		} else {
 			const itemPath = `${currentPath}.${model.itemTypes.key}`;
 			const resolvedItemTypes = await this.resolveStructure(
@@ -199,6 +228,7 @@ export class ModelStore extends ResourceStore<string, Model> {
 				itemPath,
 				currentPath
 			);
+
 			return { ...model, itemTypes: resolvedItemTypes };
 		}
 	}
