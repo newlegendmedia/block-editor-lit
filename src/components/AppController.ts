@@ -1,9 +1,8 @@
-// AppController.ts
 import { LitElement, html } from 'lit';
 import { documentManager } from './DocumentManager';
 import { SchemaStorage } from '../model/SchemaStorage';
 import { AppState, initialState } from './AppState';
-import { ContentPath } from '../content/ContentPath';
+import { UniversalPath } from '../path/UniversalPath';
 
 export class AppController {
 	private host: LitElement;
@@ -42,9 +41,10 @@ export class AppController {
 	};
 
 	handleDocumentOpened = (event: CustomEvent) => {
+		const path = UniversalPath.fromDocumentId(event.detail.documentId);
 		this.setState({
 			activeDocumentId: event.detail.documentId,
-			currentPath: new ContentPath(event.detail.documentId).toString(),
+			currentPath: path.toString(),
 		});
 	};
 
@@ -67,30 +67,21 @@ export class AppController {
 	};
 
 	handlePathClick = (event: CustomEvent) => {
+		const clickedPath = new UniversalPath(event.detail.path);
 		this.setState({
-			currentPath: event.detail.path,
+			currentPath: clickedPath.toString(),
 			pathRenderError: null,
 		});
 	};
 
-	handleBreadcrumbClick = async (event: CustomEvent) => {
-		const clickedPath = new ContentPath(event.detail.path);
+	handleBreadcrumbClick = (event: CustomEvent) => {
+		const clickedPath = new UniversalPath(event.detail.path);
 		this.setState({
-			currentPath: clickedPath.path,
-			activeDocumentId: null,
+			currentPath: clickedPath.toString(),
+			activeDocumentId: clickedPath.document,
 			pathRenderError: null,
 		});
 	};
-
-	// handleDocumentIdOnly = async (event: CustomEvent) => {
-	// 	const documentId = event.detail.documentId;
-	// 	// Load the document and update the app state
-	// 	await this.loadDocument(documentId);
-	// 	this.setState({
-	// 		activeDocumentId: documentId,
-	// 		currentPath: documentId,
-	// 	});
-	// };
 
 	handleDocumentIdOnly = async (event: CustomEvent) => {
 		const documentId = event.detail.documentId;
@@ -98,10 +89,10 @@ export class AppController {
 		try {
 			const document = await documentManager.getDocument(documentId);
 			if (document) {
-				const contentPath = ContentPath.fromDocumentId(documentId);
+				const path = UniversalPath.fromDocumentId(documentId);
 				this.setState({
 					activeDocumentId: documentId,
-					currentPath: contentPath.toString(),
+					currentPath: path.toString(),
 				});
 			} else {
 				console.error(`Document not found for ID: ${documentId}`);
@@ -120,10 +111,12 @@ export class AppController {
 	};
 
 	renderMainContent() {
-		const currentPath = this.state.currentPath ? new ContentPath(this.state.currentPath) : null;
+		const currentPath = this.state.currentPath ? new UniversalPath(this.state.currentPath) : null;
 		if (this.state.activeDocumentId) {
 			return html`
-				<h-breadcrumbs .path=${currentPath || this.state.activeDocumentId}></h-breadcrumbs>
+				<h-breadcrumbs
+					.path=${currentPath || UniversalPath.fromDocumentId(this.state.activeDocumentId)}
+				></h-breadcrumbs>
 				<document-component .documentId=${this.state.activeDocumentId}></document-component>
 			`;
 		} else if (this.state.currentPath) {

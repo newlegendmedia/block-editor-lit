@@ -1,10 +1,10 @@
-import { LitElement, html, css } from "lit";
-import { customElement, property } from "lit/decorators.js";
-import { ContentPath } from '../content/ContentPath';
+import { LitElement, html, css } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+import { UniversalPath } from '../path/UniversalPath';
 
 @customElement('h-breadcrumbs')
 export class Breadcrumbs extends LitElement {
-	@property({ type: Object }) path!: ContentPath;
+	@property({ type: Object }) path!: UniversalPath;
 
 	static styles = css`
 		:host {
@@ -36,15 +36,16 @@ export class Breadcrumbs extends LitElement {
 	`;
 
 	render() {
-		const segments = this.path.pathSegments;
+		const segments = this.path.segments;
 
 		return html`
 			<div class="breadcrumbs-container">
 				${segments.map((segment, index) => {
-					const currentPath = this.path.getSubPath(index);
+					const currentPath = new UniversalPath(this.path.toString());
+					currentPath.segments = currentPath.segments.slice(0, index + 1);
 					const isLast = index === segments.length - 1;
 					const isDocumentId = index === 0;
-					const displayText = isDocumentId ? 'document' : this.path.serializeSegment(segment);
+					const displayText = isDocumentId ? 'document' : segment.contentKey;
 
 					return html`
 						${index > 0 ? html`<span class="separator">/</span>` : ''}
@@ -59,10 +60,10 @@ export class Breadcrumbs extends LitElement {
 		`;
 	}
 
-	private handleClick(path: string) {
+	private handleClick(path: UniversalPath) {
 		this.dispatchEvent(
 			new CustomEvent('breadcrumb-clicked', {
-				detail: { path },
+				detail: { path: path },
 				bubbles: true,
 				composed: true,
 			})

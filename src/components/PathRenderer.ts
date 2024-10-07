@@ -2,17 +2,17 @@ import { LitElement, html, TemplateResult } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { until } from 'lit/directives/until.js';
 import { BlockFactory } from '../blocks/BlockFactory';
-import { ContentPath } from '../content/ContentPath';
+import { UniversalPath } from '../path/UniversalPath';
 
 @customElement('path-renderer')
 export class PathRenderer extends LitElement {
-	@property({ type: String })
-	path: string = '';
+	@property({ type: Object })
+	path: UniversalPath = new UniversalPath('');
 
 	render() {
 		return html`
 			<div>
-				<p>PathRenderer is active. Current path: ${this.path}</p>
+				<p>PathRenderer is active. Current path: ${this.path.toString()}</p>
 				${until(
 					this.renderTargetContent(),
 					html`<div>Loading content...</div>`,
@@ -23,32 +23,27 @@ export class PathRenderer extends LitElement {
 	}
 
 	private async renderTargetContent(): Promise<TemplateResult> {
-		if (!this.path) {
+		if (this.path.segments.length === 0) {
 			return html`<div>No path specified</div>`;
 		}
 
 		try {
-			const contentPath = new ContentPath(this.path);
-
 			// If only document ID is provided, dispatch the document-id-only event
-			if (contentPath.pathSegments.length === 1) {
+			if (this.path.segments.length === 1) {
 				this.dispatchEvent(
 					new CustomEvent('document-id-only', {
-						detail: { documentId: contentPath.document },
+						detail: { documentId: this.path.document },
 						bubbles: true,
 						composed: true,
 					})
 				);
-				return html`<div>Loading document ${contentPath.document}...</div>`;
+				return html`<div>Loading document ${this.path.document}...</div>`;
 			}
 
-			const key = contentPath.key;
-			const parentPath = contentPath.parentPath.toString();
-
-			const component = await BlockFactory.createComponent(parentPath, key, parentPath, key);
+			const component = await BlockFactory.createComponent(this.path);
 
 			if (!component) {
-				throw new Error(`Failed to create component for path: ${this.path}`);
+				throw new Error(`Failed to create component for path: ${this.path.toString()}`);
 			}
 
 			return component;
@@ -63,5 +58,32 @@ export class PathRenderer extends LitElement {
 			);
 			return html`<div>Error: ${error instanceof Error ? error.message : String(error)}</div>`;
 		}
+	}
+
+	private handleBlockUpdate = (event: CustomEvent) => {
+		const updatedPath = event.detail.path as UniversalPath;
+		const updatedContent = event.detail.content;
+
+		// Dispatch an event to notify parent components of the update
+		this.dispatchEvent(
+			new CustomEvent('content-updated', {
+				detail: { path: updatedPath, content: updatedContent },
+				bubbles: true,
+				composed: true,
+			})
+		);
+
+		// Trigger a re-render of this component
+		this.requestUpdate();
+	};
+
+	connectedCallback() {
+		super.connectedCallback();
+		this.addEventListener('block-update', this.handleBlockUpdate as EventListener);
+	}
+
+	disconnectedCallback() {
+		super.disconnectedCallback();
+		this.removeEventListener('block-update', this.handleBlockUpdate as EventListener);
 	}
 }

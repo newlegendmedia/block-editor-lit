@@ -5,6 +5,7 @@ import { until } from 'lit/directives/until.js';
 import { BaseBlock } from './BaseBlock';
 import { BlockFactory } from './BlockFactory';
 import { Model } from '../model/model';
+import { UniversalPath } from '../path/UniversalPath';
 
 export abstract class KeyedCompositeBlock extends BaseBlock {
 	@state() protected childComponents: Map<string, Promise<TemplateResult>> = new Map();
@@ -78,13 +79,9 @@ export abstract class KeyedCompositeBlock extends BaseBlock {
 
 	protected async createChildComponent(property: Model): Promise<TemplateResult> {
 		try {
-			return await BlockFactory.createComponent(
-				this.contentPath.path,
-				property.key,
-				this.modelPath.path,
-				property.key,
-				property.type
-			);
+			const childPath = new UniversalPath(this.path.document, this.path.path + '.' + property.key);
+
+			return await BlockFactory.createComponent(childPath, property.type);
 		} catch (error) {
 			console.error(`Error creating child component for ${property.key}:`, error);
 			return html`<div>Error: ${(error as Error).message}</div>`;

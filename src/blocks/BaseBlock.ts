@@ -3,14 +3,17 @@ import { property, state } from 'lit/decorators.js';
 import { Content } from '../content/content';
 import { Model } from '../model/model';
 import { contentStore } from '../content/ContentStore';
-import { ContentPath } from '../content/ContentPath';
+//import { ContentPath } from '../content/ContentPath';
+import { UniversalPath } from '../path/UniversalPath';
+
 import '../components/Breadcrumbs';
 
 export abstract class BaseBlock extends LitElement {
 	@property({ type: Object }) content!: Content<any>;
 	@property({ type: Object }) model!: Model;
-	@property({ type: Object }) contentPath!: ContentPath;
-	@property({ type: Object }) modelPath!: ContentPath;
+	@property({ type: Object }) path!: UniversalPath;
+	// @property({ type: Object }) contentPath!: ContentPath;
+	// @property({ type: Object }) modelPath!: ContentPath;
 	@state() protected error: string | null = null;
 
 	static blockStyles = css`
@@ -77,25 +80,24 @@ export abstract class BaseBlock extends LitElement {
 		`;
 	}
 
-	protected getChildPath(childKey: string): string {
-		if (!this.contentPath) {
-			throw new Error('Content path not initialized');
-		}
-		return new ContentPath(this.contentPath.toString(), childKey).toString();
+	protected getChildPath(childKey: string): UniversalPath {
+		const newPath = new UniversalPath(this.path.toString());
+		newPath.addSegment(childKey, childKey, this.path.segments.length);
+		return newPath;
 	}
 
 	protected renderPath() {
 		return html`
 			<h-breadcrumbs
-				.path=${this.modelPath}
+				.path=${this.path}
 				@breadcrumb-clicked=${this.handleBreadcrumbClick}
 			></h-breadcrumbs>
-			<div style="font-size:11px; margin-bottom:5px;">${this.content.id}</div>
+			<div style="font-size:11px; margin-bottom:5px;">${this.path.contentPath}</div>
 		`;
 	}
 
 	private handleBreadcrumbClick(e: CustomEvent) {
-		const clickedPath = e.detail.path;
+		const clickedPath = new UniversalPath(e.detail.path);
 		this.dispatchEvent(
 			new CustomEvent('path-clicked', {
 				detail: { path: clickedPath },

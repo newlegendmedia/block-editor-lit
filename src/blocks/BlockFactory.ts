@@ -1,148 +1,107 @@
-import { TemplateResult } from 'lit';
-import { html } from 'lit/static-html.js';
+import { html, TemplateResult } from 'lit';
+import { UniversalPath } from '../path/UniversalPath';
+import { modelStore } from '../model/ModelStore';
 import { contentStore } from '../content/ContentStore';
 import { Model, ModelType } from '../model/model';
 import { Content } from '../content/content';
-import { modelStore } from '../model/ModelStore';
-import { ContentPath } from '../content/ContentPath.ts';
 
-// Import your block components
 import './ObjectBlock';
 import './ArrayBlock';
 import './ElementBlock';
 import './GroupBlock';
-// import { ContentFactory } from '../content/ContentFactory';
-// import { generateId } from '../util/generateId';
 
 export class BlockFactory {
-	static async createComponent(
-		contentPath: string,
-		contentKey: string,
-		modelPath: string,
-		modelKey: string,
-		type?: ModelType,
-		_inlineValue?: any,
-		_inlineModel?: Model
-	): Promise<TemplateResult> {
+	static async createComponent(path: UniversalPath, type?: ModelType): Promise<TemplateResult> {
 		try {
-			const cPath = new ContentPath(contentPath, contentKey);
-			const mPath = new ContentPath(modelPath, modelKey);
-
-			const model = await modelStore.getModel(mPath.simplePath, type);
+			const model = await modelStore.getModel(path.modelPath, type);
 			if (!model) {
-				console.error(`BlockFactory: Model not found for ${mPath.toString()}`);
-				return html`<div>Error: Model not found ${mPath.toString()}</div>`;
+				console.error(`BlockFactory: Model not found for ${path.modelPath}`);
+				return html`<div>Error: Model not found ${path.modelPath}</div>`;
 			}
 
-			let content = await contentStore.getOrCreateByPath(cPath.toString(), model);
+			const content = await this.getOrCreateContent(path, model);
 			if (!content) {
-				console.error(`BlockFactory: Content not found for ${cPath}`);
-				return html`<div>Error: Content not found ${cPath}</div>`;
+				console.error(`BlockFactory: Content not found for ${path.contentPath}`);
+				return html`<div>Error: Content not found ${path.contentPath}</div>`;
 			}
 
 			// Create the appropriate block based on content type
 			switch (content.type) {
 				case 'object':
-					return this.createObjectBlock(content, model, cPath, mPath);
+					return this.createObjectBlock(content, model, path);
 				case 'array':
-					return this.createArrayBlock(content, model, cPath, mPath);
+					return this.createArrayBlock(content, model, path);
 				case 'element':
-					return this.createElementBlock(content, model, cPath, mPath);
+					return this.createElementBlock(content, model, path);
 				case 'group':
-					return this.createGroupBlock(content, model, cPath, mPath);
+					return this.createGroupBlock(content, model, path);
 				default:
 					console.warn(`BlockFactory: Unknown content type: ${content.type}`);
 					return html`<div>Unknown content type: ${content.type}</div>`;
 			}
 		} catch (error) {
-			console.error(
-				`BlockFactory: Error creating component for ID ${modelKey} ${contentKey}:`,
-				error
-			);
-			return html`<div>Error: Failed to create component</div>`;
+			console.error(`BlockFactory: Error creating component for path ${path.toString()}:`, error);
+			return html`<div>Error: ${error instanceof Error ? error.message : String(error)}</div>`;
 		}
 	}
 
-	// private static createInlineElement(
-	// 	path: string,
-	// 	content: Content,
-	// 	model: Model,
-	// 	inlineModel?: Model,
-	// 	inlineValue?: any
-	// ): TemplateResult {
-	// 	return html`
-	// 		<element-block
-	// 			.content="${content},"
-	// 			.model="${model},"
-	// 			.path=${path}
-	// 			.inlineModel=${inlineModel}
-	// 			.inlineValue=${inlineValue}
-	// 			.isInline=${true}
-	// 		></element-block>
-	// 	`;
-	// }
+	private static async getOrCreateContent(
+		path: UniversalPath,
+		model: Model
+	): Promise<Content | undefined> {
+		return contentStore.getOrCreateByPath(path, model);
+	}
 
 	private static createObjectBlock(
 		content: Content,
 		model: Model,
-		contentPath: ContentPath,
-		modelPath: ContentPath
+		path: UniversalPath
 	): TemplateResult {
-		return html`
-			<object-block
-				.content=${content}
-				.model=${model}
-				.contentPath=${contentPath}
-				.modelPath=${modelPath}
-			></object-block>
-		`;
+		return html` <object-block .content=${content} .model=${model} .path=${path}></object-block> `;
 	}
 
 	private static createArrayBlock(
 		content: Content,
 		model: Model,
-		contentPath: ContentPath,
-		modelPath: ContentPath
+		path: UniversalPath
 	): TemplateResult {
-		return html`
-			<array-block
-				.content=${content}
-				.model=${model}
-				.contentPath=${contentPath}
-				.modelPath=${modelPath}
-			></array-block>
-		`;
+		return html` <array-block .content=${content} .model=${model} .path=${path}></array-block> `;
 	}
 
 	private static createElementBlock(
 		content: Content,
 		model: Model,
-		contentPath: ContentPath,
-		modelPath: ContentPath
+		path: UniversalPath
 	): TemplateResult {
 		return html`
-			<element-block
-				.content=${content}
-				.model=${model}
-				.contentPath=${contentPath}
-				.modelPath=${modelPath}
-			></element-block>
+			<element-block .content=${content} .model=${model} .path=${path}></element-block>
 		`;
 	}
 
 	private static createGroupBlock(
 		content: Content,
 		model: Model,
-		contentPath: ContentPath,
-		modelPath: ContentPath
+		path: UniversalPath
 	): TemplateResult {
+		return html` <group-block .content=${content} .model=${model} .path=${path}></group-block> `;
+	}
+
+	static async createInlineComponent(
+		path: UniversalPath,
+		content: Content,
+		model: Model,
+		inlineModel?: Model,
+		inlineValue?: any
+	): Promise<TemplateResult> {
 		return html`
-			<group-block
+			<element-block
 				.content=${content}
 				.model=${model}
-				.contentPath=${contentPath}
-				.modelPath=${modelPath}
-			></group-block>
+				.path=${path}
+				.inlineModel=${inlineModel}
+				.inlineValue=${inlineValue}
+				.isInline=${true}
+			></element-block>
 		`;
 	}
 }

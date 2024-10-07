@@ -3,7 +3,7 @@ import { contentStore } from '../content/ContentStore';
 import { generateId } from '../util/generateId';
 import { modelStore } from '../model/ModelStore';
 import { ModelType } from '../model/model';
-import { ContentPath } from '../content/ContentPath';
+import { UniversalPath } from '../path/UniversalPath';
 
 export class DocumentManager {
 	private documents: Map<DocumentId, Document> = new Map();
@@ -20,8 +20,8 @@ export class DocumentManager {
 		}
 
 		const documentId = generateId('DOC') as DocumentId;
-		const rootContentPath = ContentPath.fromDocumentId(documentId, modelKey);
-		const rootContent = await contentStore.getOrCreateByPath(rootContentPath.path, model);
+		const rootContentPath = UniversalPath.fromDocumentId(documentId, modelKey);
+		const rootContent = await contentStore.getOrCreateByPath(rootContentPath, model);
 
 		const document: Document = {
 			id: documentId,

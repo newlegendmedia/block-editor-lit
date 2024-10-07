@@ -8,6 +8,7 @@ import { Model } from '../model/model';
 import { contentStore } from '../content/ContentStore';
 import { ContentFactory } from '../content/ContentFactory';
 import { generateId } from '../util/generateId';
+import { UniversalPath } from '../path/UniversalPath';
 import '../module/interface/AddItemMenu';
 
 export abstract class IndexedCompositeBlock extends BaseBlock {
@@ -111,13 +112,10 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 
 	protected async handleDuplicate(index: number) {
 		try {
-			//			const indexedContent = this.content as IndexedContent;
 			const originalChildRef = this.content.children[index];
-
 			const duplicatedSubtree = await contentStore.duplicateContent(originalChildRef);
 
 			if (duplicatedSubtree) {
-				// Create a new content reference for the duplicated subtree
 				const childContentReference = duplicatedSubtree.id;
 				await this.addContentReference(childContentReference);
 			}
@@ -127,25 +125,17 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 	}
 
 	protected async addChildBlock(itemType: Model): Promise<void> {
-		// create default content for the child block
 		const childContent = await this.makeDefaultContent(itemType);
 		await this.addContentToStore(childContent);
-
-		// add a reference to the default child content to the parent content
 		const childContentReference = childContent.id;
 		await this.addContentReference(childContentReference);
 	}
 
 	protected async removeChildBlock(index: number): Promise<void> {
-		// Check if the request is valid
 		if (!this.content.children || this.content.children.length <= index) {
 			throw new Error(`Invalid index: ${index}`);
 		}
-
-		// Remove the child content from the store
 		await contentStore.delete(this.content.children[index]);
-
-		// Remove the child reference from the parent content
 		await this.updateContent((content) => {
 			const updatedContent = { ...content };
 			updatedContent.children.splice(index, 1);
@@ -154,30 +144,26 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 	}
 
 	protected async createChildComponent(childRef: ContentId): Promise<TemplateResult> {
-		let childContent = await contentStore.getReference(childRef);
+		let childContent = await contentStore.get(childRef);
 		if (!childContent) {
 			console.error(`Child content not found: ${childRef}`);
 			return html`<div>Child content not found: ${childRef}</div>`;
 		}
 		try {
-			return await BlockFactory.createComponent(
-				this.contentPath.path,
-				childRef,
-				this.modelPath.path,
-				childContent.key,
-				childContent.type
+			// Create a new UniversalPath using the current path's document ID and path
+			const childPath = new UniversalPath(
+				this.path.document,
+				this.path.path ? `${this.path.path}.${childContent.key}` : childContent.key,
+				'.'
 			);
+			return await BlockFactory.createComponent(childPath, childContent.type);
 		} catch (error) {
 			console.error(`Error creating child component for ${childRef}:`, error);
 			return html`<div>Error: ${(error as Error).message}</div>`;
 		}
 	}
 
-	//
-	// AddChild Related Methods
-	//
 	protected async makeDefaultContent(itemType: Model): Promise<Content> {
-		// Create default content based on the item type
 		return {
 			id: generateId(itemType.type ? itemType.type.slice(0, 3).toUpperCase() : '') as ContentId,
 			...ContentFactory.createContentFromModel(itemType),
@@ -185,16 +171,13 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 	}
 
 	protected async addContentToStore(content: Content): Promise<Content> {
-		const newContent = await contentStore.add(
-			content,
-			this.contentPath.path,
-			this.getChildPath(content.id)
-		);
+		const childPath = new UniversalPath(this.path.toString());
+		childPath.addSegment(content.key, content.key, this.path.segments.length);
+		const newContent = await contentStore.add(content, this.path, childPath);
 		return newContent;
 	}
 
 	protected async addContentReference(contentReference: ContentId): Promise<void> {
-		// Update the parent content with the child reference
 		await this.updateContent((content) => {
 			if (!content.children) content.children = [];
 			content.children.push(contentReference);

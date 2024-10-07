@@ -55,6 +55,8 @@ export class ElementBlock extends BaseBlock {
 			type: 'element',
 			key: this.inlineModel?.key || 'inline-element',
 			content: this.inlineValue,
+			parentId: null,
+			children: [],
 		};
 	}
 

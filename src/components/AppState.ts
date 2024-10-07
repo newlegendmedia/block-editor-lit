@@ -5,7 +5,7 @@ export interface AppState {
 	activeDocumentId: DocumentId | null;
 	isSidebarOpen: boolean;
 	isDarkMode: boolean;
-	currentPath: string | null;
+	currentPath: string | null; // This is now a string representation of UniversalPath
 	pathRenderError: string | null;
 	isLoading: boolean;
 }

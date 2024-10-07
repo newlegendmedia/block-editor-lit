@@ -1,10 +1,10 @@
-import { LitElement, html, TemplateResult } from 'lit';
+import { LitElement, html, css, TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { BlockFactory } from '../blocks/BlockFactory';
 import { contentStore } from '../content/ContentStore';
 import { documentManager } from '../components/DocumentManager';
 import { Document, Content } from '../content/content';
-import { ContentPath } from '../content/ContentPath';
+import { UniversalPath } from '../path/UniversalPath';
 
 @customElement('document-component')
 export class DocumentComponent extends LitElement {
@@ -12,6 +12,16 @@ export class DocumentComponent extends LitElement {
 	@state() private document: Document | undefined = undefined;
 	@state() private rootContent: Content | undefined = undefined;
 	@state() private rootComponent: TemplateResult | undefined = undefined;
+
+	static styles = css`
+		:host {
+			display: block;
+			padding: 16px;
+		}
+		.error {
+			color: red;
+		}
+	`;
 
 	updated(changedProperties: Map<string, any>) {
 		if (changedProperties.has('documentId')) {
@@ -25,20 +35,19 @@ export class DocumentComponent extends LitElement {
 			if (this.document) {
 				this.rootContent = await contentStore.get(this.document.rootContent);
 				if (this.rootContent) {
-					const contentPath = new ContentPath(this.documentId, this.rootContent.key);
-					const modelPath = new ContentPath(this.documentId, this.rootContent.key);
-
-					this.rootComponent = await BlockFactory.createComponent(
-						contentPath.parentPath,
-						contentPath.key,
-						modelPath.parentPath,
-						modelPath.key,
-						this.rootContent.type
-					);
+					const path = UniversalPath.fromDocumentId(this.documentId, this.rootContent.key);
+					this.rootComponent = await BlockFactory.createComponent(path, this.rootContent.type);
+				} else {
+					throw new Error('Root content not found');
 				}
+			} else {
+				throw new Error('Document not found');
 			}
 		} catch (error) {
 			console.error('Error loading document:', error);
+			this.rootComponent = html`<div class="error">
+				Error loading document: ${error instanceof Error ? error.message : String(error)}
+			</div>`;
 		}
 		this.requestUpdate();
 	}
@@ -50,8 +59,31 @@ export class DocumentComponent extends LitElement {
 
 		return html`
 			<h1>${this.document.title}</h1>
-			<div>${this.documentId} ${this.rootContent.id}</div>
-			${this.rootComponent ?? html`<div>Error: Root component not loaded</div>`}
+			<div>Document ID: ${this.documentId}</div>
+			<div>Root Content ID: ${this.rootContent.id}</div>
+			${this.rootComponent ?? html`<div class="error">Error: Root component not loaded</div>`}
 		`;
+	}
+
+	private handleBlockUpdate = async (event: CustomEvent) => {
+		//		const updatedPath = new UniversalPath(event.detail.path);
+		const updatedContent = event.detail.content;
+
+		try {
+			await contentStore.update(updatedContent.id, () => updatedContent);
+			this.requestUpdate();
+		} catch (error) {
+			console.error('Error updating content:', error);
+		}
+	};
+
+	connectedCallback() {
+		super.connectedCallback();
+		this.addEventListener('block-update', this.handleBlockUpdate as unknown as EventListener);
+	}
+
+	disconnectedCallback() {
+		super.disconnectedCallback();
+		this.removeEventListener('block-update', this.handleBlockUpdate as unknown as EventListener);
 	}
 }
