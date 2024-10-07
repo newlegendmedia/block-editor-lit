@@ -154,7 +154,7 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 	}
 
 	protected async createChildComponent(childRef: ContentId): Promise<TemplateResult> {
-		let childContent = await contentStore.get(childRef);
+		let childContent = await contentStore.getReference(childRef);
 		if (!childContent) {
 			console.error(`Child content not found: ${childRef}`);
 			return html`<div>Child content not found: ${childRef}</div>`;

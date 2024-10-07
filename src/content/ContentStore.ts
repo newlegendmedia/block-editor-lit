@@ -1,5 +1,5 @@
 import { ResourceStore } from '../resource/ResourceStore';
-import { Content, ContentId } from './content';
+import { Content, ContentId, ContentReference } from './content';
 import { Model } from '../model/model';
 import { StorageAdapter } from '../storage/StorageAdapter';
 import { generateId } from '../util/generateId';
@@ -48,6 +48,18 @@ export class ContentStore extends ResourceStore<Content> {
 		}
 
 		return content;
+	}
+
+	async getReference(id: ContentId): Promise<ContentReference | undefined> {
+		const content = await this.get(id);
+		if (content) {
+			return {
+				id: content.id,
+				key: content.key,
+				type: content.type,
+			};
+		}
+		return undefined;
 	}
 
 	async set(content: Content, parentId?: ContentId): Promise<void> {
