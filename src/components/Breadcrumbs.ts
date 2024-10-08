@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, css, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { UniversalPath } from '../path/UniversalPath';
 
@@ -63,7 +63,7 @@ export class Breadcrumbs extends LitElement {
 	private handleClick(path: UniversalPath) {
 		this.dispatchEvent(
 			new CustomEvent('breadcrumb-clicked', {
-				detail: { path: path },
+				detail: { path: path.contentPath },
 				bubbles: true,
 				composed: true,
 			})

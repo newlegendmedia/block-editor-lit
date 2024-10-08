@@ -1,8 +1,8 @@
 import { LitElement, html } from 'lit';
-import { documentManager } from './DocumentManager';
 import { SchemaStorage } from '../model/SchemaStorage';
-import { AppState, initialState } from './AppState';
 import { UniversalPath } from '../path/UniversalPath';
+import { AppState, initialState } from './AppState';
+import { documentManager } from './DocumentManager';
 
 export class AppController {
 	private host: LitElement;
@@ -68,9 +68,9 @@ export class AppController {
 	};
 
 	handlePathClick = (event: CustomEvent) => {
-		const clickedPath = new UniversalPath(event.detail.path);
+		const clickedPath = event.detail.path;
 		this.setState({
-			currentPath: clickedPath.toString(),
+			currentPath: clickedPath,
 			pathRenderError: null,
 		});
 	};
@@ -118,6 +118,7 @@ export class AppController {
 				<h-breadcrumbs
 					.path=${currentPath || UniversalPath.fromDocumentId(this.state.activeDocumentId)}
 				></h-breadcrumbs>
+				for ${this.state.activeDocumentId}
 				<document-component .documentId=${this.state.activeDocumentId}></document-component>
 			`;
 		} else if (this.state.currentPath) {
