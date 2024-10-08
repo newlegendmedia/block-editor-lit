@@ -11,7 +11,6 @@ export class AppController {
 	constructor(host: LitElement) {
 		this.host = host;
 		this.state = initialState;
-		console.log('AppController initialized');
 	}
 
 	setState(newState: Partial<AppState>) {

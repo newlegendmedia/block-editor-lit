@@ -28,7 +28,6 @@ export class UniversalPath {
 			contentKey = contentKey || modelKey;
 			this.addSegment(modelKey, contentKey);
 		}
-		console.log('UniversalPath', this.toString(), this);
 	}
 
 	private parse(pathString: string): void {

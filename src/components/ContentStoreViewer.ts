@@ -128,7 +128,6 @@ export class ContentStoreViewer extends LitElement {
 	}
 
 	private handleContentChange() {
-		console.log('Content store changed');
 		this.updateContents();
 	}
 
@@ -136,7 +135,7 @@ export class ContentStoreViewer extends LitElement {
 		if (contentStore) {
 			this.contents = await contentStore.getAll();
 			this.contentsHierarchy = await contentStore.getAllHierarchical();
-			this.requestUpdate();
+			//			this.requestUpdate();
 		}
 	}
 
