@@ -1,9 +1,9 @@
-import { LitElement, html, css, TemplateResult } from 'lit';
+import { css, html, LitElement, TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { BlockFactory } from '../blocks/BlockFactory';
-import { contentStore } from '../content/ContentStore';
 import { documentManager } from '../components/DocumentManager';
-import { Document, Content } from '../content/content';
+import { Content, Document } from '../content/content';
+import { contentStore } from '../content/ContentStore';
 import { UniversalPath } from '../path/UniversalPath';
 
 @customElement('document-component')

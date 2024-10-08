@@ -26,11 +26,11 @@ export class PathRenderer extends LitElement {
 			return html`<div>No path specified</div>`;
 		}
 
-		let uPath = new UniversalPath(this.path);
+		let uPath = UniversalPath.fromFullPath(this.path);
 
 		try {
 			// If only document ID is provided, dispatch the document-id-only event
-			if (uPath.segments.length === 0) {
+			if (uPath.isDocumentRoot()) {
 				this.dispatchEvent(
 					new CustomEvent('document-id-only', {
 						detail: { documentId: uPath.document },

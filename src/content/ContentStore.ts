@@ -41,10 +41,7 @@ export class ContentStore extends ResourceStore<Content> {
 				id: generateId(model.type ? model.type.slice(0, 3).toUpperCase() : '') as ContentId,
 				...defaultContent,
 			};
-			const parentPath = new UniversalPath(path.toString());
-			parentPath.segments.pop();
-
-			content = await this.add(content, parentPath, path);
+			content = await this.add(content, path.getParent(), path);
 		}
 		return content;
 	}
@@ -79,7 +76,7 @@ export class ContentStore extends ResourceStore<Content> {
 		let parentId: ContentId | undefined = this.pathMap.get(parentPath.toString());
 
 		// If parentId is not found, check if this is a document root
-		if (!parentId && parentPath.segments.length === 0) {
+		if (!parentId && parentPath.isDocumentRoot()) {
 			// This is likely a document root, so we'll create it without a parent
 			parentId = undefined;
 		} else if (!parentId) {
@@ -119,7 +116,7 @@ export class ContentStore extends ResourceStore<Content> {
 			for (const childId of content.children) {
 				const childContent = await this.get(childId);
 				if (childContent && path) {
-					const childPath = new UniversalPath(path.toString(), childContent.key);
+					const childPath = path.createChild(childContent.key, childContent.id);
 					await this.addCompositeContent(childContent, content.id, childPath);
 				}
 			}
@@ -163,7 +160,11 @@ export class ContentStore extends ResourceStore<Content> {
 			throw new Error(`Parent path not found for content ${id}`);
 		}
 
-		const newPath = new UniversalPath(parentPath.toString(), duplicateContent.key);
+		const newPath = UniversalPath.fromFullPath(
+			parentPath.toString(),
+			duplicateContent.key,
+			duplicateContent.id
+		);
 		return this.create(duplicateContent, originalContent.parentId as ContentId, newPath);
 	}
 
@@ -174,7 +175,7 @@ export class ContentStore extends ResourceStore<Content> {
 	getPathForContent(id: ContentId): UniversalPath | undefined {
 		for (const [pathString, contentId] of this.pathMap.entries()) {
 			if (contentId === id) {
-				return new UniversalPath(pathString);
+				return UniversalPath.fromFullPath(pathString);
 			}
 		}
 		return undefined;

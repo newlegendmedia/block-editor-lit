@@ -148,7 +148,7 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 			return html`<div>Child content not found: ${childRef}</div>`;
 		}
 		try {
-			const childPath = new UniversalPath(this.path.contentPath, childContent.key);
+			const childPath = UniversalPath.fromFullPath(this.path.contentPath, childContent.key);
 			return await BlockFactory.createComponent(childPath, childContent.type);
 		} catch (error) {
 			console.error(`Error creating child component for ${childRef}:`, error);
@@ -164,7 +164,7 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 	}
 
 	protected async addContentToStore(content: Content): Promise<Content> {
-		const childPath = new UniversalPath(this.path.toString(), content.key);
+		const childPath = UniversalPath.fromFullPath(this.path.toString(), content.key);
 		return await contentStore.add(content, this.path, childPath);
 	}
 }

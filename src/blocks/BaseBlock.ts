@@ -1,8 +1,8 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, css, html } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { Content } from '../content/content';
-import { Model } from '../model/model';
 import { contentStore } from '../content/ContentStore';
+import { Model } from '../model/model';
 //import { ContentPath } from '../content/ContentPath';
 import { UniversalPath } from '../path/UniversalPath';
 
@@ -79,7 +79,7 @@ export abstract class BaseBlock extends LitElement {
 	}
 
 	protected getChildPath(childKey: string): UniversalPath {
-		return new UniversalPath(this.path.toString(), childKey);
+		return UniversalPath.fromFullPath(this.path.toString(), childKey);
 	}
 
 	protected renderPath() {
@@ -93,7 +93,7 @@ export abstract class BaseBlock extends LitElement {
 	}
 
 	private handleBreadcrumbClick(e: CustomEvent) {
-		const clickedPath = new UniversalPath(e.detail.path);
+		const clickedPath = UniversalPath.fromFullPath(e.detail.path);
 		this.dispatchEvent(
 			new CustomEvent('path-clicked', {
 				detail: { path: clickedPath },

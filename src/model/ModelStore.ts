@@ -1,13 +1,21 @@
 import { ResourceStore } from '../resource/ResourceStore';
-import { Model, ModelType, ObjectModel } from './model';
-import { StorageAdapter } from '../storage/StorageAdapter';
-import { DEFAULT_SCHEMA_NAME } from './SchemaStorage';
-import { SchemaStorage } from './SchemaStorage';
-import { isModelReference, isObject, isArray, isGroup } from './model';
-import { HierarchicalItem } from '../tree/HierarchicalItem';
-import { ModelSchema, ArrayModel, GroupModel } from './model';
-import { deepClone } from '../util/deepClone';
 import { IndexedDBAdapter } from '../storage/IndexedDBAdapter';
+import { StorageAdapter } from '../storage/StorageAdapter';
+import { HierarchicalItem } from '../tree/HierarchicalItem';
+import { deepClone } from '../util/deepClone';
+import { DEFAULT_SCHEMA_NAME, SchemaStorage } from './SchemaStorage';
+import {
+	ArrayModel,
+	GroupModel,
+	isArray,
+	isGroup,
+	isModelReference,
+	isObject,
+	Model,
+	ModelSchema,
+	ModelType,
+	ObjectModel,
+} from './model';
 
 export class ModelStore extends ResourceStore<Model> {
 	private schemas: Map<string, ModelSchema> = new Map();
@@ -207,30 +215,15 @@ export class ModelStore extends ResourceStore<Model> {
 			``;
 		}
 
-		if (Array.isArray(model.itemTypes)) {
-			const resolvedItemTypes = [];
+		const resolvedItemTypes = [];
 
-			for (let i = 0; i < model.itemTypes.length; i++) {
-				const item = model.itemTypes[i];
-				const itemPath = `${currentPath}.${item.key}`;
-				const resolvedItem = await this.resolveStructure(item, schemaName, itemPath, currentPath);
-				resolvedItemTypes.push(resolvedItem);
-			}
-
-			//			const children = model.itemTypes.map((property) => property.key);
-
-			return { ...model, itemTypes: resolvedItemTypes };
-		} else {
-			const itemPath = `${currentPath}.${model.itemTypes.key}`;
-			const resolvedItemTypes = await this.resolveStructure(
-				model.itemTypes,
-				schemaName,
-				itemPath,
-				currentPath
-			);
-
-			return { ...model, itemTypes: resolvedItemTypes };
+		for (let i = 0; i < model.itemTypes.length; i++) {
+			const item = model.itemTypes[i];
+			const itemPath = `${currentPath}.${item.key}`;
+			const resolvedItem = await this.resolveStructure(item, schemaName, itemPath, currentPath);
+			resolvedItemTypes.push(resolvedItem);
 		}
+		return { ...model, itemTypes: resolvedItemTypes };
 	}
 
 	async loadSchema(schemaName: string): Promise<void> {

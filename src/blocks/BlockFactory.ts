@@ -1,14 +1,14 @@
 import { html, TemplateResult } from 'lit';
-import { UniversalPath } from '../path/UniversalPath';
-import { modelStore } from '../model/ModelStore';
+import { Content } from '../content/content';
 import { contentStore } from '../content/ContentStore';
 import { Model, ModelType } from '../model/model';
-import { Content } from '../content/content';
+import { modelStore } from '../model/ModelStore';
+import { UniversalPath } from '../path/UniversalPath';
 
-import './ObjectBlock';
 import './ArrayBlock';
 import './ElementBlock';
 import './GroupBlock';
+import './ObjectBlock';
 
 export class BlockFactory {
 	static async createComponent(path: UniversalPath, type?: ModelType): Promise<TemplateResult> {

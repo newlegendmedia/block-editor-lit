@@ -5,108 +5,193 @@ export type PathSegment = {
 };
 
 export class UniversalPath {
-	segments: PathSegment[];
-	private documentId: string;
-	private separator: string = '.';
+	private static readonly SEPARATOR: string = '.';
+	private readonly segments: PathSegment[];
+	private readonly documentId: string;
+	private static enableLogging: boolean = false;
 
-	constructor(fullPath: string, modelKey?: string, contentKey?: string) {
-		this.segments = [];
+	public static setLogging(enabled: boolean): void {
+		UniversalPath.enableLogging = enabled;
+	}
 
+	private constructor(documentId: string, segments: PathSegment[]) {
+		this.documentId = documentId;
+		this.segments = segments;
+
+		if (UniversalPath.enableLogging) {
+			console.log('UniversalPath Initialized:', this.toString(), this);
+		}
+	}
+
+	public static fromFullPath(
+		fullPath: string,
+		modelKey?: string,
+		contentKey?: string
+	): UniversalPath {
 		if (!fullPath.includes('::')) {
-			throw new Error('UniversalPath must contain a document ID');
+			throw new Error('UniversalPath must contain a document ID separated by "::"');
 		}
 
 		const [docIdPart, ...pathParts] = fullPath.split('::');
-		this.documentId = docIdPart;
+		const documentId = docIdPart;
+
+		let segments: PathSegment[] = [];
 
 		if (pathParts.length > 0 && pathParts[0].length > 0) {
-			// Join the remaining parts in case there were extra '::' in the path
 			const remainingPath = pathParts.join('::');
-			this.parse(remainingPath);
+			segments = UniversalPath.parsePath(remainingPath);
 		}
+
 		if (modelKey) {
 			contentKey = contentKey || modelKey;
-			this.addSegment(modelKey, contentKey);
+			UniversalPath.validateKey(modelKey, 'modelKey');
+			UniversalPath.validateKey(contentKey, 'contentKey');
+			segments = [...segments, UniversalPath.createSegment(modelKey, contentKey, segments.length)];
 		}
+
+		return new UniversalPath(documentId, segments);
 	}
 
-	private parse(pathString: string): void {
-		const parts = pathString.split(this.separator);
-		this.segments = parts.map((part, index) => {
+	public static fromDocumentId(docId: string, key?: string): UniversalPath {
+		UniversalPath.validateDocId(docId);
+		let segments: PathSegment[] = [];
+
+		if (key) {
+			UniversalPath.validateKey(key, 'key');
+			segments.push(UniversalPath.createSegment(key, key, 0));
+		}
+
+		return new UniversalPath(docId, segments);
+	}
+
+	private static parsePath(pathString: string): PathSegment[] {
+		const parts = pathString.split(UniversalPath.SEPARATOR);
+		return parts.map((part, index) => {
 			const [modelKey, contentKey] = part.split(':');
-			return { modelKey, contentKey: contentKey || modelKey, index };
+			UniversalPath.validateKey(modelKey, `modelKey at segment ${index}`);
+			if (contentKey) {
+				UniversalPath.validateKey(contentKey, `contentKey at segment ${index}`);
+			}
+			return {
+				modelKey,
+				contentKey: contentKey || modelKey,
+				index,
+			};
 		});
 	}
 
-	addSegment(modelKey: string, contentKey: string): void {
-		this.segments.push({ modelKey, contentKey, index: this.segments.length });
+	private static createSegment(modelKey: string, contentKey: string, index: number): PathSegment {
+		return { modelKey, contentKey, index };
 	}
 
-	get path(): string {
+	private static validateKey(key: string, keyName: string): void {
+		const keyPattern = /^[A-Za-z0-9_-]+$/;
+		if (!keyPattern.test(key)) {
+			throw new Error(
+				`Invalid ${keyName}: "${key}". Only alphanumeric characters, underscores, and hyphens are allowed.`
+			);
+		}
+	}
+
+	private static validateDocId(docId: string): void {
+		if (!docId || typeof docId !== 'string') {
+			throw new Error('Document ID must be a non-empty string.');
+		}
+	}
+
+	public addSegment(modelKey: string, contentKey?: string): UniversalPath {
+		contentKey = contentKey || modelKey;
+		UniversalPath.validateKey(modelKey, 'modelKey');
+		UniversalPath.validateKey(contentKey, 'contentKey');
+
+		const newSegment: PathSegment = UniversalPath.createSegment(
+			modelKey,
+			contentKey,
+			this.segments.length
+		);
+
+		const newSegments = [...this.segments, newSegment];
+
+		return new UniversalPath(this.documentId, newSegments);
+	}
+
+	public get segmentsReadonly(): ReadonlyArray<PathSegment> {
+		return this.segments;
+	}
+
+	public get path(): string {
 		return this.segments
 			.map((segment) =>
 				segment.modelKey === segment.contentKey
 					? segment.modelKey
 					: `${segment.modelKey}:${segment.contentKey}`
 			)
-			.join(this.separator);
+			.join(UniversalPath.SEPARATOR);
 	}
 
-	get modelPath(): string {
-		return this.segments.map((segment) => segment.modelKey).join(this.separator);
+	public get modelPath(): string {
+		return this.segments.map((segment) => segment.modelKey).join(UniversalPath.SEPARATOR);
 	}
 
-	get contentPath(): string {
-		return `${this.documentId}::${this.segments.map((segment) => segment.contentKey).join(this.separator)}`;
+	public get contentPath(): string {
+		return `${this.documentId}::${this.segments.map((segment) => segment.contentKey).join(UniversalPath.SEPARATOR)}`;
 	}
 
-	get numericPath(): number[] {
+	public get numericPath(): number[] {
 		return this.segments.map((segment) => segment.index);
 	}
 
-	get numericParentPath(): number[] {
+	public get numericParentPath(): number[] {
 		return this.segments.slice(0, -1).map((segment) => segment.index);
 	}
 
-	get modelParent(): string {
+	public get modelParent(): string {
 		return this.segments
 			.slice(0, -1)
 			.map((segment) => segment.modelKey)
-			.join(this.separator);
+			.join(UniversalPath.SEPARATOR);
 	}
 
-	get contentParent(): string {
+	public get contentParent(): string {
 		const parentSegments = this.segments.slice(0, -1);
 		return parentSegments.length > 0
-			? `${this.documentId}::${parentSegments.map((segment) => segment.contentKey).join(this.separator)}`
-			: this.documentId + '::';
+			? `${this.documentId}::${parentSegments.map((segment) => segment.contentKey).join(UniversalPath.SEPARATOR)}`
+			: `${this.documentId}::`;
 	}
 
-	get modelKey(): string {
+	public get modelKey(): string {
 		return this.segments[this.segments.length - 1]?.modelKey || '';
 	}
 
-	get contentKey(): string {
+	public get contentKey(): string {
 		return this.segments[this.segments.length - 1]?.contentKey || '';
 	}
 
-	get document(): string {
+	public get document(): string {
 		return this.documentId;
 	}
 
-	toString(): string {
+	public toString(): string {
 		return this.contentPath;
 	}
 
-	toJSON(): string {
+	public toJSON(): string {
 		return this.toString();
 	}
 
-	static fromDocumentId(docId: string, key?: string): UniversalPath {
-		const path = new UniversalPath(docId + '::');
-		if (key) {
-			path.addSegment(key, key);
+	public isDocumentRoot(): boolean {
+		return this.segments.length === 0;
+	}
+
+	public createChild(modelKey: string, contentKey?: string): UniversalPath {
+		return this.addSegment(modelKey, contentKey);
+	}
+
+	public getParent(): UniversalPath {
+		if (this.segments.length === 0) {
+			return this;
 		}
-		return path;
+		const parentSegments = this.segments.slice(0, -1);
+		return new UniversalPath(this.documentId, parentSegments);
 	}
 }

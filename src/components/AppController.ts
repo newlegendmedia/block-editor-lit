@@ -75,7 +75,7 @@ export class AppController {
 	};
 
 	handleBreadcrumbClick = (event: CustomEvent) => {
-		const clickedPath = new UniversalPath(event.detail.path);
+		const clickedPath = UniversalPath.fromFullPath(event.detail.path);
 		this.setState({
 			currentPath: clickedPath.toString(),
 			activeDocumentId: null,
@@ -111,8 +111,10 @@ export class AppController {
 	};
 
 	renderMainContent() {
-		const currentPath = this.state.currentPath ? new UniversalPath(this.state.currentPath) : null;
-		if (this.state.activeDocumentId && currentPath?.segments.length === 0) {
+		const currentPath = this.state.currentPath
+			? UniversalPath.fromFullPath(this.state.currentPath)
+			: null;
+		if (this.state.activeDocumentId && currentPath?.isDocumentRoot()) {
 			return html`
 				<h-breadcrumbs
 					.path=${currentPath || UniversalPath.fromDocumentId(this.state.activeDocumentId)}

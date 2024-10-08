@@ -1,9 +1,9 @@
-import { Document, DocumentId, ContentId } from '../content/content';
+import { ContentId, Document, DocumentId } from '../content/content';
 import { contentStore } from '../content/ContentStore';
-import { generateId } from '../util/generateId';
-import { modelStore } from '../model/ModelStore';
 import { ModelType } from '../model/model';
+import { modelStore } from '../model/ModelStore';
 import { UniversalPath } from '../path/UniversalPath';
+import { generateId } from '../util/generateId';
 
 export class DocumentManager {
 	private documents: Map<DocumentId, Document> = new Map();

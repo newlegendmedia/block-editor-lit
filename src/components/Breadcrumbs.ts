@@ -36,19 +36,28 @@ export class Breadcrumbs extends LitElement {
 	`;
 
 	render() {
-		const segments = this.path.segments;
+		const segments = this.path.segmentsReadonly;
+		const documentId = this.path.document;
 
 		return html`
 			<div class="breadcrumbs-container">
+				<span
+					class="breadcrumb"
+					@click=${() => this.handleClick(UniversalPath.fromDocumentId(documentId))}
+					>document</span
+				>
 				${segments.map((segment, index) => {
-					const currentPath = new UniversalPath(this.path.toString());
-					currentPath.segments = currentPath.segments.slice(0, index + 1);
+					const currentPath = segments
+						.slice(0, index + 1)
+						.reduce(
+							(path, seg) => path.addSegment(seg.modelKey, seg.contentKey),
+							UniversalPath.fromDocumentId(documentId)
+						);
 					const isLast = index === segments.length - 1;
-					const isDocumentId = index === 0;
-					const displayText = isDocumentId ? 'document' : segment.contentKey;
+					const displayText = segment.contentKey;
 
 					return html`
-						${index > 0 ? html`<span class="separator">/</span>` : ''}
+						<span class="separator">/</span>
 						<span
 							class=${isLast ? 'current' : 'breadcrumb'}
 							@click=${() => this.handleClick(currentPath)}
