@@ -6,16 +6,29 @@ export type PathSegment = {
 
 export class UniversalPath {
 	segments: PathSegment[];
-	private separator: string;
 	private documentId: string;
+	private separator: string = '.';
 
-	constructor(documentId: string, pathString?: string, separator: string = '.') {
+	constructor(fullPath: string, modelKey?: string, contentKey?: string) {
 		this.segments = [];
-		this.separator = separator;
-		this.documentId = documentId;
-		if (pathString) {
-			this.parse(pathString);
+
+		if (!fullPath.includes('::')) {
+			throw new Error('UniversalPath must contain a document ID');
 		}
+
+		const [docIdPart, ...pathParts] = fullPath.split('::');
+		this.documentId = docIdPart;
+
+		if (pathParts.length > 0 && pathParts[0].length > 0) {
+			// Join the remaining parts in case there were extra '::' in the path
+			const remainingPath = pathParts.join('::');
+			this.parse(remainingPath);
+		}
+		if (modelKey) {
+			contentKey = contentKey || modelKey;
+			this.addSegment(modelKey, contentKey);
+		}
+		console.log('UniversalPath', this.toString(), this);
 	}
 
 	private parse(pathString: string): void {
@@ -26,8 +39,8 @@ export class UniversalPath {
 		});
 	}
 
-	addSegment(modelKey: string, contentKey: string, index: number): void {
-		this.segments.push({ modelKey, contentKey, index });
+	addSegment(modelKey: string, contentKey: string): void {
+		this.segments.push({ modelKey, contentKey, index: this.segments.length });
 	}
 
 	get path(): string {
@@ -91,31 +104,10 @@ export class UniversalPath {
 	}
 
 	static fromDocumentId(docId: string, key?: string): UniversalPath {
-		const path = new UniversalPath(docId);
+		const path = new UniversalPath(docId + '::');
 		if (key) {
-			path.addSegment(key, key, 0);
+			path.addSegment(key, key);
 		}
 		return path;
-	}
-
-	static fromModelAndContentPaths(
-		documentId: string,
-		modelPath: string,
-		contentPath: string,
-		numericPath: number[],
-		separator: string = '.'
-	): UniversalPath {
-		const modelParts = modelPath.split(separator);
-		const contentParts = contentPath.split('::')[1]?.split(separator) || [];
-
-		if (modelParts.length !== contentParts.length || modelParts.length !== numericPath.length) {
-			throw new Error('Model, content, and numeric paths must have the same number of segments');
-		}
-
-		const universalPath = new UniversalPath(documentId, undefined, separator);
-		for (let i = 0; i < modelParts.length; i++) {
-			universalPath.addSegment(modelParts[i], contentParts[i], numericPath[i]);
-		}
-		return universalPath;
 	}
 }

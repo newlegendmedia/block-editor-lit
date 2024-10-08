@@ -66,7 +66,6 @@ export class DocumentComponent extends LitElement {
 	}
 
 	private handleBlockUpdate = async (event: CustomEvent) => {
-		//		const updatedPath = new UniversalPath(event.detail.path);
 		const updatedContent = event.detail.content;
 
 		try {

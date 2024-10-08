@@ -12,8 +12,6 @@ export abstract class BaseBlock extends LitElement {
 	@property({ type: Object }) content!: Content<any>;
 	@property({ type: Object }) model!: Model;
 	@property({ type: Object }) path!: UniversalPath;
-	// @property({ type: Object }) contentPath!: ContentPath;
-	// @property({ type: Object }) modelPath!: ContentPath;
 	@state() protected error: string | null = null;
 
 	static blockStyles = css`
@@ -81,9 +79,7 @@ export abstract class BaseBlock extends LitElement {
 	}
 
 	protected getChildPath(childKey: string): UniversalPath {
-		const newPath = new UniversalPath(this.path.toString());
-		newPath.addSegment(childKey, childKey, this.path.segments.length);
-		return newPath;
+		return new UniversalPath(this.path.toString(), childKey);
 	}
 
 	protected renderPath() {

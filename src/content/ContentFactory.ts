@@ -11,7 +11,6 @@ import {
 	isGroup,
 	Model,
 } from '../model/model';
-import { generateId } from '../util/generateId';
 import { TreeNode } from '../tree/TreeNode';
 
 export class ContentFactory {
@@ -75,10 +74,7 @@ export class ContentFactory {
 		const children: ContentId[] = [];
 
 		model.properties.forEach((propertyModel) => {
-			const childContentItem = this.createContentFromModel(propertyModel, parentId) as Omit<
-				Content,
-				'id'
-			>;
+			this.createContentFromModel(propertyModel, parentId) as Omit<Content, 'id'>;
 			// const childId = generateId(propertyModel.type.slice(0, 3).toUpperCase()) as ContentId;
 			// childContent[propertyModel.key] = childId;
 			// children.push(childId);

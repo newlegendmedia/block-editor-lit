@@ -119,8 +119,7 @@ export class ContentStore extends ResourceStore<Content> {
 			for (const childId of content.children) {
 				const childContent = await this.get(childId);
 				if (childContent && path) {
-					const childPath = new UniversalPath(path.toString());
-					childPath.addSegment(childContent.key, childContent.key, path.segments.length);
+					const childPath = new UniversalPath(path.toString(), childContent.key);
 					await this.addCompositeContent(childContent, content.id, childPath);
 				}
 			}
@@ -164,9 +163,7 @@ export class ContentStore extends ResourceStore<Content> {
 			throw new Error(`Parent path not found for content ${id}`);
 		}
 
-		const newPath = new UniversalPath(parentPath.toString());
-		newPath.addSegment(duplicateContent.key, duplicateContent.key, parentPath.segments.length);
-
+		const newPath = new UniversalPath(parentPath.toString(), duplicateContent.key);
 		return this.create(duplicateContent, originalContent.parentId as ContentId, newPath);
 	}
 

@@ -151,11 +151,7 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 		}
 		try {
 			// Create a new UniversalPath using the current path's document ID and path
-			const childPath = new UniversalPath(
-				this.path.document,
-				this.path.path ? `${this.path.path}.${childContent.key}` : childContent.key,
-				'.'
-			);
+			const childPath = new UniversalPath(this.path.contentPath, childContent.key);
 			return await BlockFactory.createComponent(childPath, childContent.type);
 		} catch (error) {
 			console.error(`Error creating child component for ${childRef}:`, error);
@@ -171,10 +167,8 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 	}
 
 	protected async addContentToStore(content: Content): Promise<Content> {
-		const childPath = new UniversalPath(this.path.toString());
-		childPath.addSegment(content.key, content.key, this.path.segments.length);
-		const newContent = await contentStore.add(content, this.path, childPath);
-		return newContent;
+		const childPath = new UniversalPath(this.path.toString(), content.key);
+		return await contentStore.add(content, this.path, childPath);
 	}
 
 	protected async addContentReference(contentReference: ContentId): Promise<void> {

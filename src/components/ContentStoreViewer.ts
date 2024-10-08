@@ -1,9 +1,8 @@
-import { LitElement, html, css, TemplateResult } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { css, html, LitElement, TemplateResult } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
 import { contentStore } from '../content/ContentStore';
-import { Content } from '../content/content';
+import { Content, ContentReference } from '../content/content';
 import { HierarchicalItem } from '../tree/HierarchicalItem';
-import { ContentReference } from '../content/content';
 
 @customElement('content-store-viewer')
 export class ContentStoreViewer extends LitElement {
@@ -129,6 +128,7 @@ export class ContentStoreViewer extends LitElement {
 	}
 
 	private handleContentChange() {
+		console.log('Content store changed');
 		this.updateContents();
 	}
 
