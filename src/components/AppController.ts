@@ -79,7 +79,7 @@ export class AppController {
 		const clickedPath = new UniversalPath(event.detail.path);
 		this.setState({
 			currentPath: clickedPath.toString(),
-			activeDocumentId: clickedPath.document,
+			activeDocumentId: null,
 			pathRenderError: null,
 		});
 	};

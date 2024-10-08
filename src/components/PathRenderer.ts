@@ -9,12 +9,7 @@ export class PathRenderer extends LitElement {
 	@property({ type: String })
 	path!: string;
 
-	private uPath: UniversalPath | undefined;
-
 	render() {
-		if (!this.uPath) {
-			return html`<div>No path specified</div>`;
-		}
 		return html`
 			<div>
 				${until(
@@ -27,30 +22,29 @@ export class PathRenderer extends LitElement {
 	}
 
 	private async renderTargetContent(): Promise<TemplateResult> {
-		if (!this.uPath) {
-			return html`<div>No path specified</div>`;
-		}
-		if (this.uPath.segments.length === 0) {
+		if (!this.path) {
 			return html`<div>No path specified</div>`;
 		}
 
+		let uPath = new UniversalPath(this.path);
+
 		try {
 			// If only document ID is provided, dispatch the document-id-only event
-			if (this.uPath.segments.length === 1) {
+			if (uPath.segments.length === 0) {
 				this.dispatchEvent(
 					new CustomEvent('document-id-only', {
-						detail: { documentId: this.uPath.document },
+						detail: { documentId: uPath.document },
 						bubbles: true,
 						composed: true,
 					})
 				);
-				return html`<div>Loading document ${this.uPath.document}...</div>`;
+				return html`<div>Loading document ${uPath.document}...</div>`;
 			}
 
-			const component = await BlockFactory.createComponent(this.uPath);
+			const component = await BlockFactory.createComponent(uPath);
 
 			if (!component) {
-				throw new Error(`Failed to create component for path: ${this.uPath.toString()}`);
+				throw new Error(`Failed to create component for path: ${uPath.toString()}`);
 			}
 
 			return component;
@@ -65,33 +59,5 @@ export class PathRenderer extends LitElement {
 			);
 			return html`<div>Error: ${error instanceof Error ? error.message : String(error)}</div>`;
 		}
-	}
-
-	private handleBlockUpdate = (event: CustomEvent) => {
-		const updatedPath = event.detail.path as UniversalPath;
-		const updatedContent = event.detail.content;
-
-		// Dispatch an event to notify parent components of the update
-		this.dispatchEvent(
-			new CustomEvent('content-updated', {
-				detail: { path: updatedPath, content: updatedContent },
-				bubbles: true,
-				composed: true,
-			})
-		);
-
-		// Trigger a re-render of this component
-		this.requestUpdate();
-	};
-
-	connectedCallback() {
-		super.connectedCallback();
-		this.addEventListener('block-update', this.handleBlockUpdate as EventListener);
-		this.uPath = new UniversalPath(this.path);
-	}
-
-	disconnectedCallback() {
-		super.disconnectedCallback();
-		this.removeEventListener('block-update', this.handleBlockUpdate as EventListener);
 	}
 }
