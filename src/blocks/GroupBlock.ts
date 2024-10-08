@@ -1,10 +1,10 @@
 import { customElement } from 'lit/decorators.js';
-import { IndexedCompositeBlock } from './IndexedCompositeBlock';
 import { GroupModel, Model } from '../model/model';
+import { IndexedCompositeBlock } from './IndexedCompositeBlock';
 
 @customElement('group-block')
 export class GroupBlock extends IndexedCompositeBlock {
-	protected getItemTypes(): Model[] {
+	protected getChildModels(): Model[] {
 		const model = this.model as GroupModel;
 		return model.itemTypes;
 	}

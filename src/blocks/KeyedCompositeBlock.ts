@@ -1,11 +1,11 @@
-import { html, css, TemplateResult } from 'lit';
+import { css, html, TemplateResult } from 'lit';
 import { state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { until } from 'lit/directives/until.js';
-import { BaseBlock } from './BaseBlock';
-import { BlockFactory } from './BlockFactory';
 import { Model } from '../model/model';
 import { UniversalPath } from '../path/UniversalPath';
+import { BaseBlock } from './BaseBlock';
+import { BlockFactory } from './BlockFactory';
 
 export abstract class KeyedCompositeBlock extends BaseBlock {
 	@state() protected childComponents: Map<string, Promise<TemplateResult>> = new Map();
@@ -45,7 +45,7 @@ export abstract class KeyedCompositeBlock extends BaseBlock {
 	];
 
 	protected abstract getBlockTitle(): string;
-	protected abstract getModelProperties(): Model[];
+	protected abstract getChildModels(): Model[];
 
 	protected renderContent(): TemplateResult {
 		if (!this.content || !this.model) {
@@ -56,7 +56,7 @@ export abstract class KeyedCompositeBlock extends BaseBlock {
 				<h3 class="composite-title">${this.getBlockTitle()}</h3>
 				<div class="composite-content">
 					${repeat(
-						this.getModelProperties(),
+						this.getChildModels(),
 						(prop) => prop.key,
 						(prop, index) => this.renderCompositeItem(prop, index)
 					)}

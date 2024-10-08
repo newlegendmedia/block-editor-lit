@@ -1,10 +1,10 @@
 import { customElement } from 'lit/decorators.js';
-import { IndexedCompositeBlock } from './IndexedCompositeBlock';
 import { ArrayModel, Model } from '../model/model';
+import { IndexedCompositeBlock } from './IndexedCompositeBlock';
 
 @customElement('array-block')
 export class ArrayBlock extends IndexedCompositeBlock {
-	protected getItemTypes(): Model[] {
+	protected getChildModels(): Model[] {
 		const model = this.model as ArrayModel;
 		return [model.itemType];
 	}

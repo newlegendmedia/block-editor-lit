@@ -1,11 +1,11 @@
-import { ResourceStore } from '../resource/ResourceStore';
-import { Content, ContentId, isCompositeContent } from './content';
 import { Model } from '../model/model';
-import { StorageAdapter } from '../storage/StorageAdapter';
-import { generateId } from '../util/generateId';
-import { HierarchicalItem } from '../tree/HierarchicalItem';
-import { IndexedDBAdapter } from '../storage/IndexedDBAdapter';
 import { UniversalPath } from '../path/UniversalPath';
+import { ResourceStore } from '../resource/ResourceStore';
+import { IndexedDBAdapter } from '../storage/IndexedDBAdapter';
+import { StorageAdapter } from '../storage/StorageAdapter';
+import { HierarchicalItem } from '../tree/HierarchicalItem';
+import { generateId } from '../util/generateId';
+import { Content, ContentId, isCompositeContent } from './content';
 import { ContentFactory } from './ContentFactory';
 
 export class ContentStore extends ResourceStore<Content> {

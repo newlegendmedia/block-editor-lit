@@ -1,7 +1,7 @@
 import { css } from 'lit';
 import { customElement } from 'lit/decorators.js';
+import { Model, ObjectModel } from '../model/model';
 import { KeyedCompositeBlock } from './KeyedCompositeBlock';
-import { ObjectModel, Model } from '../model/model';
 
 @customElement('object-block')
 export class ObjectBlock extends KeyedCompositeBlock {
@@ -25,7 +25,7 @@ export class ObjectBlock extends KeyedCompositeBlock {
 		`,
 	];
 
-	protected getModelProperties(): Model[] {
+	protected getChildModels(): Model[] {
 		const properties = (this.model as ObjectModel)?.properties || [];
 		return properties;
 	}
@@ -33,5 +33,4 @@ export class ObjectBlock extends KeyedCompositeBlock {
 	protected getBlockTitle(): string {
 		return (this.model as ObjectModel).name || 'Object';
 	}
-
 }

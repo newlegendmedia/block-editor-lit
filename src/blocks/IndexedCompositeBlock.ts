@@ -1,15 +1,15 @@
-import { html, css, TemplateResult } from 'lit';
+import { css, html, TemplateResult } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
 import { until } from 'lit/directives/until.js';
+import { Content, ContentId, IndexedCompositeChildren } from '../content/content';
+import { ContentFactory } from '../content/ContentFactory';
+import { contentStore } from '../content/ContentStore';
+import { Model } from '../model/model';
+import '../module/interface/AddItemMenu';
+import { UniversalPath } from '../path/UniversalPath';
+import { generateId } from '../util/generateId';
 import { BaseBlock } from './BaseBlock';
 import { BlockFactory } from './BlockFactory';
-import { Content, ContentId, IndexedCompositeChildren } from '../content/content';
-import { Model } from '../model/model';
-import { contentStore } from '../content/ContentStore';
-import { ContentFactory } from '../content/ContentFactory';
-import { generateId } from '../util/generateId';
-import { UniversalPath } from '../path/UniversalPath';
-import '../module/interface/AddItemMenu';
 
 export abstract class IndexedCompositeBlock extends BaseBlock {
 	static styles = [
@@ -37,7 +37,7 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 	];
 
 	protected abstract getBlockTitle(): string;
-	protected abstract getItemTypes(): Model[];
+	protected abstract getChildModels(): Model[];
 
 	protected renderContent(): TemplateResult {
 		return html`
@@ -53,7 +53,7 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 					)}
 				</div>
 				<add-item-menu
-					.itemTypes=${this.getItemTypes()}
+					.itemTypes=${this.getChildModels()}
 					.blockTitle=${this.getBlockTitle()}
 					@add-item=${this.handleAdd}
 				></add-item-menu>
@@ -100,13 +100,10 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 	}
 
 	protected async handleRemove(index: number) {
-		const confirmed = confirm('Are you sure you want to remove this item?');
-		if (confirmed) {
-			try {
-				await this.removeChildBlock(index);
-			} catch (error) {
-				console.error('Error removing child block:', error);
-			}
+		try {
+			await this.removeChildBlock(index);
+		} catch (error) {
+			console.error('Error removing child block:', error);
 		}
 	}
 
@@ -116,8 +113,9 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 			const duplicatedSubtree = await contentStore.duplicateContent(originalChildRef);
 
 			if (duplicatedSubtree) {
-				const childContentReference = duplicatedSubtree.id;
-				await this.addContentReference(childContentReference);
+				await this.updateContent((content) => {
+					return content;
+				});
 			}
 		} catch (error) {
 			console.error('Error duplicating child block:', error);
@@ -127,8 +125,9 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 	protected async addChildBlock(itemType: Model): Promise<void> {
 		const childContent = await this.makeDefaultContent(itemType);
 		await this.addContentToStore(childContent);
-		const childContentReference = childContent.id;
-		await this.addContentReference(childContentReference);
+		await this.updateContent((content) => {
+			return content;
+		});
 	}
 
 	protected async removeChildBlock(index: number): Promise<void> {
@@ -146,11 +145,9 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 	protected async createChildComponent(childRef: ContentId): Promise<TemplateResult> {
 		let childContent = await contentStore.get(childRef);
 		if (!childContent) {
-			console.error(`Child content not found: ${childRef}`);
 			return html`<div>Child content not found: ${childRef}</div>`;
 		}
 		try {
-			// Create a new UniversalPath using the current path's document ID and path
 			const childPath = new UniversalPath(this.path.contentPath, childContent.key);
 			return await BlockFactory.createComponent(childPath, childContent.type);
 		} catch (error) {
@@ -169,13 +166,5 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 	protected async addContentToStore(content: Content): Promise<Content> {
 		const childPath = new UniversalPath(this.path.toString(), content.key);
 		return await contentStore.add(content, this.path, childPath);
-	}
-
-	protected async addContentReference(contentReference: ContentId): Promise<void> {
-		await this.updateContent((content) => {
-			if (!content.children) content.children = [];
-			content.children.push(contentReference);
-			return content;
-		});
 	}
 }
