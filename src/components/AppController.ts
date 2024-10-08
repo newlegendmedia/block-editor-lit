@@ -113,12 +113,11 @@ export class AppController {
 
 	renderMainContent() {
 		const currentPath = this.state.currentPath ? new UniversalPath(this.state.currentPath) : null;
-		if (this.state.activeDocumentId) {
+		if (this.state.activeDocumentId && currentPath?.segments.length === 0) {
 			return html`
 				<h-breadcrumbs
 					.path=${currentPath || UniversalPath.fromDocumentId(this.state.activeDocumentId)}
 				></h-breadcrumbs>
-				for ${this.state.activeDocumentId}
 				<document-component .documentId=${this.state.activeDocumentId}></document-component>
 			`;
 		} else if (this.state.currentPath) {

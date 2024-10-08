@@ -1,4 +1,4 @@
-import { LitElement, html, TemplateResult } from 'lit';
+import { html, LitElement, TemplateResult } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { until } from 'lit/directives/until.js';
 import { BlockFactory } from '../blocks/BlockFactory';
@@ -6,13 +6,17 @@ import { UniversalPath } from '../path/UniversalPath';
 
 @customElement('path-renderer')
 export class PathRenderer extends LitElement {
-	@property({ type: Object })
-	path: UniversalPath = new UniversalPath('');
+	@property({ type: String })
+	path!: string;
+
+	private uPath: UniversalPath | undefined;
 
 	render() {
+		if (!this.uPath) {
+			return html`<div>No path specified</div>`;
+		}
 		return html`
 			<div>
-				<p>PathRenderer is active. Current path: ${this.path.toString()}</p>
 				${until(
 					this.renderTargetContent(),
 					html`<div>Loading content...</div>`,
@@ -23,27 +27,30 @@ export class PathRenderer extends LitElement {
 	}
 
 	private async renderTargetContent(): Promise<TemplateResult> {
-		if (this.path.segments.length === 0) {
+		if (!this.uPath) {
+			return html`<div>No path specified</div>`;
+		}
+		if (this.uPath.segments.length === 0) {
 			return html`<div>No path specified</div>`;
 		}
 
 		try {
 			// If only document ID is provided, dispatch the document-id-only event
-			if (this.path.segments.length === 1) {
+			if (this.uPath.segments.length === 1) {
 				this.dispatchEvent(
 					new CustomEvent('document-id-only', {
-						detail: { documentId: this.path.document },
+						detail: { documentId: this.uPath.document },
 						bubbles: true,
 						composed: true,
 					})
 				);
-				return html`<div>Loading document ${this.path.document}...</div>`;
+				return html`<div>Loading document ${this.uPath.document}...</div>`;
 			}
 
-			const component = await BlockFactory.createComponent(this.path);
+			const component = await BlockFactory.createComponent(this.uPath);
 
 			if (!component) {
-				throw new Error(`Failed to create component for path: ${this.path.toString()}`);
+				throw new Error(`Failed to create component for path: ${this.uPath.toString()}`);
 			}
 
 			return component;
@@ -80,6 +87,7 @@ export class PathRenderer extends LitElement {
 	connectedCallback() {
 		super.connectedCallback();
 		this.addEventListener('block-update', this.handleBlockUpdate as EventListener);
+		this.uPath = new UniversalPath(this.path);
 	}
 
 	disconnectedCallback() {
