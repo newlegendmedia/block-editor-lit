@@ -2,8 +2,8 @@ import { TreeNode } from '../tree/TreeNode';
 
 // Resource.ts
 export interface Resource extends TreeNode {
+	id: ResourceId;
 	type: string;
 	key: string;
-	content: any;
 }
 export type ResourceId = string;

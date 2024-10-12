@@ -1,17 +1,17 @@
-import { Content, ElementContent, CompositeContent, ContentId, ObjectContent } from './content';
 import {
-	AtomType,
-	ObjectModel,
 	ArrayModel,
-	GroupModel,
+	AtomType,
 	ElementModel,
-	isElement,
-	isObject,
+	GroupModel,
 	isArray,
+	isElement,
 	isGroup,
+	isObject,
 	Model,
+	ObjectModel,
 } from '../model/model';
 import { TreeNode } from '../tree/TreeNode';
+import { CompositeContent, Content, ContentId, ElementContent, ObjectContent } from './content';
 
 export class ContentFactory {
 	static createContentFromModel(
@@ -27,8 +27,8 @@ export class ContentFactory {
 		} else if (isGroup(model)) {
 			return this.createGroupContent(model, parentId);
 		}
-		console.error(`Unsupported model type: ${model.type}`, model);
-		throw new Error(`Unsupported model type: ${model.type}`);
+		console.error(`Unsupported model type:`, model);
+		throw new Error(`Unsupported model type: ${model}`);
 	}
 
 	private static createElementContent(

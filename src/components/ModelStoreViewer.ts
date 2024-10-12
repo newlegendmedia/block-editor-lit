@@ -1,8 +1,8 @@
-import { LitElement, html, css, TemplateResult } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { css, html, LitElement, TemplateResult } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
 import { modelStore } from '../model/ModelStore';
-import { Model } from "../model/model";
-import { HierarchicalItem } from "../tree/HierarchicalItem";
+import { Model } from '../model/model';
+import { HierarchicalItem } from '../tree/HierarchicalItem';
 
 @customElement('model-store-viewer')
 export class ModelStoreViewer extends LitElement {
@@ -214,7 +214,7 @@ export class ModelStoreViewer extends LitElement {
 		`;
 	}
 
-	private renderModelDetails(model: Model): TemplateResult {
+	private renderModelDetails(model: Model | HierarchicalItem<Model>): TemplateResult {
 		return html`
 			<ul class="property-list">
 				${Object.entries(model).map(

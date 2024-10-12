@@ -25,7 +25,6 @@ export class ModelStore extends ResourceStore<Model> {
 			id: 'root',
 			type: 'root',
 			key: 'root',
-			content: '',
 			parentId: null,
 			children: [],
 		};
@@ -107,7 +106,19 @@ export class ModelStore extends ResourceStore<Model> {
 	}
 
 	private findModelInSchema(schema: ModelSchema, type: ModelType, key: string): Model | undefined {
-		return schema.models[type]?.[key];
+		const model = schema.models[type]?.[key];
+		if (!model) {
+			console.warn(`Model not found in schema: ${type}.${key}`);
+			return undefined;
+		}
+		// create a Model from the BaseModelDefinition
+		return {
+			...model,
+			key: model.key || '',
+			id: model.key || '',
+			parentId: 'root',
+			children: [],
+		};
 	}
 
 	private async resolveStructure(
@@ -125,7 +136,11 @@ export class ModelStore extends ResourceStore<Model> {
 			children: [],
 		};
 
-		if (isModelReference(model) && model.ref) {
+		if (isModelReference(model)) {
+			if (!model.ref) {
+				console.warn(`Model reference is missing: ${model}`);
+				return resolvedModel;
+			}
 			const referencedModel = await this.getModelfromSchema(model.ref, model.type, schemaName);
 
 			if (!referencedModel) {
@@ -152,9 +167,7 @@ export class ModelStore extends ResourceStore<Model> {
 			resolvedModel = await this.resolveGroupModel(resolvedModel, schemaName, currentPath);
 		}
 
-		// Update the model in the tree after processing
 		this.tree.set(currentPath, resolvedModel);
-
 		return resolvedModel;
 	}
 
@@ -166,7 +179,6 @@ export class ModelStore extends ResourceStore<Model> {
 		if (!isObject(model)) {
 			throw new Error(`Model is not an object: ${model}`);
 		}
-
 		const resolvedProperties = [];
 
 		for (const property of model.properties) {
@@ -179,9 +191,6 @@ export class ModelStore extends ResourceStore<Model> {
 			);
 			resolvedProperties.push(resolvedProperty);
 		}
-
-		//		const children = model.properties.map((property) => property.path || property.key);
-
 		return { ...model, properties: resolvedProperties };
 	}
 
@@ -199,9 +208,6 @@ export class ModelStore extends ResourceStore<Model> {
 			itemTypePath,
 			currentPath
 		);
-
-		//		const children = [model.itemType.key];
-
 		return { ...model, itemType: resolvedItemType };
 	}
 
@@ -214,7 +220,6 @@ export class ModelStore extends ResourceStore<Model> {
 			throw new Error(`Model is not a group: ${model}`);
 			``;
 		}
-
 		const resolvedItemTypes = [];
 
 		for (let i = 0; i < model.itemTypes.length; i++) {
@@ -248,12 +253,6 @@ export class ModelStore extends ResourceStore<Model> {
 
 	subscribeAll(callback: () => void): () => void {
 		return super.subscribeToAll(callback);
-	}
-
-	protected getParentId(_item: Model): string | undefined {
-		// Implement based on your model structure
-		// For example, you might use a convention like `${item.type}.${item.key}`
-		return undefined;
 	}
 }
 

@@ -79,8 +79,7 @@ export abstract class KeyedCompositeBlock extends BaseBlock {
 
 	protected async createChildComponent(property: Model): Promise<TemplateResult> {
 		try {
-			const childPath = UniversalPath.fromFullPath(this.path.contentPath, property.key);
-
+			const childPath = UniversalPath.fromPathObject(this.path, property.key);
 			return await BlockFactory.createComponent(childPath, property.type);
 		} catch (error) {
 			console.error(`Error creating child component for ${property.key}:`, error);

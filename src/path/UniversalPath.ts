@@ -23,6 +23,23 @@ export class UniversalPath {
 		}
 	}
 
+	public static fromPathObject(
+		path: UniversalPath,
+		modelKey?: string,
+		contentKey?: string
+	): UniversalPath {
+		let segments = path.segments;
+
+		if (modelKey) {
+			contentKey = contentKey || modelKey;
+			UniversalPath.validateKey(modelKey, 'modelKey');
+			UniversalPath.validateKey(contentKey, 'contentKey');
+			segments = [...segments, UniversalPath.createSegment(modelKey, contentKey, segments.length)];
+		}
+
+		return new UniversalPath(path.document, segments);
+	}
+
 	public static fromFullPath(
 		fullPath: string,
 		modelKey?: string,

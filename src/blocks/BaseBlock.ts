@@ -7,6 +7,7 @@ import { Model } from '../model/model';
 import { UniversalPath } from '../path/UniversalPath';
 
 import '../components/Breadcrumbs';
+import '../components/JsonViewer';
 
 export abstract class BaseBlock extends LitElement {
 	@property({ type: Object }) content!: Content<any>;
@@ -89,6 +90,7 @@ export abstract class BaseBlock extends LitElement {
 				@breadcrumb-clicked=${this.handleBreadcrumbClick}
 			></h-breadcrumbs>
 			<div style="font-size:11px; margin-bottom:5px;">${this.path.contentPath}</div>
+			<json-viewer .data=${this.path}></json-viewer>
 		`;
 	}
 

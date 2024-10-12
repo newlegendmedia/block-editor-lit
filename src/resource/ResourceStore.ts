@@ -1,9 +1,9 @@
-import { Tree } from '../tree/Tree';
-import { Resource } from './Resource';
 import { StorageAdapter } from '../storage/StorageAdapter';
-import { SubscriptionManager } from './SubscriptionManager';
-import { deepClone } from '../util/deepClone';
+import { Tree } from '../tree/Tree';
 import { ResolvedNode } from '../tree/TreeNode';
+import { deepClone } from '../util/deepClone';
+import { Resource } from './Resource';
+import { SubscriptionManager } from './SubscriptionManager';
 
 type ResourceId = string;
 
@@ -81,7 +81,6 @@ export class ResourceStore<T extends Resource> {
 			id: 'root',
 			type: 'root',
 			key: 'root',
-			content: null,
 			parentId: null,
 			children: [],
 		};

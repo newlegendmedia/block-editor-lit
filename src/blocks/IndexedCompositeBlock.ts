@@ -148,10 +148,9 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 			return html`<div>Child content not found: ${childRef}</div>`;
 		}
 		try {
-			const childPath = UniversalPath.fromFullPath(this.path.contentPath, childContent.key);
+			const childPath = UniversalPath.fromPathObject(this.path, childContent.key, childContent.id);
 			return await BlockFactory.createComponent(childPath, childContent.type);
 		} catch (error) {
-			console.error(`Error creating child component for ${childRef}:`, error);
 			return html`<div>Error: ${(error as Error).message}</div>`;
 		}
 	}

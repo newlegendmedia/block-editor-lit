@@ -16,7 +16,7 @@ export type AtomType = (typeof AtomType)[keyof typeof AtomType];
 
 export type ModelId = string;
 
-export type BaseModel = Resource & {
+export type BaseModelProps = {
 	id?: ModelId;
 	type: ModelType;
 	key: string;
@@ -26,6 +26,8 @@ export type BaseModel = Resource & {
 	metadata?: Record<string, Model>;
 	required?: boolean;
 };
+
+export type BaseModel = Resource & BaseModelProps;
 
 export interface BaseCompositeModel extends BaseModel {
 	inlineChildren?: boolean;
@@ -57,14 +59,12 @@ export type ModelReference = BaseModel & {
 	ref?: string; // Make ref optional
 };
 
-export interface Model extends BaseModel {
-	type: ModelType;
-	key: string;
-}
+export interface Model extends BaseModel {}
 
 export type CompositeModel = ObjectModel | ArrayModel | GroupModel;
 
-export type ModelWithoutId = Omit<Model, 'id'>;
+export type ModelWithoutId = Omit<BaseModelProps, 'id'>;
+
 export interface ModelSchema {
 	name: string;
 	models: {

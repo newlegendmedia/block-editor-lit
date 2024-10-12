@@ -5,7 +5,7 @@ import { IndexedDBAdapter } from '../storage/IndexedDBAdapter';
 import { StorageAdapter } from '../storage/StorageAdapter';
 import { HierarchicalItem } from '../tree/HierarchicalItem';
 import { generateId } from '../util/generateId';
-import { Content, ContentId, isCompositeContent } from './content';
+import { Content, ContentId } from './content';
 import { ContentFactory } from './ContentFactory';
 
 export class ContentStore extends ResourceStore<Content> {
@@ -17,7 +17,7 @@ export class ContentStore extends ResourceStore<Content> {
 			id: 'root' as ContentId,
 			type: 'root',
 			key: 'root',
-			parentId: null,
+			parentId: 'root',
 			children: [],
 			content: {},
 		};
@@ -112,15 +112,15 @@ export class ContentStore extends ResourceStore<Content> {
 			this.pathMap.set(path.toString(), content.id);
 		}
 
-		if (isCompositeContent(content) && content.children) {
-			for (const childId of content.children) {
-				const childContent = await this.get(childId);
-				if (childContent && path) {
-					const childPath = path.createChild(childContent.key, childContent.id);
-					await this.addCompositeContent(childContent, content.id, childPath);
-				}
-			}
-		}
+		// if (isCompositeContent(content) && content.children) {
+		// 	for (const childId of content.children) {
+		// 		const childContent = await this.get(childId);
+		// 		if (childContent && path) {
+		// 			const childPath = path.createChild(childContent.key, childContent.id);
+		// 			await this.addCompositeContent(childContent, content.id, childPath);
+		// 		}
+		// 	}
+		// }
 	}
 
 	async update(

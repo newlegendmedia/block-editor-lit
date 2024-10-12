@@ -3,10 +3,10 @@
 import { modelStore } from './ModelStore';
 import { ModelSchema, ModelWithoutId } from './model';
 
-import objectsData from './files/objects.json';
-import elementsData from './files/elements.json';
 import arraysData from './files/arrays.json';
+import elementsData from './files/elements.json';
 import groupsData from './files/groups.json';
+import objectsData from './files/objects.json';
 
 export const DEFAULT_SCHEMA_NAME = 'default';
 

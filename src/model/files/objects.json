@@ -35,7 +35,6 @@
 		"properties": [
 			{ "type": "element", "key": "titleElement1", "name": "Title", "ref": "textInput" },
 			{ "type": "element", "key": "dateElement1", "name": "Created On", "ref": "dateElement" },
-			{ "type": "element", "key": "dateElement2", "name": "Last Updated", "ref": "dateElement" },
 			{ "type": "element", "key": "textInput1", "name": "Tags", "base": "text" },
 			{ "type": "group", "key": "page", "name": "content", "editable": true, "ref": "page" }
 		]
@@ -48,7 +47,7 @@
 		"properties": [
 			{ "type": "element", "key": "title", "name": "Task Title", "base": "text" },
 			{ "type": "element", "key": "completed", "name": "Completed", "base": "boolean" },
-			{ "type": "element", "key": "dueDate", "name": "Due Date", "base": "datetime" }
+			{ "type": "element", "key": "dueDate", "name": "Due Date", "ref": "dateElement" }
 		]
 	},
 	"document": {
