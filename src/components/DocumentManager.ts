@@ -13,7 +13,7 @@ export class DocumentManager {
 		modelKey: string = 'page',
 		modelType: ModelType = 'group'
 	): Promise<Document> {
-		const model = await modelStore.getModel(modelKey, modelType);
+		const model = await modelStore.getByPath(modelKey, modelType);
 
 		if (!model) {
 			throw new Error(`${modelKey} model not found`);
@@ -21,7 +21,7 @@ export class DocumentManager {
 
 		const documentId = generateId('DOC') as DocumentId;
 		const rootContentPath = UniversalPath.fromDocumentId(documentId, modelKey);
-		const rootContent = await contentStore.getOrCreateByPath(rootContentPath, model);
+		const rootContent = await contentStore.getOrCreateByPath(rootContentPath.toString(), model);
 
 		const document: Document = {
 			id: documentId,
@@ -89,7 +89,7 @@ export class DocumentManager {
 					await this.deleteContentRecursively(childId);
 				}
 			}
-			await contentStore.delete(contentId);
+			await contentStore.remove(contentId);
 		}
 	}
 }

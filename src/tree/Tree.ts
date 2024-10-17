@@ -1,5 +1,5 @@
-import { NodeId, Path, TreeNode, ResolvedNode } from './TreeNode';
 import { MappedArray } from './MappedArray';
+import { NodeId, Path, ResolvedNode, TreeNode } from './TreeNode';
 
 // HierarchicalItem.ts
 export type HierarchicalItem<T> = T & {
@@ -110,11 +110,10 @@ export class Tree<T extends TreeNode> {
 			return node;
 		}
 
-		if (parent !== undefined) {
+		if (node.id !== this.root) {
+			parent = parent ?? this.root;
 			const parentNode = this.assignParent(node, parent);
 			this.assignChild(parentNode, node);
-		} else if (node.id !== this.root) {
-			throw new Error('Only the root node can have no parent');
 		}
 
 		this.nodes.add(node);

@@ -1,10 +1,10 @@
 // ElementBlock.ts
 
-import { html, css, TemplateResult } from 'lit';
+import { css, html, TemplateResult } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import { BaseBlock } from './BaseBlock';
-import { ElementModel, AtomType, Model } from '../model/model';
 import { Content } from '../content/content';
+import { AtomType, ElementModel, Model } from '../model/types/model';
+import { BaseBlock } from './BaseBlock';
 
 @customElement('element-block')
 export class ElementBlock extends BaseBlock {

@@ -1,7 +1,17 @@
 // SchemaStorage.ts
 
-import { modelStore } from './ModelStore';
-import { ModelSchema, ModelWithoutId } from './model';
+import { schemaManager } from './SchemaManager';
+import {
+	ArrayModelDefn,
+	ArrayModelRefDefn,
+	ElementModelDefn,
+	ElementModelRefDefn,
+	GroupModelDefn,
+	GroupModelRefDefn,
+	ObjectModelDefn,
+	ObjectModelRefDefn,
+} from './types/modelDefn';
+import { ModelSchema } from './types/modelSchema';
 
 import arraysData from './files/arrays.json';
 import elementsData from './files/elements.json';
@@ -28,17 +38,18 @@ export class SchemaStorage {
 		const defaultSchemaData: ModelSchema = {
 			name: DEFAULT_SCHEMA_NAME,
 			models: {
-				object: objectsData as Record<string, ModelWithoutId>,
-				element: elementsData as Record<string, ModelWithoutId>,
-				array: arraysData as Record<string, ModelWithoutId>,
-				group: groupsData as Record<string, ModelWithoutId>,
+				root: {},
+				object: objectsData as Record<string, ObjectModelDefn | ObjectModelRefDefn>,
+				element: elementsData as Record<string, ElementModelDefn | ElementModelRefDefn>,
+				array: arraysData as Record<string, ArrayModelDefn | ArrayModelRefDefn>,
+				group: groupsData as Record<string, GroupModelDefn | GroupModelRefDefn>,
 			},
 		};
 
 		try {
 			try {
 				await SchemaStorage.loadSchemaFromJson(defaultSchemaData);
-				await modelStore.loadSchema(DEFAULT_SCHEMA_NAME);
+				await schemaManager.loadSchema(DEFAULT_SCHEMA_NAME, defaultSchemaData);
 			} catch (error) {
 				console.error('Error loading schema from JSON:', error);
 			}

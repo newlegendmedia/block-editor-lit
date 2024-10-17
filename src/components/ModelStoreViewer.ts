@@ -110,7 +110,7 @@ export class ModelStoreViewer extends LitElement {
 
 	connectedCallback() {
 		super.connectedCallback();
-		this.unsubscribe = modelStore.subscribeAll(this.handleModelChange.bind(this));
+		this.unsubscribe = modelStore.subscribeToAll(this.handleModelChange.bind(this));
 		this.updateModels();
 	}
 

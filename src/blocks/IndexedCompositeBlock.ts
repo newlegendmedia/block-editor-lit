@@ -110,7 +110,7 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 	protected async handleDuplicate(index: number) {
 		try {
 			const originalChildRef = this.content.children[index];
-			const duplicatedSubtree = await contentStore.duplicateContent(originalChildRef);
+			const duplicatedSubtree = await contentStore.duplicateItem(originalChildRef);
 
 			if (duplicatedSubtree) {
 				await this.updateContent((content) => {
@@ -134,7 +134,7 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 		if (!this.content.children || this.content.children.length <= index) {
 			throw new Error(`Invalid index: ${index}`);
 		}
-		await contentStore.delete(this.content.children[index]);
+		await contentStore.remove(this.content.children[index]);
 		await this.updateContent((content) => {
 			const updatedContent = { ...content };
 			updatedContent.children.splice(index, 1);
@@ -164,6 +164,6 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 
 	protected async addContentToStore(content: Content): Promise<Content> {
 		const childPath = UniversalPath.fromFullPath(this.path.toString(), content.key);
-		return await contentStore.add(content, this.path, childPath);
+		return await contentStore.add(content, this.path.toString(), childPath.toString());
 	}
 }

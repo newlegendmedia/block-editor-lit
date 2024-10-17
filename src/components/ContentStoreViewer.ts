@@ -115,7 +115,7 @@ export class ContentStoreViewer extends LitElement {
 
 	connectedCallback() {
 		super.connectedCallback();
-		this.unsubscribe = contentStore.subscribeAll(this.handleContentChange.bind(this));
+		this.unsubscribe = contentStore.subscribeToAll(this.handleContentChange.bind(this));
 		this.updateContents();
 	}
 

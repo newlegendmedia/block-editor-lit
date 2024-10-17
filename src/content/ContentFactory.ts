@@ -9,7 +9,7 @@ import {
 	isObject,
 	Model,
 	ObjectModel,
-} from '../model/model';
+} from '../model/types/model';
 import { TreeNode } from '../tree/TreeNode';
 import { CompositeContent, Content, ContentId, ElementContent, ObjectContent } from './content';
 
@@ -47,7 +47,6 @@ export class ContentFactory {
 			case AtomType.Text:
 			case AtomType.Enum:
 			case AtomType.File:
-			case AtomType.Reference:
 				defaultValue = '';
 				break;
 			case AtomType.Datetime:

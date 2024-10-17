@@ -13,7 +13,7 @@ import './ObjectBlock';
 export class BlockFactory {
 	static async createComponent(path: UniversalPath, type?: ModelType): Promise<TemplateResult> {
 		try {
-			const model = await modelStore.getModel(path.modelPath, type);
+			const model = await modelStore.getByPath(path.modelPath, type);
 			if (!model) {
 				console.error(`BlockFactory: Model not found for ${path.modelPath}`);
 				return html`<div>Error: Model not found ${path.modelPath}</div>`;
@@ -49,7 +49,7 @@ export class BlockFactory {
 		path: UniversalPath,
 		model: Model
 	): Promise<Content | undefined> {
-		return contentStore.getOrCreateByPath(path, model);
+		return contentStore.getOrCreateByPath(path.toString(), model);
 	}
 
 	private static createObjectBlock(

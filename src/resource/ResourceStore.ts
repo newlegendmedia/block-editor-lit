@@ -1,7 +1,9 @@
+import { UniversalPath } from '../path/UniversalPath';
 import { StorageAdapter } from '../storage/StorageAdapter';
+import { HierarchicalItem } from '../tree/HierarchicalItem';
 import { Tree } from '../tree/Tree';
-import { ResolvedNode } from '../tree/TreeNode';
 import { deepClone } from '../util/deepClone';
+import { generateId } from '../util/generateId';
 import { Resource } from './Resource';
 import { SubscriptionManager } from './SubscriptionManager';
 
@@ -11,6 +13,7 @@ export class ResourceStore<T extends Resource> {
 	protected tree: Tree<T>;
 	protected storage: StorageAdapter<ResourceId, T>;
 	protected subscriptions: SubscriptionManager<ResourceId, T>;
+	pathMap: Map<string, ResourceId> = new Map();
 
 	constructor(storage: StorageAdapter<ResourceId, T>, _rootId: ResourceId, rootItem: T) {
 		this.storage = storage;
@@ -32,11 +35,15 @@ export class ResourceStore<T extends Resource> {
 		return item ? deepClone(item) : undefined;
 	}
 
+	async getByPath(path: string): Promise<T | undefined> {
+		const id = this.pathMap.get(path);
+		return id ? this.get(id) : undefined;
+	}
+
 	async set(item: T, parentId?: ResourceId): Promise<void> {
 		await this.storage.set(item);
 
 		const node = this.tree.add(item, parentId, item.id);
-
 		if (!node) {
 			console.error(`Failed to add/update item ${item.id} in the tree.`);
 		}
@@ -45,11 +52,81 @@ export class ResourceStore<T extends Resource> {
 		this.subscriptions.notifyAll();
 	}
 
-	async delete(id: ResourceId): Promise<void> {
-		await this.storage.delete(id);
+	async add(item: T, parentPath: string, path: string): Promise<T> {
+		let parentId: ResourceId | undefined = this.pathMap.get(parentPath);
+		if (!parentId && parentPath === 'root') {
+			parentId = 'root';
+		}
+		if (!parentId) {
+			throw new Error(`Parent content not found at path ${parentPath.toString()}`);
+		}
+
+		await this.create(item, parentId, path);
+
+		return item;
+	}
+
+	async create(item: T, parentId: ResourceId, path?: string): Promise<T> {
+		if (!item.id) {
+			item.id = generateId(item.type ? item.type.slice(0, 3).toUpperCase() : '');
+		}
+
+		await this.set(item, parentId);
+
+		console.log('Set pathmap:', item, parentId, path);
+
+		if (path) {
+			this.pathMap.set(path, item.id);
+		}
+
+		return item;
+	}
+
+	async remove(id: ResourceId): Promise<void> {
+		const path = this.getPathForId(id);
+		if (!path) {
+			return;
+		}
+		this.pathMap.delete(path.toString());
 		this.tree.remove(id);
+		await this.storage.delete(id);
+
 		this.subscriptions.notify(id, null);
 		this.subscriptions.notifyAll();
+	}
+
+	async update(id: ResourceId, updater: (content: T) => T): Promise<T | undefined> {
+		const item = await this.get(id);
+
+		if (item) {
+			const updatedItem = updater(item);
+			const parentNode = this.tree.parent(item);
+			await this.set(updatedItem, parentNode?.id);
+			return updatedItem;
+		}
+		return undefined;
+	}
+
+	async duplicateItem(id: ResourceId): Promise<T | undefined> {
+		const original = await this.get(id);
+		if (!original) {
+			return;
+		}
+		if (!original.parentId) {
+			original.parentId = 'root';
+		}
+
+		const parentPath = this.getPathForId(original.parentId);
+		if (!parentPath) {
+			throw new Error(`Parent path not found for content ${id}`);
+		}
+
+		const duplicate = JSON.parse(JSON.stringify(original));
+		duplicate.id = generateId(duplicate.type.slice(0, 3).toUpperCase());
+
+		const newPath = UniversalPath.fromFullPath(parentPath.toString(), duplicate.key, duplicate.id);
+
+		return this.create(duplicate, original.parentId, newPath.toString());
 	}
 
 	async getAll(): Promise<T[]> {
@@ -57,22 +134,8 @@ export class ResourceStore<T extends Resource> {
 		return all;
 	}
 
-	async getMany(ids: ResourceId[]): Promise<(T | undefined)[]> {
-		const items = await Promise.all(ids.map((id) => this.get(id)));
-		return items.map((item) => (item ? deepClone(item) : undefined));
-	}
-
-	async setMany(items: T[]): Promise<void> {
-		await Promise.all(items.map((item) => this.set(item)));
-	}
-
-	async deleteMany(ids: ResourceId[]): Promise<void> {
-		await Promise.all(ids.map((id) => this.delete(id)));
-	}
-
-	async exists(id: ResourceId): Promise<boolean> {
-		const item = await this.get(id);
-		return item !== undefined;
+	async getAllHierarchical(): Promise<HierarchicalItem<T>> {
+		return this.tree.getAllHierarchical();
 	}
 
 	async clear(): Promise<void> {
@@ -84,6 +147,7 @@ export class ResourceStore<T extends Resource> {
 			parentId: null,
 			children: [],
 		};
+		this.pathMap.clear();
 		this.tree = new Tree<T>(root as T);
 		this.subscriptions.notifyAll();
 	}
@@ -104,61 +168,17 @@ export class ResourceStore<T extends Resource> {
 		this.subscriptions.unsubscribeFromAll(callback);
 	}
 
-	protected getStorage(): StorageAdapter<ResourceId, T> {
-		return this.storage;
+	protected async getParentId(item: T): Promise<ResourceId | undefined> {
+		const node = await this.get(item.id);
+		return node?.parentId as ResourceId | undefined;
 	}
 
-	protected getParentId(_item: T): ResourceId | undefined {
+	getPathForId(id: ResourceId): string | undefined {
+		for (const [pathString, contentId] of this.pathMap.entries()) {
+			if (contentId === id) {
+				return pathString;
+			}
+		}
 		return undefined;
 	}
-
-	async getSubtree(id: ResourceId): Promise<ResolvedNode<T> | null> {
-		const subtreeNode = this.tree.getResolved(id);
-		if (!subtreeNode) {
-			return null;
-		}
-
-		// const getSubtreeHelper = async (node: T): Promise<T> => {
-		// 	const clonedNode = deepClone(node);
-		// 	const children = await Promise.all(
-		// 		this.tree.get(node.id)!.children.map((child) => getSubtreeHelper(child))
-		// 	);
-		// 	(clonedNode as any).children = children;
-		// 	return clonedNode;
-		// };
-
-		//return getSubtreeHelper(subtreeNode);
-		return subtreeNode;
-	}
-
-	// async duplicateSubtree(id: K, parentId: K): Promise<T | null> {
-	// 	const duplicatedNode = this.tree.duplicateSubtree(id, parentId);
-	// 	if (!duplicatedNode) {
-	// 		return null;
-	// 	}
-
-	// 	const updateStorageHelper = async (node: T): Promise<void> => {
-	// 		await this.storage.set(node);
-	// 		if ((node as any).children) {
-	// 			await Promise.all((node as any).children.map((child: T) => updateStorageHelper(child)));
-	// 		}
-	// 	};
-
-	// 	await updateStorageHelper(duplicatedNode.item);
-
-	// 	this.subscriptions.notifyAll();
-	// 	return duplicatedNode.item;
-	// }
-
-	// async moveSubtree(id: K, newParentId: K): Promise<boolean> {
-	// 	const success = this.tree.moveSubtree(id, newParentId);
-	// 	if (success) {
-	// 		const movedNode = this.tree.get(id);
-	// 		if (movedNode) {
-	// 			await this.storage.set(movedNode.item);
-	// 			this.subscriptions.notifyAll();
-	// 		}
-	// 	}
-	// 	return success;
-	// }
 }
