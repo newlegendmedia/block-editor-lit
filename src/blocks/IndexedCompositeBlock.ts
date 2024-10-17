@@ -163,7 +163,7 @@ export abstract class IndexedCompositeBlock extends BaseBlock {
 	}
 
 	protected async addContentToStore(content: Content): Promise<Content> {
-		const childPath = UniversalPath.fromFullPath(this.path.toString(), content.key);
+		const childPath = UniversalPath.fromFullPath(this.path.toString(), content.id);
 		return await contentStore.add(content, this.path.toString(), childPath.toString());
 	}
 }
